@@ -10,7 +10,7 @@ if __name__=="__main__":
         },
         'parameters': {
             'learning_rate': {
-                'values':[5e-5]
+                'values':[5e-4]
             },
             'batch_size': {
                 'values': [10]
