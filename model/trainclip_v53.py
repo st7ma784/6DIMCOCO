@@ -1,4 +1,3 @@
-
 import pytorch_lightning
 from pytorch_lightning import LightningModule
 import torch.nn as nn
@@ -7,7 +6,7 @@ import numpy as np
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from typing import Optional
 from clip.model import Transformer,LayerNorm,VisionTransformer
-from functools import partial
+from functools import partial,reduce
 import clip
 from warnings import warn
 import matplotlib.pyplot as plt
@@ -119,20 +118,12 @@ class LightningCLIPModule(LightningModule):
 
             B=self.hparams.batch_size
             N=6
-            def setview(V,N):
-                V[N]=B
-                print(V)
-                return V
-            Views=tuple(map(lambda N: setview(N[1],N[0]), enumerate(torch.ones((N,N),dtype=torch.long).tolist())))
-            shape=torch.broadcast_shapes(*Views)
-            cube=torch.stack(list(map(lambda Arr: Arr[0].view(*Arr[1]).expand(shape),zip([torch.arange(B)]*N,Views))),dim=-1)#dim=0) #shape (B^N ,B)
-            encodings=torch.nn.functional.one_hot(cube,num_classes=B) #should be of shape B^N (Base Shape) X B(one hot)
-            bincounts=torch.sum(encodings,dim=-2)# gets me bin counts 
-            print("OneHot counts shape",encodings.shape)
-            print("BinCounts should be B^N x B_indexes", bincounts.shape)
-            self.Lossmasks=torch.sum(torch.pow(bincounts,2),dim=-1)#Should be same shape as self.label
+            Views=torch.diag_embed(torch.ones(N,dtype=torch.long)*B-1)+1
+            bincounts2=reduce(torch.add,list(map(lambda Arr: torch.nn.functional.one_hot(Arr[0].view(*Arr[1]),num_classes=B),zip([torch.arange(B)]*N,Views.tolist()))))
+            self.Lossmasks=torch.sum(bincounts2.pow(2),dim=-1)
             self.masks=torch.unique(torch.flatten(self.Lossmasks,0,N-1),dim=0,sorted=False) 
             assert self.label.shape == self.Lossmasks.shape
+
     def build_attention_mask(self):
         # lazily create causal attention mask, with full attention between the vision tokens
         # pytorch uses additive attention mask; fill with -inf
@@ -239,7 +230,7 @@ class LightningCLIPModule(LightningModule):
 
         lossim = self.loss(logits, labels)
             
-
+        
         loss1 = self.loss(logits.permute(1,2,3,4,5,0), labels)
         loss2 = self.loss(logits.permute(2,3,4,5,0,1), labels)
         loss3 = self.loss(logits.permute(3,4,5,0,1,2), labels)
