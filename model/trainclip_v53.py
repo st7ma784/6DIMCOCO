@@ -227,7 +227,7 @@ class LightningCLIPModule(LightningModule):
             self.log("meanloss",meanloss,enable_graph=False, rank_zero_only=True)
             for mask in self.masks:
                 self.log("maskVal={}".format(mask),torch.mean(loss[self.Lossmasks==mask]),enable_graph=False, rank_zero_only=True)
-                self.log("proportionmaskVal={}".format(mask),torch.mean(loss[self.Lossmasks==mask])/meanloss,enable_graph=False, rank_zero_only=True)
+                self.log("proportionmaskVal={}".format(mask),torch.div(torch.mean(loss[self.Lossmasks==mask]),meanloss),enable_graph=False, rank_zero_only=True)
 
             
 
