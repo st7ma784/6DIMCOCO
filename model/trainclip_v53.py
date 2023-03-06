@@ -21,6 +21,7 @@ class LightningCLIPModule(LightningModule):
                 normlogits=True,
                 maskLosses=True,
                 projection='inv',
+                logvariance=False,
                 prune=True,
                 meanloss=False,
                 exactlabels=False,
@@ -62,7 +63,7 @@ class LightningCLIPModule(LightningModule):
         
         #self.linear.weight=torch.nn.Parameter(self.clip.token_embedding.weight.T)
         self.loss=torch.nn.CrossEntropyLoss(reduction='sum')
-
+        self.logvariance=logvariance
         self.vocab_size = vocab_size
         self.token_embedding = nn.Embedding(vocab_size, transformer_width)
         self.positional_embedding = nn.Parameter(torch.empty(self.context_length, transformer_width))
@@ -80,22 +81,23 @@ class LightningCLIPModule(LightningModule):
         print("done")
         from model.LossCalculation import calculate_lossStock as sl
         self.calculate_lossStock=sl
-        if logitsversion==0:
-            from model.LossCalculation import calculate_loss as cl
-        elif logitsversion==1: 
-            from model.LossCalculation import calculate_loss2 as cl
-        elif logitsversion==2: 
-            from model.LossCalculation import calculate_loss3 as cl
-        elif logitsversion==3:
-            from model.LossCalculation import calculate_loss4 as cl
-        elif logitsversion==4:
-            from model.LossCalculation import calculate_loss5 as cl
-        elif logitsversion==5:
-            from model.LossCalculation import calculate_loss6 as cl
-        else:
-            from model.LossCalculation import calculate_loss as cl
-        self.calculate_loss=cl
-        self.normlogits=normlogits
+        from model.LossCalculation import get_loss_fn 
+        self.calculate_loss=get_loss_fn(logitsversion=logitsversion,norm=normlogits,log=logvariance)
+        # if logitsversion==0:
+        #     from model.LossCalculation import calculate_loss as cl
+        # elif logitsversion==1: 
+        #     from model.LossCalculation import calculate_loss2 as cl
+        # elif logitsversion==2: 
+        #     from model.LossCalculation import calculate_loss3 as cl
+        # elif logitsversion==3:
+        #     from model.LossCalculation import calculate_loss4 as cl
+        # elif logitsversion==4:
+        #     from model.LossCalculation import calculate_loss5 as cl
+        # elif logitsversion==5:
+        #     from model.LossCalculation import calculate_loss6 as cl
+        # else:
+        #     from model.LossCalculation import calculate_loss as cl
+        # self.calculate_loss=partial(cl,norm=normlogits,log=logvariance)
         self.projection=projection
         self.prune=prune
         if self.prune:
@@ -198,7 +200,7 @@ class LightningCLIPModule(LightningModule):
             caption_features4=caption_features4@self.text_projection
             caption_features5=caption_features5@self.text_projection
         
-        return self.calculate_loss(image_features, caption_features1, caption_features2, caption_features3, caption_features4, caption_features5,norm=self.normlogits)*self.logit_scale.exp()
+        return self.calculate_loss(image_features, caption_features1, caption_features2, caption_features3, caption_features4, caption_features5)*self.logit_scale.exp()
 
     def on_train_epoch_start(self) -> None:
         if self.prune:
