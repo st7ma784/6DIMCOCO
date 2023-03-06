@@ -49,8 +49,6 @@ def get_loss_fn(logitsversion=0,norm=False,log=False):
         def baseLogits(*args):
             return oneminus(logfunction(calculate_loss6(*args)))
 
-    
-
     def lossfn(*args,**kwargs):
         args,kwargs=normfunction(*args,**kwargs)
         return baseLogits(*args,**kwargs) 
