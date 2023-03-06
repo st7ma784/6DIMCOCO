@@ -111,7 +111,8 @@ class LightningCLIPModule(LightningModule):
             print("using labels: ", self.label[:2,:2,:2,:2,:2,:2])
         #elif add in the case where using -inf or -1 instead of zeros as below....
         else:
-            self.label=torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.ones(self.hparams.batch_size,dtype=torch.float,device=self.device))))))
+            self.label=torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.ones(self.hparams.batch_size,dtype=torch.float,device=self.device))))))*2 
+            self.label=self.label-1
         self.maskLoss=maskLosses
         if self.maskLoss:
             self.maskloss=torch.nn.MSELoss(reduction='none')
@@ -228,7 +229,7 @@ class LightningCLIPModule(LightningModule):
             for mask in self.masks:
                 self.log("maskVal={}".format(mask),torch.mean(loss[self.Lossmasks==mask]),enable_graph=False, rank_zero_only=True)
                 self.log("proportionmaskVal={}".format(mask),torch.div(torch.mean(loss[self.Lossmasks==mask]),meanloss),enable_graph=False, rank_zero_only=True)
-
+                # self.log("absdeltamaskVal={}".format(mask),torch.sub(loss,loss[self.Lossmasks==mask]),enable_graph=False, rank_zero_only=True)
             
 
         lossim = self.loss(logits, labels)
