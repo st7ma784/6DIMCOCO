@@ -63,6 +63,7 @@ class LightningCLIPModule(LightningModule):
         
         #self.linear.weight=torch.nn.Parameter(self.clip.token_embedding.weight.T)
         self.loss=torch.nn.CrossEntropyLoss(reduction='sum')
+        self.valloss=torch.nn.CrossEntropyLoss(reduction='mean')
         self.logvariance=logvariance
         self.vocab_size = vocab_size
         self.token_embedding = nn.Embedding(vocab_size, transformer_width)
@@ -98,7 +99,8 @@ class LightningCLIPModule(LightningModule):
         # else:
         #     from model.LossCalculation import calculate_loss as cl
         # self.calculate_loss=partial(cl,norm=normlogits,log=logvariance)
-        self.projection=projection
+        from model.Projection import get_proj_fn
+        self.projection=get_proj_fn(projection)
         self.prune=prune
         if self.prune:
             from model.PruneCalculation import PruneHook
@@ -187,20 +189,9 @@ class LightningCLIPModule(LightningModule):
         caption_features4=self.encode_text(captions4)
         caption_features5=self.encode_text(captions5)
 
-
-        if self.projection=="inv":
-            image_features=image_features@ self.text_projection
-        elif self.projection=="iinv":
-            image_features=image_features@torch.inverse(self.text_projection)
-        elif self.projection=="None":
-          
-            caption_features1=caption_features1@self.text_projection
-            caption_features2=caption_features2@self.text_projection
-            caption_features3=caption_features3@self.text_projection
-            caption_features4=caption_features4@self.text_projection
-            caption_features5=caption_features5@self.text_projection
+        [i],[c1,c2,c3,c4,c5]=self.projection(self.text_projection,im=[image_features],text=[caption_features1,caption_features2,caption_features3,caption_features4,caption_features5])
         
-        return self.calculate_loss(image_features, caption_features1, caption_features2, caption_features3, caption_features4, caption_features5)*self.logit_scale.exp()
+        return self.calculate_loss(i,c1,c2,c3,c4,c5)*self.logit_scale.exp()
 
     def on_train_epoch_start(self) -> None:
         if self.prune:
@@ -316,23 +307,15 @@ class LightningCLIPModule(LightningModule):
         self.CAPhsic_matrix2=torch.add(self.CAPhsic_matrix2,batch_HSIC2(a))
         joint_HSIC=torch.nan_to_num(batch_HSIC3(a,torch.nan_to_num(torch.stack(list(self.model1_features.values())))))
         self.CAPhsic_matrix1=torch.add(self.CAPhsic_matrix1,joint_HSIC) 
-       
-
-        if self.projection=="inv":
-            image_features=image_features@ self.text_projection
-        elif self.projection=="iinv":
-            image_features=image_features@torch.inverse(self.text_projection)
-        elif self.projection=="None":
-            captions=captions@self.text_projection
-
-
+        
+        image_features, captions = self.projection(self.text_projection,im=[image_features],text=[captions])
         # print("self.logit scale is 14 right? ",self.logit_scale.exp())
         logitsI,logitsT=self.calculate_lossStock(image_features, captions) 
         self.log("mean validation stock logits ", logitsI.mean())
         labels=torch.arange(batch[0].shape[0],dtype=torch.long,device=self.device)
 
-        lossim = self.loss(logitsI* 80, labels)
-        loss1 = self.loss(logitsT* 80, labels)
+        lossim = self.valloss(logitsI* 80, labels)
+        loss1 = self.valloss(logitsT* 80, labels)
         loss = lossim+loss1
         loss=loss/2
         loss = loss.mean()
