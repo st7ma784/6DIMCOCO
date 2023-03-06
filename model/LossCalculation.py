@@ -97,7 +97,7 @@ def calculate_loss2(  I, C1, C2, C3, C4, C5):
     
     
 def calculate_loss3( I, C1, C2, C3, C4, C5):
-    
+    print("cl3")
     return torch.sqrt(torch.sum(torch.pow(reduce(torch.add,[torch.pow(I,2).view( I.shape[0],1,1,1,1,1,-1),
                                                 torch.pow(C1,2).view(1,C1.shape[0],1,1,1,1,-1),
                                                 torch.pow(C2,2).view(1,1,C2.shape[0],1,1,1,-1),
@@ -113,7 +113,8 @@ def calculate_loss3( I, C1, C2, C3, C4, C5):
     
 
 def calculate_loss4(I, C1, C2, C3, C4, C5):
-    
+    print("cl4")
+
 
     return  torch.sum(torch.sqrt(reduce(torch.add,[torch.pow(I,2).view( I.shape[0],1,1,1,1,1,-1),
                                                 torch.pow(C1,2).view(1,C1.shape[0],1,1,1,1,-1),
@@ -123,6 +124,7 @@ def calculate_loss4(I, C1, C2, C3, C4, C5):
                                                 torch.pow(C5,2).view(1,1,1,1,1,C5.shape[0],-1)])),dim=-1)
     
 def calculate_loss5(I, C1, C2, C3, C4, C5):
+    print("cl5")
     return torch.sum(reduce(torch.add,[torch.pow(I,2).view( I.shape[0],1,1,1,1,1,-1),
                                                 torch.pow(C1,2).view(1,C1.shape[0],1,1,1,1,-1),
                                                 torch.pow(C2,2).view(1,1,C2.shape[0],1,1,1,-1),
@@ -138,6 +140,7 @@ def calculate_loss5(I, C1, C2, C3, C4, C5):
 
     
 def calculate_loss6(I, C1, C2, C3, C4, C5):
+    print("cl6")
     return torch.sqrt(torch.sum(reduce(torch.add,[torch.pow(I,2).view( I.shape[0],1,1,1,1,1,-1),
                                                   torch.pow(C1,2).view(1,C1.shape[0],1,1,1,1,-1),
                                                   torch.pow(C2,2).view(1,1,C2.shape[0],1,1,1,-1),
