@@ -12,8 +12,8 @@ will be very slow.
 '''
 
 
-def oneminus(arg):
-    return 1-arg
+def oneminus(*args,**kwargs):
+    return tuple(map(lambda arg: 1-arg, args)),kwargs
 def null(*args,**kwargs):
     return args,kwargs
 def normargs(*args,**kwargs):
