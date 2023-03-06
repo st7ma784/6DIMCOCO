@@ -119,6 +119,7 @@ class ImagenetDataModule(LightningDataModule):
                 no meta.bin present. Imagenet is no longer automatically downloaded by PyTorch.
                 To get imagenet:
                 1. download yourself from http://www.image-net.org/challenges/LSVRC/2012/downloads
+                https://image-net.org/data/winter21_whole.tar.gz
                 2. download the devkit (ILSVRC2012_devkit_t12.tar.gz)
                 3. generate the meta.bin file using the devkit
                 4. copy the meta.bin file into both train and val split folders
