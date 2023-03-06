@@ -17,7 +17,7 @@ def oneminus(arg):
 def null(*args,**kwargs):
     return args,kwargs
 def normargs(*args,**kwargs):
-    return tuple(map(lambda arg: arg/arg.norm(dim=-1, keepdim=True), args))
+    return tuple(map(lambda arg: arg/arg.norm(dim=-1, keepdim=True), args)),kwargs
 def logargs(*args,**kwargs):
     return tuple(map(torch.log,args))
 
