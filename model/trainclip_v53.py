@@ -113,8 +113,9 @@ class LightningCLIPModule(LightningModule):
             print("using labels: ", self.label[:2,:2,:2,:2,:2,:2])
         #elif add in the case where using -inf or -1 instead of zeros as below....
         else:
-            self.label=torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.ones(self.hparams.batch_size,dtype=torch.float,device=self.device)))))) 
+            self.label=torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.ones(self.hparams.batch_size,dtype=torch.long,device=self.device))))))#.detach()
             self.label=(self.label*2)-1
+            print("using labelsv2: ", self.label[:2,:2,:2,:2,:2,:2])
         self.maskLoss=maskLosses
         if self.maskLoss:
             self.maskloss=torch.nn.MSELoss(reduction='none')
@@ -200,7 +201,7 @@ class LightningCLIPModule(LightningModule):
             caption_features4=caption_features4@self.text_projection
             caption_features5=caption_features5@self.text_projection
         
-        return self.calculate_loss(image_features, caption_features1, caption_features2, caption_features3, caption_features4, caption_features5)*self.logit_scale.exp()
+        return self.calculate_loss(image_features, caption_features1, caption_features2, caption_features3, caption_features4, caption_features5) *self.logit_scale
 
     def on_train_epoch_start(self) -> None:
         if self.prune:
@@ -214,9 +215,9 @@ class LightningCLIPModule(LightningModule):
         
     def training_step(self, batch, batch_idx,optimizer_idx=0):
 
-        labels=self.label[:batch[0].shape[0],:batch[0].shape[0],:batch[0].shape[0],:batch[0].shape[0],:batch[0].shape[0],:batch[0].shape[0]].to(self.device,non_blocking=True) 
         im,captions= batch[0],batch[1]
-        
+        labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0]),:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,non_blocking=True) 
+
         logits=self(im,captions[:,0],captions[:,1],captions[:,2],captions[:,3],captions[:,4])
         self.log("first logit",logits[0,0,0,0,0,0],enable_graph=False)
         self.log("BAD logit",logits[1,2,3,4,5,0],enable_graph=False)
@@ -477,7 +478,6 @@ def batch_HSIC3(K,L):
     L=L.unsqueeze(0) # 1,46, B,B
     a=torch.sum(L,dim=-1) #1,46,10
     b=torch.sum(K,dim=-2) #46,1,10
-    #print(a.shape,b.shape)
     c=torch.sub(torch.mul(torch.sum(b,dim=-1),torch.sum(a,dim=-1)).div((K.shape[-2] - 1)),torch.sum(torch.mul(b,a),dim=-1),alpha=2) #[46,46]- [46,46] =[46,46]
     #print(c.shape) # expect LayerK, LayerL, 
     return torch.div(torch.add(torch.sum(torch.sum(K*L,dim=-1),dim=-1),torch.div(c,(K.shape[-2] - 2))),(K.shape[-2]*(K.shape[-2] - 3)))

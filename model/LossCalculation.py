@@ -12,13 +12,13 @@ will be very slow.
 '''
 
 
-def oneminus(*args,**kwargs):
+def oneminus(*args):
     return tuple(map(lambda arg: 1-arg, args))
-def null(*args,**kwargs):
-    return args,kwargs
-def normargs(*args,**kwargs):
-    return tuple(map(lambda arg: arg/arg.norm(dim=-1, keepdim=True), args)),kwargs
-def logargs(*args,**kwargs):
+def null(*args):
+    return args
+def normargs(*args):
+    return map(lambda arg: arg/arg.norm(dim=-1, keepdim=True), args)
+def logargs(*args):
     return tuple(map(torch.log,args))
 
 
@@ -49,9 +49,9 @@ def get_loss_fn(logitsversion=0,norm=False,log=False):
         def baseLogits(*args):
             return oneminus(logfunction(calculate_loss6(*args)))
 
-    def lossfn(*args,**kwargs):
-        args,kwargs=normfunction(*args,**kwargs)
-        return baseLogits(*args,**kwargs) 
+    def lossfn(*args):
+        normfunction(*args)
+        return baseLogits(*args) 
     return lossfn
 
 
@@ -113,25 +113,20 @@ def calculate_loss3( I, C1, C2, C3, C4, C5):
     
 
 def calculate_loss4(I, C1, C2, C3, C4, C5):
-    print("cl4")
-
-
-    return  torch.sum(torch.sqrt(reduce(torch.add,[torch.pow(I,2).view( I.shape[0],1,1,1,1,1,-1),
+    return torch.sum(torch.sqrt(reduce(torch.add,[torch.pow(I,2).view( I.shape[0],1,1,1,1,1,-1),
                                                 torch.pow(C1,2).view(1,C1.shape[0],1,1,1,1,-1),
                                                 torch.pow(C2,2).view(1,1,C2.shape[0],1,1,1,-1),
                                                 torch.pow(C3,2).view(1,1,1,C3.shape[0],1,1,-1),
                                                 torch.pow(C4,2).view(1,1,1,1,C4.shape[0],1,-1),
                                                 torch.pow(C5,2).view(1,1,1,1,1,C5.shape[0],-1)])),dim=-1)
-    
 def calculate_loss5(I, C1, C2, C3, C4, C5):
-    print("cl5")
-    return torch.sum(reduce(torch.add,[torch.pow(I,2).view( I.shape[0],1,1,1,1,1,-1),
-                                                torch.pow(C1,2).view(1,C1.shape[0],1,1,1,1,-1),
-                                                torch.pow(C2,2).view(1,1,C2.shape[0],1,1,1,-1),
-                                                torch.pow(C3,2).view(1,1,1,C3.shape[0],1,1,-1),
-                                                torch.pow(C4,2).view(1,1,1,1,C4.shape[0],1,-1),
-                                                torch.pow(C5,2).view(1,1,1,1,1,C5.shape[0],-1)]).sub_(
-                        torch.pow(reduce(torch.add,[I.view( I.shape[0],1,1,1,1,1,-1),
+    return torch.sum(reduce(torch.add,[ torch.pow(I,2).view( I.shape[0],1,1,1,1,1,-1),
+                                        torch.pow(C1,2).view(1,C1.shape[0],1,1,1,1,-1),
+                                        torch.pow(C2,2).view(1,1,C2.shape[0],1,1,1,-1),
+                                        torch.pow(C3,2).view(1,1,1,C3.shape[0],1,1,-1),
+                                        torch.pow(C4,2).view(1,1,1,1,C4.shape[0],1,-1),
+                                        torch.pow(C5,2).view(1,1,1,1,1,C5.shape[0],-1)]).sub_(
+                    torch.pow(reduce(torch.add,[    I.view( I.shape[0],1,1,1,1,1,-1),
                                                     C1.view(1,C1.shape[0],1,1,1,1,-1),
                                                     C2.view(1,1,C2.shape[0],1,1,1,-1),
                                                     C3.view(1,1,1,C3.shape[0],1,1,-1),
@@ -140,7 +135,6 @@ def calculate_loss5(I, C1, C2, C3, C4, C5):
 
     
 def calculate_loss6(I, C1, C2, C3, C4, C5):
-    print("cl6")
     return torch.sqrt(torch.sum(reduce(torch.add,[torch.pow(I,2).view( I.shape[0],1,1,1,1,1,-1),
                                                   torch.pow(C1,2).view(1,C1.shape[0],1,1,1,1,-1),
                                                   torch.pow(C2,2).view(1,1,C2.shape[0],1,1,1,-1),
@@ -154,4 +148,3 @@ def calculate_loss6(I, C1, C2, C3, C4, C5):
                                                         C4.view(1,1,1,1,C4.shape[0],1,-1),
                                                         C5.view(1,1,1,1,1,C5.shape[0],-1)]),2),alpha=1/6),dim=-1))
     
-    # @torch.jit.script
