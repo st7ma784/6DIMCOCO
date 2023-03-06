@@ -13,7 +13,7 @@ will be very slow.
 
 
 def oneminus(*args,**kwargs):
-    return tuple(map(lambda arg: 1-arg, args)),kwargs
+    return tuple(map(lambda arg: 1-arg, args))
 def null(*args,**kwargs):
     return args,kwargs
 def normargs(*args,**kwargs):
