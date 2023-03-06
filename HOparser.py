@@ -16,7 +16,7 @@ class parser(HyperOptArgumentParser):
         self.opt_list("--exactlabels",default=False,type=bool,options=[True,False])
         self.opt_list("--meanloss",default=False,type=bool,options=[True,False])
 
-        self.opt_list("--logitsversion",default=0,type=int,options=[0,1,2,3,4])
+        self.opt_list("--logitsversion",default=4,type=int,options=[0,1,2,3,4,5,6])
         self.opt_list("--precision", default=16, options=[16], tunable=False)
         self.opt_list("--codeversion", default=6, type=int, options=[6], tunable=False)
         self.opt_list("--transformer_layers", default=5, type=int, options=[3,4,5,6], tunable=True)
