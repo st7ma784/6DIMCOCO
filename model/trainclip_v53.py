@@ -122,7 +122,7 @@ class LightningCLIPModule(LightningModule):
             B=self.hparams.batch_size
             N=6
             Views=torch.diag_embed(torch.ones(N,dtype=torch.long)*B-1)+1
-            bincounts2=reduce(torch.add,list(map(lambda Arr: torch.nn.functional.one_hot(Arr[0].view(*Arr[1]),num_classes=B),zip([torch.arange(B)]*N,Views.tolist()))))
+            bincounts2=reduce(torch.add,list(map(lambda Arr: torch.nn.functional.one_hot(torch.arange(B).view(*Arr),num_classes=B),Views.tolist())))
             self.Lossmasks=torch.sum(bincounts2.pow(3),dim=-1)
             self.masks=torch.unique(torch.flatten(self.Lossmasks,0,N-1),dim=0,sorted=False) 
             assert self.label.shape == self.Lossmasks.shape
