@@ -44,7 +44,7 @@ def get_loss_fn(logitsversion=0,norm=False,log=False):
             return logfunction(calculate_loss4(*args))
     elif logitsversion==4:
         def baseLogits(*args):
-            return logfunction(calculate_loss5(*args))
+            return oneminus(logfunction(calculate_loss5(*args)))
     elif logitsversion==5:
         def baseLogits(*args):
             return oneminus(logfunction(calculate_loss6(*args)))
@@ -96,7 +96,6 @@ def calculate_loss2(  I, C1, C2, C3, C4, C5):
     
     
 def calculate_loss3( I, C1, C2, C3, C4, C5):
-    print("cl3")
     return torch.sqrt(torch.sum(torch.pow(reduce(torch.add,[torch.pow(I,2).view( I.shape[0],1,1,1,1,1,-1),
                                                 torch.pow(C1,2).view(1,C1.shape[0],1,1,1,1,-1),
                                                 torch.pow(C2,2).view(1,1,C2.shape[0],1,1,1,-1),
