@@ -118,14 +118,14 @@ class LightningCLIPModule(LightningModule):
         self.maskLoss=maskLosses
         if self.maskLoss:
             self.maskloss=torch.nn.MSELoss(reduction='none')
-
-            B=self.hparams.batch_size
-            N=6
-            Views=torch.diag_embed(torch.ones(N,dtype=torch.long)*B-1)+1
-            bincounts2=reduce(torch.add,list(map(lambda Arr: torch.nn.functional.one_hot(Arr[0].view(*Arr[1]),num_classes=B),zip([torch.arange(B)]*N,Views.tolist()))))
-            self.Lossmasks=torch.sum(bincounts2.pow(4),dim=-1)
-            self.masks=torch.unique(torch.flatten(self.Lossmasks,0,N-1),dim=0,sorted=False) 
-            assert self.label.shape == self.Lossmasks.shape
+            with torch.no_grad:
+                B=self.hparams.batch_size
+                N=6
+                Views=torch.diag_embed(torch.ones(N,dtype=torch.long)*B-1)+1
+                bincounts2=reduce(torch.add,list(map(lambda Arr: torch.nn.functional.one_hot(torch.arange(B).view(*Arr),num_classes=B),Views.tolist())))
+                self.Lossmasks=torch.sum(bincounts2.pow(4),dim=-1)
+                self.masks=torch.unique(torch.flatten(self.Lossmasks,0,N-1),dim=0,sorted=False) 
+                assert self.label.shape == self.Lossmasks.shape
 
     def build_attention_mask(self):
         # lazily create causal attention mask, with full attention between the vision tokens
@@ -343,7 +343,7 @@ class LightningCLIPModule(LightningModule):
             for hook in self.pruneHooks:
                 global_entropy = hook.retrieve()
                 hook.remove()        
-
+        self.test_token_embeddings()
                 # im_scores =map(lambda name, block: prune_Residual_Attention_block(block, global_entropy[name], self.args["prune_eta"]), filter(lambda name,block: isinstance(block, ResidualAttentionBlock) and name in global_entropy.keys(), self.encode_image.named_modules()[:-1]))
                 # for imscoredict in im_scores:
                 #     for (param_to_prune, im_score) in imscoredict.items():
