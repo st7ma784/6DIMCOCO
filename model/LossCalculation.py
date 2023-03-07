@@ -5,26 +5,26 @@ from functools import partial,reduce
 '''
 This is research code... it is not clean and it is not commented
 
-If you wish to use it for TPUs, I strongly recommend you refactor this to 
-minimize the if statements, using a function factory. Otherwise your runs
-will be very slow.
+If you wish to use it for TPUs, I strongly recommend you refactor your code to use this style of function factory.
+ Otherwise your runs will be very slow.
 
 '''
 
 
-def oneminus(*args):
-    return tuple(map(lambda arg: 1-arg, args))
+def oneminus(args):
+    return 1-args
 def null(*args):
     return args
+
 def normargs(*args):
     return map(lambda arg: arg/arg.norm(dim=-1, keepdim=True), args)
-def logargs(*args):
-    return tuple(map(torch.log,args))
+def logargs(args):
+    return torch.log(args)
 
 
 def get_loss_fn(logitsversion=0,norm=False,log=False):
     baseLogits=calculate_loss
-    logfunction=null
+    logfunction=lambda x:x
     normfunction=null
     if norm:
         normfunction=normargs
@@ -50,8 +50,7 @@ def get_loss_fn(logitsversion=0,norm=False,log=False):
             return oneminus(logfunction(calculate_loss6(*args)))
 
     def lossfn(*args):
-        normfunction(*args)
-        return baseLogits(*args) 
+        return baseLogits(*normfunction(*args)) 
     return lossfn
 
 
@@ -148,3 +147,15 @@ def calculate_loss6(I, C1, C2, C3, C4, C5):
                                                         C4.view(1,1,1,1,C4.shape[0],1,-1),
                                                         C5.view(1,1,1,1,1,C5.shape[0],-1)]),2),alpha=1/6),dim=-1))
     
+
+def get_loss_sum(version=False):
+    if version:
+        return add_loss_sum
+    else:
+        return add_loss_sum2
+
+from functools import reduce
+def add_loss_sum(I=[],T=[]):
+    return reduce(torch.add,I)/len(I)+reduce(torch.add,T)/len(T)
+def add_loss_sum2(I=[],T=[]):
+    return reduce(torch.add,I+T)/(len(I)+len(T))

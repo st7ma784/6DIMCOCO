@@ -8,6 +8,7 @@ def get_proj_fn(projection):
         projection=inv3
     elif projection=="None":
         projection=inv
+    return projection
 def null(proj,im,text):
     return im,text
 def inv(proj,im=None,text=None):

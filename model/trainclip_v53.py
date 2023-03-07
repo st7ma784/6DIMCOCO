@@ -43,8 +43,8 @@ class LightningCLIPModule(LightningModule):
 
         super().__init__()
         self.save_hyperparameters()
-        print("learning_rate",learning_rate)
-        self.meanloss=meanloss
+        from model.LossCalculation import get_loss_sum
+        self.meanloss=get_loss_sum(meanloss)
         self.context_length = context_length
         self.encoder = Transformer(
             width=transformer_width,
@@ -73,13 +73,9 @@ class LightningCLIPModule(LightningModule):
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
         self.transformer_width=transformer_width
         self.handles=[]
-        self.features=[]
-        
-        self.labels=[]
         self.model1_info={'Name':"SelfCLIP",}
         self.model2_info={'Name': "Stock CLIP",}
         self.naninfcount=0
-        print("done")
         from model.LossCalculation import calculate_lossStock as sl
         self.calculate_lossStock=sl
         from model.LossCalculation import get_loss_fn 
@@ -110,12 +106,13 @@ class LightningCLIPModule(LightningModule):
             self.pruneHooks=[]
         self.initialize_parameters()
         if exactlabels:
-            testBatch=torch.rand(self.hparams.batch_size,self.transformer_width,device=self.device)
-            self.label=self.calculate_loss(testBatch,testBatch,testBatch,testBatch,testBatch,testBatch).to(self.device,non_blocking=True)
+            with torch.no_grad:
+                testBatch=torch.rand(self.hparams.batch_size,self.transformer_width,device=self.device)
+                self.label=self.calculate_loss(testBatch,testBatch,testBatch,testBatch,testBatch,testBatch).to(self.device,non_blocking=True)
             print("using labels: ", self.label[:2,:2,:2,:2,:2,:2])
         #elif add in the case where using -inf or -1 instead of zeros as below....
         else:
-            self.label=torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.ones(self.hparams.batch_size,dtype=torch.long,device=self.device))))))#.detach()
+            self.label=torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.ones(self.hparams.batch_size,dtype=torch.float,device=self.device)))))).detach()
             self.label=(self.label*2)-1
             print("using labelsv2: ", self.label[:2,:2,:2,:2,:2,:2])
         self.maskLoss=maskLosses
@@ -192,7 +189,7 @@ class LightningCLIPModule(LightningModule):
 
         [i],[c1,c2,c3,c4,c5]=self.projection(self.text_projection,im=[image_features],text=[caption_features1,caption_features2,caption_features3,caption_features4,caption_features5])
         
-        return self.calculate_loss(i,c1,c2,c3,c4,c5)*self.logit_scale.exp()
+        return self.calculate_loss(i,c1,c2,c3,c4,c5).mul(torch.exp(self.logit_scale))
 
     def on_train_epoch_start(self) -> None:
         if self.prune:
@@ -216,15 +213,15 @@ class LightningCLIPModule(LightningModule):
         #  Option 1: divide down.
         #  Option 2: 1- output...
         # option 3: logarithmic functions? 
-        if self.maskLoss:
-            loss=self.maskloss(logits,labels)
-            meanloss=torch.mean(loss)
-            self.log("meanloss",meanloss,enable_graph=False, rank_zero_only=True)
-            for mask in self.masks:
-                self.log("maskVal={}".format(mask),torch.mean(loss[self.Lossmasks==mask]),enable_graph=False, rank_zero_only=True)
-                self.log("proportionmaskVal={}".format(mask),torch.div(torch.mean(loss[self.Lossmasks==mask]),meanloss),enable_graph=False, rank_zero_only=True)
-                # self.log("absdeltamaskVal={}".format(mask),torch.sub(loss,loss[self.Lossmasks==mask]),enable_graph=False, rank_zero_only=True)
-            
+        mloss=self.maskloss(logits,labels)
+        meanloss=torch.mean(mloss)
+        self.log("meanloss",meanloss,enable_graph=False, rank_zero_only=True)
+        for mask in self.masks:
+            mea=torch.mean(mloss[self.Lossmasks==mask])
+            self.log("maskVal={}".format(mask),mea,enable_graph=False, rank_zero_only=True)
+            self.log("proportionmaskVal={}".format(mask),torch.div(mea,meanloss),enable_graph=False, rank_zero_only=True)
+            # self.log("absdeltamaskVal={}".format(mask),torch.sub(loss,loss[self.Lossmasks==mask]),enable_graph=False, rank_zero_only=True)
+        
 
         lossim = self.loss(logits, labels)
             
@@ -234,15 +231,8 @@ class LightningCLIPModule(LightningModule):
         loss3 = self.loss(logits.permute(3,4,5,0,1,2), labels)
         loss4 = self.loss(logits.permute(4,5,0,1,2,3), labels)
         loss5 = self.loss(logits.permute(5,0,1,2,3,4), labels)
-        if self.meanloss:
-            loss = lossim+loss1+loss2+loss3+loss4+loss5
-            loss=loss/6
-        else:
-            losst=loss1+loss2+loss3+loss4+loss5
-            losst=losst/5
-            loss=lossim+losst
-            loss=loss/2
-        loss = loss.mean()
+        loss=self.meanloss(I=[lossim],T=[loss1,loss2,loss3,loss4,loss5]).mean()
+      
         self.log('train_loss', loss, prog_bar=True,enable_graph=False, rank_zero_only=True)
         
         return {"loss": loss}
@@ -309,7 +299,7 @@ class LightningCLIPModule(LightningModule):
         joint_HSIC=torch.nan_to_num(batch_HSIC3(a,torch.nan_to_num(torch.stack(list(self.model1_features.values())))))
         self.CAPhsic_matrix1=torch.add(self.CAPhsic_matrix1,joint_HSIC) 
         
-        image_features, captions = self.projection(self.text_projection,im=[image_features],text=[captions])
+        [image_features], [captions] = self.projection(self.text_projection,im=[image_features],text=[captions])
         # print("self.logit scale is 14 right? ",self.logit_scale.exp())
         logitsI,logitsT=self.calculate_lossStock(image_features, captions) 
         self.log("mean validation stock logits ", logitsI.mean())
