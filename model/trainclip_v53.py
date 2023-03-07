@@ -12,7 +12,7 @@ from warnings import warn
 import matplotlib.pyplot as plt
 from CKA_test import add_colorbar 
 from sklearn.linear_model import LogisticRegression
-
+from sklearn.cluster import KMeans
 class LightningCLIPModule(LightningModule):
     def __init__(self,
                 
@@ -123,7 +123,7 @@ class LightningCLIPModule(LightningModule):
             N=6
             Views=torch.diag_embed(torch.ones(N,dtype=torch.long)*B-1)+1
             bincounts2=reduce(torch.add,list(map(lambda Arr: torch.nn.functional.one_hot(Arr[0].view(*Arr[1]),num_classes=B),zip([torch.arange(B)]*N,Views.tolist()))))
-            self.Lossmasks=torch.sum(bincounts2.pow(2),dim=-1)
+            self.Lossmasks=torch.sum(bincounts2.pow(4),dim=-1)
             self.masks=torch.unique(torch.flatten(self.Lossmasks,0,N-1),dim=0,sorted=False) 
             assert self.label.shape == self.Lossmasks.shape
 
@@ -349,7 +349,24 @@ class LightningCLIPModule(LightningModule):
                 #     for (param_to_prune, im_score) in imscoredict.items():
                 #         prune_module(param_to_prune, im_score, self.args)
                 #then purun accordingly 
-        
+        #log the tokenembeddings for the text encoder, 
+    def test_token_embeddings(self):
+        #create int of all the tokens in vocab size
+        #embed them all with self.token_embeddings
+        #perform kmeans on them all, 
+        #log the clusters and the tokens nearest to each centroid. 
+        tokens=torch.arange(self.token_embeddings.num_embeddings)
+        embeddings=self.token_embeddings(tokens)
+        kmeans = KMeans(n_clusters=40, random_state=0).fit(embeddings)
+        for i in range(10):
+            print(kmeans.cluster_centers_[i])
+            print(tokens[kmeans.labels_==i])
+        self.logger.log_text("token embeddings cluster centers ",str(kmeans.cluster_centers_))
+        self.logger.log_text("token embeddings tokens nearest centers",str(tokens[kmeans.labels_==i]))
+        #log the tokens closest to the mean of all embeddings.
+        closest=torch.argsort(torch.norm(embeddings-embeddings.mean(dim=0),dim=1))
+        self.logger.log_text("token embeddings center-most tokens",str(tokens[closest[:10]]))
+        self.logger.log_text("token embeddings furthest tokens",str(tokens[closest[-10:]]))
     def _log_layer(self, model: str, name: str, layer: nn.Module,inp: torch.Tensor, out: torch.Tensor):
         if isinstance(out, tuple):
             out=out[0]       
