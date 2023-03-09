@@ -106,14 +106,14 @@ class LightningCLIPModule(LightningModule):
             self.pruneHooks=[]
         self.initialize_parameters()
         if exactlabels:
-            with torch.no_grad:
+            with torch.no_grad():
                 testBatch=torch.rand(self.hparams.batch_size,self.transformer_width,device=self.device)
                 self.label=self.calculate_loss(testBatch,testBatch,testBatch,testBatch,testBatch,testBatch).to(self.device,non_blocking=True)
             print("using labels: ", self.label[:2,:2,:2,:2,:2,:2])
         #elif add in the case where using -inf or -1 instead of zeros as below....
         else:
             self.label=torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.ones(self.hparams.batch_size,dtype=torch.float,device=self.device)))))).detach()
-            #self.label=(self.label*2)-1
+            #self.label=(self.label*2)-1 This makes loss negative! 
             print("using labelsv2: ", self.label[:2,:2,:2,:2,:2,:2])
         self.maskLoss=maskLosses
         self.loss=get_loss_calc(reduction='sum',mask=[])
@@ -358,18 +358,20 @@ class LightningCLIPModule(LightningModule):
         #embed them all with self.token_embeddings
         #perform kmeans on them all, 
         #log the clusters and the tokens nearest to each centroid. 
-        tokens=torch.arange(self.token_embedding.num_embeddings,dtype=torch.long,device=self.device)
-        embeddings=self.token_embedding(tokens).detach()
-        # kmeans = KMeans(n_clusters=40, random_state=0).fit(embeddings.cpu().numpy())
+        tokens=torch.arange(self.token_embedding.num_embeddings,device=self.device)
+        embeddings=self.token_embedding(tokens)
+        # kmeans = KMeans(n_clusters=40, random_state=0).fit(embeddings)
         # for i in range(10):
-        #     #print(kmeans.cluster_centers_[i])
+        #     print(kmeans.cluster_centers_[i])
         #     print(tokens[kmeans.labels_==i])
-        # #self.logger.log_text("token embeddings cluster centers ",[str(k) for k in kmeans.cluster_centers_])
-        #self.logger.log_text("token embeddings tokens nearest centers",tokens[kmeans.labels_==i].tolist())
-        #log the tokens closest to the mean of all embeddings.
+        # self.logger.log_text("token embeddings cluster centers ",str(kmeans.cluster_centers_))
+        # self.logger.log_text("token embeddings tokens nearest centers",str(tokens[kmeans.labels_==i]))
+        # #log the tokens closest to the mean of all embeddings.
         closest=torch.argsort(torch.norm(embeddings-embeddings.mean(dim=0),dim=1))
-        self.logger.log_text("token embeddings center-most tokens",[str(t) for t in tokens[closest[:10]].tolist()])
-        self.logger.log_text("token embeddings furthest tokens",[str(t) for t in tokens[closest[-10:]].tolist()])
+        self.logger.log_text("token embeddings center-most tokens",tokens[closest[:10]].tolist())
+        self.logger.log_text("token embeddings furthest tokens",tokens[closest[-10:]].tolist())
+
+        
     def _log_layer(self, model: str, name: str, layer: nn.Module,inp: torch.Tensor, out: torch.Tensor):
         if isinstance(out, tuple):
             out=out[0]       
