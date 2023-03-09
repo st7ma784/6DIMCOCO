@@ -62,7 +62,7 @@ class LightningCLIPModule(LightningModule):
             )
         
         #self.linear.weight=torch.nn.Parameter(self.clip.token_embedding.weight.T)
-        self.loss=torch.nn.CrossEntropyLoss(reduction='sum')
+        from model.LossCalculation import get_loss_calc
         self.valloss=torch.nn.CrossEntropyLoss(reduction='mean')
         self.logvariance=logvariance
         self.vocab_size = vocab_size
@@ -113,19 +113,22 @@ class LightningCLIPModule(LightningModule):
         #elif add in the case where using -inf or -1 instead of zeros as below....
         else:
             self.label=torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.ones(self.hparams.batch_size,dtype=torch.float,device=self.device)))))).detach()
-            self.label=(self.label*2)-1
+            #self.label=(self.label*2)-1
             print("using labelsv2: ", self.label[:2,:2,:2,:2,:2,:2])
         self.maskLoss=maskLosses
+        self.loss=get_loss_calc(reduction='sum',mask=[])
+
         if self.maskLoss:
             self.maskloss=torch.nn.MSELoss(reduction='none')
-            with torch.no_grad:
-                B=self.hparams.batch_size
-                N=6
+            with torch.no_grad():
+                B,N=self.hparams.batch_size,6
                 Views=torch.diag_embed(torch.ones(N,dtype=torch.long)*B-1)+1
-                bincounts2=reduce(torch.add,list(map(lambda Arr: torch.nn.functional.one_hot(torch.arange(B).view(*Arr),num_classes=B),Views.tolist())))
-                self.Lossmasks=torch.sum(bincounts2.pow(4),dim=-1)
-                self.masks=torch.unique(torch.flatten(self.Lossmasks,0,N-1),dim=0,sorted=False) 
+                self.Lossmasks=torch.sum(reduce(torch.add,list(map(lambda Arr: torch.nn.functional.one_hot(torch.arange(B).view(*Arr),num_classes=B),Views.tolist()))).pow(4),dim=-1).detach()
+                self.masks=torch.unique(torch.flatten(self.Lossmasks,0,N-1),dim=0,sorted=False).detach()
                 assert self.label.shape == self.Lossmasks.shape
+                self.loss=get_loss_calc(reduction='sum',mask=torch.logical_or(self.Lossmasks==N,self.Lossmasks==N).to(self.device, non_blocking=True))
+
+
 
     def build_attention_mask(self):
         # lazily create causal attention mask, with full attention between the vision tokens
@@ -355,18 +358,18 @@ class LightningCLIPModule(LightningModule):
         #embed them all with self.token_embeddings
         #perform kmeans on them all, 
         #log the clusters and the tokens nearest to each centroid. 
-        tokens=torch.arange(self.token_embeddings.num_embeddings)
-        embeddings=self.token_embeddings(tokens)
-        kmeans = KMeans(n_clusters=40, random_state=0).fit(embeddings)
-        for i in range(10):
-            print(kmeans.cluster_centers_[i])
-            print(tokens[kmeans.labels_==i])
-        self.logger.log_text("token embeddings cluster centers ",str(kmeans.cluster_centers_))
-        self.logger.log_text("token embeddings tokens nearest centers",str(tokens[kmeans.labels_==i]))
+        tokens=torch.arange(self.token_embedding.num_embeddings,dtype=torch.long,device=self.device)
+        embeddings=self.token_embedding(tokens).detach()
+        # kmeans = KMeans(n_clusters=40, random_state=0).fit(embeddings.cpu().numpy())
+        # for i in range(10):
+        #     #print(kmeans.cluster_centers_[i])
+        #     print(tokens[kmeans.labels_==i])
+        # #self.logger.log_text("token embeddings cluster centers ",[str(k) for k in kmeans.cluster_centers_])
+        #self.logger.log_text("token embeddings tokens nearest centers",tokens[kmeans.labels_==i].tolist())
         #log the tokens closest to the mean of all embeddings.
         closest=torch.argsort(torch.norm(embeddings-embeddings.mean(dim=0),dim=1))
-        self.logger.log_text("token embeddings center-most tokens",str(tokens[closest[:10]]))
-        self.logger.log_text("token embeddings furthest tokens",str(tokens[closest[-10:]]))
+        self.logger.log_text("token embeddings center-most tokens",[str(t) for t in tokens[closest[:10]].tolist()])
+        self.logger.log_text("token embeddings furthest tokens",[str(t) for t in tokens[closest[-10:]].tolist()])
     def _log_layer(self, model: str, name: str, layer: nn.Module,inp: torch.Tensor, out: torch.Tensor):
         if isinstance(out, tuple):
             out=out[0]       

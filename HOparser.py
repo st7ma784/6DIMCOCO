@@ -8,7 +8,7 @@ class parser(HyperOptArgumentParser):
         self.add_argument("--dir",default="/nobackup/projects/bdlan05/smander3/data",type=str)
         self.add_argument("--log_path",default="/nobackup/projects/bdlan05/smander3/logs/",type=str)
         self.opt_list("--learning_rate", default=0.00001, type=float, options=[1e-3,1e-5, 1e-4,], tunable=True)
-        self.opt_list("--batch_size", default=10, type=int, options=[6,8,10,12], tunable=True)
+        self.opt_list("--batch_size", default=8, type=int, options=[6,8,10,12], tunable=True)
         self.opt_list("--JSE", default=0, type=int, options=[0], tunable=True)
         self.opt_list("--prune",default=False,type=bool,options=[True,False])
         self.opt_list("--projection",default="None",type=str,options=["NONE","inv","iinv"])
@@ -16,7 +16,7 @@ class parser(HyperOptArgumentParser):
         self.opt_list("--exactlabels",default=False,type=bool,options=[True,False])
         self.opt_list("--meanloss",default=False,type=bool,options=[True,False])
 
-        self.opt_list("--logitsversion",default=3,type=int,options=[0,1,2,3,4,5,6])
+        self.opt_list("--logitsversion",default=4,type=int,options=[0,1,2,3,4,5])
         self.opt_list("--precision", default=16, options=[16], tunable=False)
         self.opt_list("--codeversion", default=6, type=int, options=[6], tunable=False)
         self.opt_list("--transformer_layers", default=5, type=int, options=[3,4,5,6], tunable=True)
