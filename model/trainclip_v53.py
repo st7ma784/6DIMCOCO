@@ -355,7 +355,7 @@ class LightningCLIPModule(LightningModule):
         #embed them all with self.token_embeddings
         #perform kmeans on them all, 
         #log the clusters and the tokens nearest to each centroid. 
-        tokens=torch.arange(self.token_embedding.num_embeddings)
+        tokens=torch.arange(self.token_embedding.num_embeddings,device=self.device)
         embeddings=self.token_embedding(tokens)
         # kmeans = KMeans(n_clusters=40, random_state=0).fit(embeddings)
         # for i in range(10):
