@@ -118,7 +118,7 @@ class LightningCLIPModule(LightningModule):
         self.maskLoss=maskLosses
         if self.maskLoss:
             self.maskloss=torch.nn.MSELoss(reduction='none')
-            with torch.no_grad:
+            with torch.no_grad():
                 B=self.hparams.batch_size
                 N=6
                 Views=torch.diag_embed(torch.ones(N,dtype=torch.long)*B-1)+1
