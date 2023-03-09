@@ -357,13 +357,13 @@ class LightningCLIPModule(LightningModule):
         #log the clusters and the tokens nearest to each centroid. 
         tokens=torch.arange(self.token_embedding.num_embeddings)
         embeddings=self.token_embedding(tokens)
-        kmeans = KMeans(n_clusters=40, random_state=0).fit(embeddings)
-        for i in range(10):
-            print(kmeans.cluster_centers_[i])
-            print(tokens[kmeans.labels_==i])
-        self.logger.log_text("token embeddings cluster centers ",str(kmeans.cluster_centers_))
-        self.logger.log_text("token embeddings tokens nearest centers",str(tokens[kmeans.labels_==i]))
-        #log the tokens closest to the mean of all embeddings.
+        # kmeans = KMeans(n_clusters=40, random_state=0).fit(embeddings)
+        # for i in range(10):
+        #     print(kmeans.cluster_centers_[i])
+        #     print(tokens[kmeans.labels_==i])
+        # self.logger.log_text("token embeddings cluster centers ",str(kmeans.cluster_centers_))
+        # self.logger.log_text("token embeddings tokens nearest centers",str(tokens[kmeans.labels_==i]))
+        # #log the tokens closest to the mean of all embeddings.
         closest=torch.argsort(torch.norm(embeddings-embeddings.mean(dim=0),dim=1))
         self.logger.log_text("token embeddings center-most tokens",str(tokens[closest[:10]]))
         self.logger.log_text("token embeddings furthest tokens",str(tokens[closest[-10:]]))
