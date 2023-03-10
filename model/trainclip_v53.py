@@ -112,7 +112,7 @@ class LightningCLIPModule(LightningModule):
             print("using labels: ", self.label[:2,:2,:2,:2,:2,:2])
         #elif add in the case where using -inf or -1 instead of zeros as below....
         else:
-            self.label=torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.ones(self.hparams.batch_size,dtype=torch.float,device=self.device)))))).detach()
+            self.label=torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.ones(self.hparams.batch_size,dtype=torch.float,device=self.device))))))
             #self.label=(self.label*2)-1 This makes loss negative! 
             print("using labelsv2: ", self.label[:2,:2,:2,:2,:2,:2])
         self.maskLoss=maskLosses
@@ -126,7 +126,7 @@ class LightningCLIPModule(LightningModule):
                 self.Lossmasks=torch.sum(reduce(torch.add,list(map(lambda Arr: torch.nn.functional.one_hot(torch.arange(B).view(*Arr),num_classes=B),Views.tolist()))).pow(4),dim=-1).detach()
                 self.masks=torch.unique(torch.flatten(self.Lossmasks,0,N-1),dim=0,sorted=False).detach()
                 assert self.label.shape == self.Lossmasks.shape
-                self.loss=get_loss_calc(reduction='sum',mask=torch.logical_or(self.Lossmasks==N,self.Lossmasks==N).to(self.device, non_blocking=True))
+            self.loss=get_loss_calc(reduction='sum',mask=torch.logical_or(self.Lossmasks==self.masks[0],self.Lossmasks==self.masks[-1]).to(self.device, non_blocking=True))
 
 
 

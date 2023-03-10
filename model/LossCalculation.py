@@ -28,7 +28,7 @@ def get_loss_fn(logitsversion=0,norm=False,log=False):
     normfunction=null
     if norm:
         normfunction=normargs
-    # if log:
+        # if log:
     #     logfunction=logargs
     if logitsversion==0:
         def baseLogits(*args):
@@ -175,9 +175,8 @@ def get_loss_calc(reduction='sum',mask=[]):
             #l=torch.nn.functional.cross_entropy(x.where(mask,torch.tensor(-100)),y.where(mask,torch.tensor(-100)),ignore_index=-100,reduction="mean")
             #l1=torch.nn.functional.cross_entropy(x.where(mask,torch.tensor(-100)),y.where(mask,torch.tensor(-100)),ignore_index=-100,reduction="sum")
             #l2=torch.nn.functional.cross_entropy(x.where(mask,torch.tensor(-100)),y.where(mask,torch.tensor(-100)),ignore_index=-100,reduction="none")
-
             #print("function loss: {} \n vs \n {} \n vs \n {}".format(l,l1,l2))
-            return torch.nn.functional.cross_entropy(x.where(mask==False,torch.ones([],device=x.device)*-100),y.where(mask==False,torch.ones([],device=y.device)*-100),reduction="mean",ignore_index=-100)
+            return torch.nn.functional.cross_entropy(x[mask],y[mask])*mask.shape[0]/mask.sum()
          #negative because when mask is used, the loss is actually the negative of the loss
     
     return loss
