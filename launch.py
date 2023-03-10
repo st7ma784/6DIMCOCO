@@ -40,6 +40,8 @@ def train(config={
     # from pl_bolts.datamodules import ImagenetDataModule
     model=LightningCLIPModule( train_batch_size=config["batch_size"],
                                 **config)
+    if logtool:
+        logtool.watch(model, log_freq=1000,log_graph=False)
     if dir is None:
         dir=config.get("dir",".")
     if Dataset is None:
