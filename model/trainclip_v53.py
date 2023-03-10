@@ -105,10 +105,14 @@ class LightningCLIPModule(LightningModule):
         else:
             self.pruneHooks=[]
         self.initialize_parameters()
+        self.loss=get_loss_calc(reduction='sum',mask=[])
+
         if exactlabels:
             with torch.no_grad():
                 testBatch=torch.rand(self.hparams.batch_size,self.transformer_width,device=self.device)
                 self.label=self.calculate_loss(testBatch,testBatch,testBatch,testBatch,testBatch,testBatch).to(self.device,non_blocking=True)
+                #convert this to probabilities in range [0,1]
+                self.label=torch.nn.functional.softmax(self.label)
             print("using labels: ", self.label[:2,:2,:2,:2,:2,:2])
         #elif add in the case where using -inf or -1 instead of zeros as below....
         else:
@@ -116,7 +120,6 @@ class LightningCLIPModule(LightningModule):
             #self.label=(self.label*2)-1 This makes loss negative! 
             print("using labelsv2: ", self.label[:2,:2,:2,:2,:2,:2])
         self.maskLoss=maskLosses
-        self.loss=get_loss_calc(reduction='sum',mask=[])
 
         if self.maskLoss:
             self.maskloss=torch.nn.MSELoss(reduction='none')
@@ -371,7 +374,7 @@ class LightningCLIPModule(LightningModule):
         self.logger.log_text("token embeddings center-most tokens",tokens[closest[:10]].tolist())
         self.logger.log_text("token embeddings furthest tokens",tokens[closest[-10:]].tolist())
 
-        
+
     def _log_layer(self, model: str, name: str, layer: nn.Module,inp: torch.Tensor, out: torch.Tensor):
         if isinstance(out, tuple):
             out=out[0]       
