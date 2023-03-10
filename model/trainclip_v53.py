@@ -370,9 +370,9 @@ class LightningCLIPModule(LightningModule):
         # self.logger.log_text("token embeddings cluster centers ",str(kmeans.cluster_centers_))
         # self.logger.log_text("token embeddings tokens nearest centers",str(tokens[kmeans.labels_==i]))
         # #log the tokens closest to the mean of all embeddings.
-        closest=torch.argsort(torch.norm(embeddings-embeddings.mean(dim=0),dim=1))
-        self.logger.log_text("token embeddings center-most tokens",tokens[closest[:10]].tolist())
-        self.logger.log_text("token embeddings furthest tokens",tokens[closest[-10:]].tolist())
+        values,indxs=torch.sort(torch.norm(embeddings-embeddings.mean(dim=0),dim=1),)
+        self.logger.log_text("token embeddings center-most tokens",tokens[indxs[:10]].tolist(),values[:10])
+        self.logger.log_text("token embeddings furthest tokens",tokens[indxs[-10:]].tolist(),values[:-10])
 
 
     def _log_layer(self, model: str, name: str, layer: nn.Module,inp: torch.Tensor, out: torch.Tensor):
