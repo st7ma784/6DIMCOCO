@@ -123,21 +123,21 @@ class LightningCLIPModule(LightningModule):
         self.maskLoss=maskLosses
         self.maskloss=torch.nn.MSELoss(reduction='none')
 
-        if self.maskLoss!=0:
-            with torch.no_grad():
-                B,N=self.hparams.batch_size,6
-                Views=torch.diag_embed(torch.ones(N,dtype=torch.long)*B-1)+1
-                self.Lossmask=torch.sum(reduce(torch.add,list(map(lambda Arr: torch.nn.functional.one_hot(torch.arange(B).view(*Arr),num_classes=B),Views.tolist()))).pow(4),dim=-1).detach()
-                self.masks=torch.unique(torch.flatten(self.Lossmask,0,N-1),dim=0,sorted=False).detach()
-                assert self.label.shape == self.Lossmask.shape
-            self.alpha=nn.Parameter(torch.ones(len(self.masks)))
-            if self.maskLoss==1:
-                masks=torch.stack([self.Lossmask==masks for masks in self.masks],dim=0)
-                self.Lossmasks=torch.sum(torch.mul(masks,torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True))),dim=0).to(self.device)
-            else:
-                self.Lossmasks=reduce(torch.logical_or,[self.Lossmask==self.masks[i] for i in range(-2,2)]).to(self.device)
-            
-            self.loss=get_loss_calc(reduction='sum',mask=self.Lossmasks.to(self.device,non_blocking=True))
+        with torch.no_grad():
+            B,N=self.hparams.batch_size,6
+            Views=torch.diag_embed(torch.ones(N,dtype=torch.long)*B-1)+1
+            self.Lossmask=torch.sum(reduce(torch.add,list(map(lambda Arr: torch.nn.functional.one_hot(torch.arange(B).view(*Arr),num_classes=B),Views.tolist()))).pow(4),dim=-1).detach()
+            self.masks=torch.unique(torch.flatten(self.Lossmask,0,N-1),dim=0,sorted=False).detach()
+            assert self.label.shape == self.Lossmask.shape
+        self.alpha=nn.Parameter(torch.ones(len(self.masks)))
+        if self.maskLoss==1:
+            masks=torch.stack([self.Lossmask==masks for masks in self.masks],dim=0)
+            self.Lossmasks=torch.sum(torch.mul(masks,torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True))),dim=0).to(self.device)
+        elif self.maskLoss==2:
+            self.Lossmasks=reduce(torch.logical_or,[self.Lossmask==self.masks[i] for i in range(-2,2)]).to(self.device)
+        else:
+            self.Lossmasks=[]
+        self.loss=get_loss_calc(reduction='sum',mask=self.Lossmasks)
             
             #alpha for weighting regions. 
         #this is one set of masks, theres another set however, of
