@@ -129,7 +129,7 @@ class LightningCLIPModule(LightningModule):
             self.Lossmask=torch.sum(reduce(torch.add,list(map(lambda Arr: torch.nn.functional.one_hot(torch.arange(B).view(*Arr),num_classes=B),Views.tolist()))).pow(4),dim=-1).detach()
             self.masks=torch.unique(torch.flatten(self.Lossmask,0,N-1),dim=0,sorted=False).detach()
             assert self.label.shape == self.Lossmask.shape
-        self.alpha=nn.Parameter(torch.ones_like(self.masks))
+        self.alpha=nn.Parameter(torch.ones_like(self.masks,dtype=torch.float))
         if self.maskLoss==1:
             masks=torch.stack([self.Lossmask==masks for masks in self.masks],dim=0)
             self.Lossmasks=torch.sum(torch.mul(masks,torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True))),dim=0).to(self.device)
