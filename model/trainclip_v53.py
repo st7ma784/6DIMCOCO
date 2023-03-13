@@ -121,9 +121,9 @@ class LightningCLIPModule(LightningModule):
             print("using labelsv2: ", self.label[:2,:2,:2,:2,:2,:2])
         self.label=torch.nan_to_num(self.label)
         self.maskLoss=maskLosses
-        
+        self.maskloss=torch.nn.MSELoss(reduction='none')
+
         if self.maskLoss!=0:
-            self.maskloss=torch.nn.MSELoss(reduction='none')
             with torch.no_grad():
                 B,N=self.hparams.batch_size,6
                 Views=torch.diag_embed(torch.ones(N,dtype=torch.long)*B-1)+1
