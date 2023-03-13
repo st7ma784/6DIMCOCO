@@ -19,7 +19,7 @@ class LightningCLIPModule(LightningModule):
                 learning_rate,
                 logitsversion=0,
                 normlogits=True,
-                maskLosses=True,
+                maskLosses=0.5,
                 projection='inv',
                 logvariance=False,
                 prune=True,
@@ -119,18 +119,28 @@ class LightningCLIPModule(LightningModule):
             self.label=torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.ones(self.hparams.batch_size,dtype=torch.float,device=self.device))))))
             #self.label=(self.label*2)-1 This makes loss negative! 
             print("using labelsv2: ", self.label[:2,:2,:2,:2,:2,:2])
+        self.label=torch.nan_to_num(self.label)
         self.maskLoss=maskLosses
-
-        if self.maskLoss:
+        
+        if self.maskLoss!=0:
             self.maskloss=torch.nn.MSELoss(reduction='none')
             with torch.no_grad():
                 B,N=self.hparams.batch_size,6
                 Views=torch.diag_embed(torch.ones(N,dtype=torch.long)*B-1)+1
-                self.Lossmasks=torch.sum(reduce(torch.add,list(map(lambda Arr: torch.nn.functional.one_hot(torch.arange(B).view(*Arr),num_classes=B),Views.tolist()))).pow(4),dim=-1).detach()
-                self.masks=torch.unique(torch.flatten(self.Lossmasks,0,N-1),dim=0,sorted=False).detach()
-                assert self.label.shape == self.Lossmasks.shape
-            self.loss=get_loss_calc(reduction='sum',mask=torch.logical_or(self.Lossmasks==self.masks[0],self.Lossmasks==self.masks[-1]).to(self.device, non_blocking=True))
-
+                self.Lossmask=torch.sum(reduce(torch.add,list(map(lambda Arr: torch.nn.functional.one_hot(torch.arange(B).view(*Arr),num_classes=B),Views.tolist()))).pow(4),dim=-1).detach()
+                self.masks=torch.unique(torch.flatten(self.Lossmask,0,N-1),dim=0,sorted=False).detach()
+                assert self.label.shape == self.Lossmask.shape
+            self.alpha=nn.Parameter(torch.ones(len(self.masks)))
+            if self.maskLoss==1:
+                masks=torch.stack([self.Lossmask==masks for masks in self.masks],dim=0)
+                self.Lossmasks=torch.sum(torch.mul(masks,torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True))),dim=0).to(self.device)
+            else:
+                self.Lossmasks=reduce(torch.logical_or,[self.Lossmask==self.masks[i] for i in range(-2,2)]).to(self.device)
+            
+            self.loss=get_loss_calc(reduction='sum',mask=self.Lossmasks.to(self.device,non_blocking=True))
+            
+            #alpha for weighting regions. 
+        #this is one set of masks, theres another set however, of
 
 
     def build_attention_mask(self):
@@ -201,11 +211,17 @@ class LightningCLIPModule(LightningModule):
         if self.prune:
             for hook in self.pruneHooks:
                 hook.set_up()
-
+        # if hasattr(self,"alpha"):
+        #     self.logger.log_text("mask weights",columns=[str(i) for i in self.masks.tolist()],data=[self.alpha.tolist()])
+        #     self.logger.log_text("effective weights", columns=[str(i) for i in self.masks.tolist()],data=[torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True)).tolist()])
+        
     def on_train_epoch_end(self) -> None:
-         if self.prune:
+        if self.prune:
             for hook in self.pruneHooks:
                 hook.remove()
+        if hasattr(self,"alpha"):
+            self.logger.log_text("mask weights",columns=[str(i) for i in self.masks.tolist()],data=self.alpha.tolist())
+            self.logger.log_text("effective weights", columns=[str(i) for i in self.masks.tolist()],data=[torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True)).tolist()])
         
     def training_step(self, batch, batch_idx,optimizer_idx=0):
 
@@ -223,12 +239,17 @@ class LightningCLIPModule(LightningModule):
         meanloss=torch.mean(mloss)
         self.log("meanloss",meanloss,enable_graph=False, rank_zero_only=True)
         for mask in self.masks:
-            mea=torch.mean(mloss[self.Lossmasks==mask])
+            mea=torch.mean(mloss[self.Lossmask==mask])
             self.log("maskVal={}".format(mask),mea,enable_graph=False, rank_zero_only=True)
             self.log("proportionmaskVal={}".format(mask),torch.div(mea,meanloss),enable_graph=False, rank_zero_only=True)
             # self.log("absdeltamaskVal={}".format(mask),torch.sub(loss,loss[self.Lossmasks==mask]),enable_graph=False, rank_zero_only=True)
+        if hasattr(self,"alpha"):
+            self.logger.log_text("mask weights",columns=[str(i) for i in self.masks.tolist()],data=[self.alpha.tolist()])
+            self.logger.log_text("effective weights", columns=[str(i) for i in self.masks.tolist()],data=[torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True)).tolist()])
         
-
+        # self.logger.log_text("mask weights",columns=self.masks.tolist(),data=self.alpha.tolist())
+        # self.logger.log_text("effective weights", columns=self.masks.tolist(),data=torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True)).tolist())
+        
         lossim = self.loss(logits, labels)
             
         
