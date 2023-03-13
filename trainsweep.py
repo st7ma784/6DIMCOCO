@@ -18,6 +18,9 @@ if __name__=="__main__":
             'precision': {
                 'values': ['bf16']
             },
+            'maskLosses': {
+                'values': [0,1,2]
+            },
             'embed_dim':{
                 'values': [512]
             }, 
