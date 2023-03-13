@@ -129,7 +129,7 @@ class LightningCLIPModule(LightningModule):
             self.Lossmask=torch.sum(reduce(torch.add,list(map(lambda Arr: torch.nn.functional.one_hot(torch.arange(B).view(*Arr),num_classes=B),Views.tolist()))).pow(4),dim=-1).detach()
             self.masks=torch.unique(torch.flatten(self.Lossmask,0,N-1),dim=0,sorted=False).detach()
             assert self.label.shape == self.Lossmask.shape
-        self.alpha=nn.Parameter(torch.ones(len(self.masks)))
+        self.alpha=nn.Parameter(torch.ones_like(self.masks))
         if self.maskLoss==1:
             masks=torch.stack([self.Lossmask==masks for masks in self.masks],dim=0)
             self.Lossmasks=torch.sum(torch.mul(masks,torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True))),dim=0).to(self.device)
@@ -243,9 +243,9 @@ class LightningCLIPModule(LightningModule):
             self.log("maskVal={}".format(mask),mea,enable_graph=False, rank_zero_only=True)
             self.log("proportionmaskVal={}".format(mask),torch.div(mea,meanloss),enable_graph=False, rank_zero_only=True)
             # self.log("absdeltamaskVal={}".format(mask),torch.sub(loss,loss[self.Lossmasks==mask]),enable_graph=False, rank_zero_only=True)
-        if hasattr(self,"alpha"):
-            self.logger.log_text("mask weights",columns=[str(i) for i in self.masks.tolist()],data=[self.alpha.tolist()])
-            self.logger.log_text("effective weights", columns=[str(i) for i in self.masks.tolist()],data=[torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True)).tolist()])
+        # if hasattr(self,"alpha"):
+        #     self.logger.log_text("mask weights",columns=[str(i) for i in self.masks.tolist()],data=[self.alpha.tolist()])
+        #     self.logger.log_text("effective weights", columns=[str(i) for i in self.masks.tolist()],data=[torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True)).tolist()])
         
         # self.logger.log_text("mask weights",columns=self.masks.tolist(),data=self.alpha.tolist())
         # self.logger.log_text("effective weights", columns=self.masks.tolist(),data=torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True)).tolist())
