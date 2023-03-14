@@ -220,8 +220,8 @@ class LightningCLIPModule(LightningModule):
             for hook in self.pruneHooks:
                 hook.remove()
         if hasattr(self,"alpha"):
-            self.logger.log_text("mask weights",columns=[str(i) for i in self.masks.tolist()],data=self.alpha.tolist())
-            self.logger.log_text("effective weights", columns=[str(i) for i in self.masks.tolist()],data=[torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True)).tolist()])
+            self.logger.log_text("mask weights",columns=self.masks.tolist(),data=[self.alpha.tolist()])
+            self.logger.log_text("effective weights", columns=self.masks.tolist(),data=[torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True)).tolist()])
         
     def training_step(self, batch, batch_idx,optimizer_idx=0):
 
