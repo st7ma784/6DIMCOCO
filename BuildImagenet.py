@@ -111,24 +111,7 @@ class ImagenetDataModule(LightningDataModule):
         self._verify_splits(self.data_dir, "train")
         self._verify_splits(self.data_dir, "val")
 
-        for split in ["train", "val"]:
-            files = os.listdir(os.path.join(self.data_dir, split))
-            if "meta.bin" not in files:
-                raise FileNotFoundError(
-                    """
-                no meta.bin present. Imagenet is no longer automatically downloaded by PyTorch.
-                To get imagenet:
-                1. download yourself from http://www.image-net.org/challenges/LSVRC/2012/downloads
-                https://image-net.org/data/winter21_whole.tar.gz
-                2. download the devkit (ILSVRC2012_devkit_t12.tar.gz)
-                3. generate the meta.bin file using the devkit
-                4. copy the meta.bin file into both train and val split folders
-                To generate the meta.bin do the following:
-                from pl_bolts.datasets import UnlabeledImagenet
-                path = '/path/to/folder/with/ILSVRC2012_devkit_t12.tar.gz/'
-                UnlabeledImagenet.generate_meta_bins(path)
-                """
-                )
+
 
     def train_dataloader(self) -> DataLoader:
         """Uses the train split of imagenet2012 and puts away a portion of it for the validation split."""
