@@ -13,13 +13,18 @@ import matplotlib.pyplot as plt
 from CKA_test import add_colorbar 
 from sklearn.linear_model import LogisticRegression
 from sklearn.cluster import KMeans
+
+
+
+torch.autograd.set_detect_anomaly(True)
+
 class LightningCLIPModule(LightningModule):
     def __init__(self,
                 
                 learning_rate,
                 logitsversion=0,
                 normlogits=True,
-                maskLosses=0.5,
+                maskLosses=2,
                 projection='inv',
                 logvariance=False,
                 prune=True,
@@ -123,6 +128,7 @@ class LightningCLIPModule(LightningModule):
         self.maskLoss=maskLosses
         self.maskloss=torch.nn.MSELoss(reduction='none')
 
+        torch.autograd.set_detect_anomaly(True)
         with torch.no_grad():
             B,N=self.hparams.batch_size,6
             Views=torch.diag_embed(torch.ones(N,dtype=torch.long)*B-1)+1
@@ -130,13 +136,16 @@ class LightningCLIPModule(LightningModule):
             self.masks=torch.unique(torch.flatten(self.Lossmask,0,N-1),dim=0,sorted=False).detach()
             assert self.label.shape == self.Lossmask.shape
         self.alpha=nn.Parameter(torch.ones_like(self.masks,dtype=torch.float))
+        self.Lossmasks=torch.ones([])
         if self.maskLoss==1:
-            masks=torch.stack([self.Lossmask==masks for masks in self.masks],dim=-1)
-            self.Lossmasks=torch.sum(torch.mul(masks,torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True))),dim=-1).to(self.device)
+            masks=torch.stack([self.Lossmask==masks for masks in self.masks],dim=-1).detach()
+            self.Lossmasks=torch.sum(torch.mul(torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True)),masks),dim=-1)
         elif self.maskLoss==2:
-            self.Lossmasks=reduce(torch.logical_or,[self.Lossmask==self.masks[i] for i in range(-2,2)]).to(self.device)
-        else:
-            self.Lossmasks=[]
+            self.Lossmasks=reduce(torch.logical_or,[self.Lossmask==self.masks[i] for i in range(-2,2)])
+        
+            
+       
+
         self.loss=get_loss_calc(reduction='sum',mask=self.Lossmasks)
             
             #alpha for weighting regions. 
@@ -211,6 +220,7 @@ class LightningCLIPModule(LightningModule):
         if self.prune:
             for hook in self.pruneHooks:
                 hook.set_up()
+        self.Lossmasks=self.Lossmasks.to(self.device)
         # if hasattr(self,"alpha"):
         #     self.logger.log_text("mask weights",columns=[str(i) for i in self.masks.tolist()],data=[self.alpha.tolist()])
         #     self.logger.log_text("effective weights", columns=[str(i) for i in self.masks.tolist()],data=[torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True)).tolist()])

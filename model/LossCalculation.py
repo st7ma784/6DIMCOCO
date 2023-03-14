@@ -165,11 +165,11 @@ def add_loss_sum2(I=[],T=[]):
     return reduce(torch.add,I+T)/(len(I)+len(T))
 
 
-def get_loss_calc(reduction='sum',mask=[],alpha=None):
+def get_loss_calc(reduction='sum',mask=None,alpha=None):
     #returns a function that calculates the loss from target labels and logits and masks the output with the mask before reduction
 #    is used, the loss is actually the negative of the loss
     
-    if mask==[]:
+    if mask==None:
 
         def loss(x,y):
             return torch.nn.functional.cross_entropy(x,y,reduction=reduction)
@@ -181,8 +181,11 @@ def get_loss_calc(reduction='sum',mask=[],alpha=None):
             #l1=torch.nn.functional.cross_entropy(x.where(mask,torch.tensor(-100)),y.where(mask,torch.tensor(-100)),ignore_index=-100,reduction="sum")
             #l2=torch.nn.functional.cross_entropy(x.where(mask,torch.tensor(-100)),y.where(mask,torch.tensor(-100)),ignore_index=-100,reduction="none")
             #print("function loss: {} \n vs \n {} \n vs \n {}".format(l,l1,l2))
-           
-            return torch.nn.functional.cross_entropy(x * mask.to(x.device),y * mask.to(x.device))#*mask.shape[0]/mask.sum()
+            #mask=mask.to(x.device,non_blocking=True)
+            print(x.device)
+            print(y.device)
+            print(mask.device)
+            return torch.nn.functional.cross_entropy(torch.mul(x,mask.to(x.device)),torch.mul(y, mask.to(y.device)))#*mask.shape[0]/mask.sum()
          #negative because when mask is used, the loss is actually the negative of the loss
     
     return loss
