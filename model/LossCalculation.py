@@ -182,7 +182,7 @@ def get_loss_calc(reduction='sum',mask=[],alpha=None):
             #l2=torch.nn.functional.cross_entropy(x.where(mask,torch.tensor(-100)),y.where(mask,torch.tensor(-100)),ignore_index=-100,reduction="none")
             #print("function loss: {} \n vs \n {} \n vs \n {}".format(l,l1,l2))
            
-            return torch.nn.functional.cross_entropy(x*mask.to(x.device,non_blocking=True),y*mask.to(x.device,non_blocking=True))#*mask.shape[0]/mask.sum()
+            return torch.nn.functional.cross_entropy(x * mask.to(x.device),y * mask.to(x.device))#*mask.shape[0]/mask.sum()
          #negative because when mask is used, the loss is actually the negative of the loss
     
     return loss
