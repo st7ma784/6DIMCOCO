@@ -110,7 +110,7 @@ class LightningCLIPModule(LightningModule):
         else:
             self.pruneHooks=[]
         self.initialize_parameters()
-        self.loss=get_loss_calc(reduction='sum',mask=[])
+        # self.loss=get_loss_calc(reduction='sum',ver=0,mask=torch.ones([1]))
 
         if exactlabels:
             with torch.no_grad():
@@ -129,24 +129,20 @@ class LightningCLIPModule(LightningModule):
         self.maskloss=torch.nn.MSELoss(reduction='none')
 
         torch.autograd.set_detect_anomaly(True)
-        with torch.no_grad():
-            B,N=self.hparams.batch_size,6
-            Views=torch.diag_embed(torch.ones(N,dtype=torch.long)*B-1)+1
-            self.Lossmask=torch.sum(reduce(torch.add,list(map(lambda Arr: torch.nn.functional.one_hot(torch.arange(B).view(*Arr),num_classes=B),Views.tolist()))).pow(4),dim=-1).detach()
-            self.masks=torch.unique(torch.flatten(self.Lossmask,0,N-1),dim=0,sorted=False).detach()
-            assert self.label.shape == self.Lossmask.shape
+        #with torch.no_grad():
+        B,N=self.hparams.batch_size,6
+        Views=torch.diag_embed(torch.ones(N,dtype=torch.long)*B-1)+1
+        self.Lossmask=torch.sum(reduce(torch.add,list(map(lambda Arr: torch.nn.functional.one_hot(torch.arange(B).view(*Arr),num_classes=B),Views.tolist()))).pow(4),dim=-1)
+        assert self.label.shape == self.Lossmask.shape
+
+        self.masks=torch.unique(torch.flatten(self.Lossmask,0,-2),dim=0,sorted=False)
+
         self.alpha=nn.Parameter(torch.ones_like(self.masks,dtype=torch.float))
-        self.Lossmasks=torch.ones([])
-        if self.maskLoss==1:
-            masks=torch.stack([self.Lossmask==masks for masks in self.masks],dim=-1).detach()
-            self.Lossmasks=torch.sum(torch.mul(torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True)),masks),dim=-1)
-        elif self.maskLoss==2:
-            self.Lossmasks=reduce(torch.logical_or,[self.Lossmask==self.masks[i] for i in range(-2,2)])
-        
-            
+        self.Lossmasks=torch.ones([1],device=self.device)
+
        
 
-        self.loss=get_loss_calc(reduction='sum',mask=self.Lossmasks)
+        self.loss=get_loss_calc(reduction='sum',ver=self.maskLoss,mask=self.Lossmask)
             
             #alpha for weighting regions. 
         #this is one set of masks, theres another set however, of
@@ -220,7 +216,7 @@ class LightningCLIPModule(LightningModule):
         if self.prune:
             for hook in self.pruneHooks:
                 hook.set_up()
-        self.Lossmasks=self.Lossmasks.to(self.device)
+        #self.Lossmasks=self.Lossmasks#.to(self.device)
         # if hasattr(self,"alpha"):
         #     self.logger.log_text("mask weights",columns=[str(i) for i in self.masks.tolist()],data=[self.alpha.tolist()])
         #     self.logger.log_text("effective weights", columns=[str(i) for i in self.masks.tolist()],data=[torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True)).tolist()])
@@ -260,14 +256,14 @@ class LightningCLIPModule(LightningModule):
         # self.logger.log_text("mask weights",columns=self.masks.tolist(),data=self.alpha.tolist())
         # self.logger.log_text("effective weights", columns=self.masks.tolist(),data=torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True)).tolist())
         
-        lossim = self.loss(logits, labels)
+        lossim = self.loss(logits, labels,alpha=self.alpha)
             
         
-        loss1 = self.loss(logits.permute(1,2,3,4,5,0), labels)
-        loss2 = self.loss(logits.permute(2,3,4,5,0,1), labels)
-        loss3 = self.loss(logits.permute(3,4,5,0,1,2), labels)
-        loss4 = self.loss(logits.permute(4,5,0,1,2,3), labels)
-        loss5 = self.loss(logits.permute(5,0,1,2,3,4), labels)
+        loss1 = self.loss(logits.permute(1,2,3,4,5,0), labels,alpha=self.alpha)
+        loss2 = self.loss(logits.permute(2,3,4,5,0,1), labels,alpha=self.alpha)
+        loss3 = self.loss(logits.permute(3,4,5,0,1,2), labels,alpha=self.alpha)
+        loss4 = self.loss(logits.permute(4,5,0,1,2,3), labels,alpha=self.alpha)
+        loss5 = self.loss(logits.permute(5,0,1,2,3,4), labels,alpha=self.alpha)
         loss=self.meanloss(I=[lossim],T=[loss1,loss2,loss3,loss4,loss5]).mean()
       
         self.log('train_loss', loss, prog_bar=True,enable_graph=False, rank_zero_only=True)

@@ -165,27 +165,45 @@ def add_loss_sum2(I=[],T=[]):
     return reduce(torch.add,I+T)/(len(I)+len(T))
 
 
-def get_loss_calc(reduction='sum',mask=None,alpha=None):
+def get_loss_calc(reduction='sum',ver=0,mask=None):
     #returns a function that calculates the loss from target labels and logits and masks the output with the mask before reduction
 #    is used, the loss is actually the negative of the loss
-    
-    if mask==None:
+    print(mask)
+    if len(mask.shape)>1:
+       masks=torch.unique(torch.flatten(mask,0,-2),dim=0,sorted=False)
+    else:
+        print("masks:", mask.shape)
+        masks=None
+        ver=0
+    if ver==0:
 
-        def loss(x,y):
+        def loss(x,y,alpha):
             return torch.nn.functional.cross_entropy(x,y,reduction=reduction)
 
+    elif ver==1:
+        #onehot encode mask and multiply by alpha
+        
+        #masks=torch.stack([self.Lossmask==masks for masks in self.masks],dim=-1)
+        
+        #self.Lossmasks=torch.sum(masks*torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True)),dim=-1)
+        def loss(x,y,alpha):
+            Lossmasks=torch.sum(torch.nn.functional.one_hot(mask,num_classes=len(masks))*torch.nn.functional.softmax(alpha/torch.norm(alpha,keepdim=True)),dim=-1)
+            return torch.nn.functional.cross_entropy(x*Lossmasks,y*Lossmasks,reduction=reduction,)
+    elif ver==2:
+        def loss(x,y,alpha):
 
+            Lossmasks=reduce(torch.logical_or,[mask==masks[i] for i in range(-2,2)])
+            return torch.nn.functional.cross_entropy(x*Lossmasks,y*Lossmasks,reduction=reduction)
+            
     else:
-        def loss(x,y):
+        def loss(x,y,alpha):
             #l=torch.nn.functional.cross_entropy(x.where(mask,torch.tensor(-100)),y.where(mask,torch.tensor(-100)),ignore_index=-100,reduction="mean")
             #l1=torch.nn.functional.cross_entropy(x.where(mask,torch.tensor(-100)),y.where(mask,torch.tensor(-100)),ignore_index=-100,reduction="sum")
             #l2=torch.nn.functional.cross_entropy(x.where(mask,torch.tensor(-100)),y.where(mask,torch.tensor(-100)),ignore_index=-100,reduction="none")
             #print("function loss: {} \n vs \n {} \n vs \n {}".format(l,l1,l2))
             #mask=mask.to(x.device,non_blocking=True)
-            print(x.device)
-            print(y.device)
-            print(mask.device)
-            return torch.nn.functional.cross_entropy(torch.mul(x,mask.to(x.device)),torch.mul(y, mask.to(y.device)))#*mask.shape[0]/mask.sum()
+
+            return torch.nn.functional.cross_entropy(x*mask.to(x.device),y*mask.to(y.device))#*mask.shape[0]/mask.sum()
          #negative because when mask is used, the loss is actually the negative of the loss
     
     return loss
