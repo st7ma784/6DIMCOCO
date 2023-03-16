@@ -25,31 +25,31 @@ def logargs(args):
 def get_loss_fn(logitsversion=0,norm=False,log=False):
     baseLogits=calculate_loss
     logfunction=lambda x:x
-    normfunction=null
+    normfunction=lambda x:x
     if norm:
         normfunction=normargs
         # if log:
     #     logfunction=logargs
     if logitsversion==0:
         def baseLogits(*args):
-            return logfunction(calculate_loss(*args))
+            return logfunction(calculate_loss(*normfunction(*args)))
     elif logitsversion==1: 
         def baseLogits(*args):
-            return oneminus(logfunction(calculate_loss2(*args)))
+            return oneminus(logfunction(calculate_loss2(*normfunction(*args))))
     elif logitsversion==2: 
         def baseLogits(*args):
-            return oneminus(logfunction(calculate_loss3(*args)))        #one minus here
+            return oneminus(logfunction(calculate_loss3(*normfunction(*args))))        #one minus here
     elif logitsversion==3:
         #this does not work in any arrangement? 
         def baseLogits(*args):
-            return oneminus(logfunction(calculate_loss4(*args)))
+            return oneminus(logfunction(calculate_loss4(*normfunction(*args))))
     elif logitsversion==4:
         #this does not work in any arrangement either?
         def baseLogits(*args):
-            return oneminus(logfunction(calculate_loss5(*args)))
+            return oneminus(logfunction(calculate_loss5(*normfunction(*args))))
     elif logitsversion==5:
         def baseLogits(*args):
-            return oneminus(logfunction(calculate_loss6(*args)))
+            return oneminus(logfunction(calculate_loss6(*normfunction(*args))))
 
     def lossfn(*args):
         return baseLogits(*normfunction(*args)) 
