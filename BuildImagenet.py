@@ -3,44 +3,28 @@ from argparse import ArgumentParser
 from typing import Any, Callable, Optional
 
 from pytorch_lightning import LightningDataModule
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader,ImageFolder
 
 from pl_bolts.datasets import UnlabeledImagenet
 from pl_bolts.transforms.dataset_normalizations import imagenet_normalization
 from pl_bolts.utils import _TORCHVISION_AVAILABLE
 from pl_bolts.utils.stability import under_review
 from pl_bolts.utils.warnings import warn_missing_pkg
-
+from pysmartdl import SmartDL
+from pathlib import Path
 if _TORCHVISION_AVAILABLE:
     from torchvision import transforms as transform_lib
 else:  # pragma: no cover
     warn_missing_pkg("torchvision")
-
-
+import torchvision.transforms as transforms
+import io
+import asyncio
+import random
+from PIL import Image
+outQ = asyncio.Queue() 
 @under_review()
 class ImagenetDataModule(LightningDataModule):
-    """
-    .. figure:: https://3qeqpr26caki16dnhd19sv6by6v-wpengine.netdna-ssl.com/wp-content/uploads/2017/08/
-        Sample-of-Images-from-the-ImageNet-Dataset-used-in-the-ILSVRC-Challenge.png
-        :width: 400
-        :alt: Imagenet
-    Specs:
-        - 1000 classes
-        - Each image is (3 x varies x varies) (here we default to 3 x 224 x 224)
-    Imagenet train, val and test dataloaders.
-    The train set is the imagenet train.
-    The val set is taken from the train set with `num_imgs_per_val_class` images per class.
-    For example if `num_imgs_per_val_class=2` then there will be 2,000 images in the validation set.
-    The test set is the official imagenet validation set.
-     Example::
-        from pl_bolts.datamodules import ImagenetDataModule
-        dm = ImagenetDataModule(IMAGENET_PATH)
-        model = LitModel()
-        Trainer().fit(model, datamodule=dm)
-    """
-
     name = "imagenet"
-
     def __init__(
         self,
         data_dir: str,
@@ -94,149 +78,265 @@ class ImagenetDataModule(LightningDataModule):
             1000
         """
         return 1000
+    def setup(self, stage: Optional[str] = None) -> None:
+        
+        
+        train_transform, test_transform = transforms.Compose([
+            transforms.RandomResizedCrop(224),
+            transforms.RandomHorizontalFlip(),]),transforms.Compose([
+            transforms.Resize(224),
+            transforms.CenterCrop(224),])
+        
+        train_dir = os.path.join(self.data_dir, 'ImageNet_224', 'train')
+        test_dir = os.path.join(self.data_dir, 'ImageNet_224', 'train')
+        self.train_dataset = ImageFolder(train_dir, transform=train_transform)
+        self.test_dataset = ImageFolder(test_dir, transform=test_transform)
+        
+        #return train_dataset, test_dataset
 
-    def _verify_splits(self, data_dir: str, split: str) -> None:
-        dirs = os.listdir(data_dir)
 
-        if split not in dirs:
-            raise FileNotFoundError(
-                f"a {split} Imagenet split was not found in {data_dir},"
-                f" make sure the folder contains a subfolder named {split}"
-            )
 
     def prepare_data(self) -> None:
-        """This method already assumes you have imagenet2012 downloaded. It validates the data using the meta.bin.
-        .. warning:: Please download imagenet on your own first.
-        """
-        self._verify_splits(self.data_dir, "train")
-        self._verify_splits(self.data_dir, "val")
+        '''Download and prepare data'''
+        # download dataset with pysmartDL
+        # download dataset
+        urls=["https://image-net.org/data/ILSVRC/2012/ILSVRC2012_img_train.tar",
+        "https://image-net.org/data/ILSVRC/2012/ILSVRC2012_img_val.tar",
+        "https://image-net.org/data/ILSVRC/2012/ILSVRC2012_img_test_v10102019.tar",
+        "https://image-net.org/data/ILSVRC/2012/ILSVRC2012_devkit_t3.tar.gz"
+        ]
+        
+        data_path = self.data_dir
+        #check if files exist
+        downloads=[]
+        for url in urls:
+            #get filename
+            filename = url.split('/')[-1]
+            #check if file exists
+            #else download
+            if os.path.exists(os.path.join(data_path,filename)):
+                print("File {} exists".format(filename))
+                #touch file
+                path=Path(os.path.join(data_path,filename))
+                path.touch()
+            else:
+                obj=SmartDL(url,os.path.join(data_path,filename),progress_bar=False, verify=False)
+                obj.start() 
+                downloads.append(obj)
+        #check if all files are downloaded
+        for obj in downloads:
+            if not obj.isFinished():
+                obj.wait()
+                #now touch each file
+                path=Path(obj.get_dest())
+                path.touch()
+        
+        #rename devkit
+        original=os.path.join(data_path,"ILSVRC2012_devkit_t3.tar.gz")
+        #move to os.path.join(data_path,"devkit.tar.gz")
+        os.cmd("mv {} {}".format(original,os.path.join(data_path,"devkit.tar.gz")))
+        
+        # make train directory and unzip files
+        os.makedirs(os.path.join(data_path,"ImageNet-2012","train"),exist_ok=True)
+        #extract files
+        os.cmd("tar --touch -xvf {} -C {}".format(os.path.join(data_path,"ILSVRC2012_img_train.tar"),os.path.join(data_path,"ImageNet-2012","train")))
+        #for file in train/*.tar;do
+        for file in os.listdir(os.path.join(data_path,"ImageNet-2012","train")):
+            #extract
+            if file.endswith(".tar"):
+                #extract tar
+                #make directory
+                dirname = file.split('/')[-1].split('.')[0]
+                os.makedirs(os.path.join(data_path,"ImageNet-2012","train",dirname),exist_ok=True)
+                os.cmd("tar --touch -xvf {} -C {}".format(file.get_dest(),os.path.join(data_path,dirname)))
+        
+                       
+        '''
+        for file in *.tar;do
+        filename=$(basename $file .tar)
+        if [ ! -d $filename ];then
+            mkdir -pv $filename
+        else
+            rm -rf $filename
+        fi
+        tar --touch -xvf $file -C $filename
+        rm $file
+        done
+        '''
+        os.makedirs(os.path.join(data_path,"ImageNet-2012","val"),exist_ok=True)
+        os.cmd("tar --touch -xvf {} -C {}".format(os.path.join(data_path,"ILSVRC2012_img_val.tar"),os.path.join(data_path,"ImageNet-2012","val")))
+        
+        for file in os.listdir(os.path.join(data_path,"ImageNet-2012","val")):
+            if file.endswith(".tar"):
+                dirname=file.split('/')[-1].split('.')[0]
+                os.makedirs(os.path.join(data_path,"ImageNet-2012","val",dirname),exist_ok=True)
+                os.cmd("tar --touch -xvf {} -C {}".format(file.get_dest(),os.path.join(data_path,dirname)))
+        #copy APCT-master/prepare/val_prepare.sh to ImageNet-2012/prepare
+        os.cmd("cp {} {}".format(os.path.join("APCT-master","prepare","val_prepare.sh"),os.path.join(data_path,"ImageNet-2012","prepare")))
+        os.cmd("cd {} && bash val_prepare.sh {}".format(os.path.join(data_path,"ImageNet-2012","prepare"), os.path.join(data_path,"ImageNet-2012","val")))
+        '''
+        cd $$data_path/ImageNet-2012/prepare
+        bash val_prepare.sh $data_path/ImageNet-2012/val
+        ''' 
+        #now lets resize the images
+
+        '''
+        # resize dataset
+        python $file_path/prepare/resize.py --data_path $data_path
+            
+        '''
+        #resize dataset
+        self.fast_resize(os.path.join(data_path,"ImageNet-2012","train"))
+        self.fast_resize(os.path.join(data_path,"ImageNet-2012","val"))
+        
+    def fast_resize(self,dir):
+        '''resize all images in a directory to 224x224'''
+        #we will use PIL to resize images to 224x224 and save them in a new directory
+        #create new directory
+        new_dir = dir+"_224"
+        os.makedirs(new_dir,exist_ok=True)
+        #now create async loop, and resize images
+        loop = asyncio.get_event_loop()
+
+        loop.run_until_complete(self.run(dir,new_dir,size=224))
+        loop.close()
+    async def run(self,dir,new_dir,size=224):
+        queue = asyncio.Queue()
+        consumer = asyncio.ensure_future(self.consume(queue, new_dir, size))
+        await self.produce(queue, dir)
+        await queue.join()
+        consumer.cancel()
+
+    async def produce(self,queue, dir):
+        #nested directory to produce images from,
+        #walk through directory and produce images
+        for dir,file in os.walk(dir):
+            if file.endswith(".JPEG"):
+                #produce image
+                await queue.put(os.path.join(dir,file))
+                #await asyncio.sleep(random.random())
+
+    async def consume(self, queue, new_dir, size=224):
+        while True:
+            print('consume ')
+            imagepath = await queue.get()
+            #open image
+            buffer=io.BytesIO()
+            #await reading into buffer
+            await self.read(imagepath,buffer,size)
+          
+            #save image
+            await self.save(buffer,os.path.join(new_dir,imagepath))   
+            #await asyncio.sleep(random.random())
+            await buffer.close()
+            queue.task_done()
+
+    async def read(self,imagepath,buffer,size):
+                
+        Image.open(imagepath).resize((size, size)).save(buffer, "JPEG")
+    async def save(self,buffer,dest):
+        with open(dest, "wb") as f:
+            f.write(buffer.getbuffer())
+         
 
 
 
-    def train_dataloader(self) -> DataLoader:
-        """Uses the train split of imagenet2012 and puts away a portion of it for the validation split."""
-        transforms = self.train_transform() if self.train_transforms is None else self.train_transforms
 
-        dataset = UnlabeledImagenet(
-            self.data_dir,
-            num_imgs_per_class=-1,
-            num_imgs_per_class_val_split=self.num_imgs_per_val_class,
-            meta_dir=self.meta_dir,
-            split="train",
-            transform=transforms,
-        )
-        loader: DataLoader = DataLoader(
-            dataset,
-            batch_size=self.batch_size,
-            shuffle=self.shuffle,
-            num_workers=self.num_workers,
-            drop_last=self.drop_last,
-            pin_memory=self.pin_memory,
-        )
-        return loader
 
-    def val_dataloader(self) -> DataLoader:
-        """Uses the part of the train split of imagenet2012  that was not used for training via
-        `num_imgs_per_val_class`
-        Args:
-            batch_size: the batch size
-            transforms: the transforms
-        """
-        transforms = self.val_transform() if self.val_transforms is None else self.val_transforms
 
-        dataset = UnlabeledImagenet(
-            self.data_dir,
-            num_imgs_per_class_val_split=self.num_imgs_per_val_class,
-            meta_dir=self.meta_dir,
-            split="val",
-            transform=transforms,
-        )
-        loader: DataLoader = DataLoader(
-            dataset,
-            batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=self.num_workers,
-            drop_last=self.drop_last,
-            pin_memory=self.pin_memory,
-        )
-        return loader
 
-    def test_dataloader(self) -> DataLoader:
-        """Uses the validation split of imagenet2012 for testing."""
-        transforms = self.val_transform() if self.test_transforms is None else self.test_transforms
-
-        dataset = UnlabeledImagenet(
-            self.data_dir, num_imgs_per_class=-1, meta_dir=self.meta_dir, split="test", transform=transforms
-        )
-        loader: DataLoader = DataLoader(
-            dataset,
-            batch_size=self.batch_size,
-            shuffle=False,
-            num_workers=self.num_workers,
-            drop_last=self.drop_last,
-            pin_memory=self.pin_memory,
-        )
-        return loader
-
-    def train_transform(self) -> Callable:
-        """The standard imagenet transforms.
-        .. code-block:: python
-            transform_lib.Compose([
-                transform_lib.RandomResizedCrop(self.image_size),
-                transform_lib.RandomHorizontalFlip(),
-                transform_lib.ToTensor(),
-                transform_lib.Normalize(
-                    mean=[0.485, 0.456, 0.406],
-                    std=[0.229, 0.224, 0.225]
-                ),
-            ])
-        """
-        preprocessing = transform_lib.Compose(
-            [
-                transform_lib.RandomResizedCrop(self.image_size),
-                transform_lib.RandomHorizontalFlip(),
-                transform_lib.ToTensor(),
-                imagenet_normalization(),
-            ]
-        )
-
-        return preprocessing
-
-    def val_transform(self) -> Callable:
-        """The standard imagenet transforms for validation.
-        .. code-block:: python
-            transform_lib.Compose([
-                transform_lib.Resize(self.image_size + 32),
-                transform_lib.CenterCrop(self.image_size),
-                transform_lib.ToTensor(),
-                transform_lib.Normalize(
-                    mean=[0.485, 0.456, 0.406],
-                    std=[0.229, 0.224, 0.225]
-                ),
-            ])
-        """
-
-        preprocessing = transform_lib.Compose(
-            [
-                transform_lib.Resize(self.image_size + 32),
-                transform_lib.CenterCrop(self.image_size),
-                transform_lib.ToTensor(),
-                imagenet_normalization(),
-            ]
-        )
-        return preprocessing
-
-    @staticmethod
-    def add_dataset_specific_args(parent_parser: ArgumentParser) -> ArgumentParser:
-        parser = ArgumentParser(parents=[parent_parser], add_help=False)
-
-        parser.add_argument("--data_dir", type=str, default=".")
-        parser.add_argument("--num_workers", type=int, default=0)
-        parser.add_argument("--batch_size", type=int, default=32)
-
-        return parser
 if __name__ == '__main__':
     dm = ImagenetDataModule()
     print(dm.test_dataloader()[0])
     print(dm.val_dataloader()[0])
     print(dm.train_dataloader()[0])
+
+    '''
+    from torchvision.transforms import *
+from torchvision.datasets import CIFAR10, CIFAR100, MNIST, ImageFolder
+from torch.utils.data import DataLoader
+from config import *
+import os
+
+MNIST_MEAN_STD = (0.1307,), (0.3081,)
+CIAFR10_MEAN_STD = [(0.4914, 0.4822, 0.4465), (0.2471, 0.2435, 0.2616)]
+CIAFR100_MEAN_STD = [(0.5071, 0.4867, 0.4408), (0.2675, 0.2565, 0.2761)]
+IMAGENET_MEAN_STD = [(0.485, 0.456, 0.406), (0.229, 0.224, 0.225)]
+
+
+def set_dataloader(args, datasets=None):
+    if datasets is None:
+        train_dataset, val_dataset = set_dataset(args)
+    else:
+        train_dataset, val_dataset = datasets
+    train_loader = DataLoader(
+                dataset=train_dataset,
+                batch_size=args.batch_size,
+                shuffle=True,
+                num_workers=args.num_workers,
+                pin_memory=True,
+                drop_last=False,
+                prefetch_factor=4,
+                persistent_workers=True)
+    val_loader = DataLoader(
+                dataset=val_dataset,
+                batch_size=args.batch_size,
+                shuffle=False,
+                num_workers=args.num_workers,
+                pin_memory=True,
+                drop_last=False,
+                prefetch_factor=4,
+                persistent_workers=True)
+    return train_loader, val_loader
+
+
+def set_dataset(args):
+    train_transform, test_transform = set_transforms(args)
+    if args.dataset.lower() == 'mnist':
+        train_dataset = MNIST(DATA_PATH, train=True, transform=train_transform, download=True)
+        test_dataset = MNIST(DATA_PATH, train=False, transform=test_transform, download=True)
+    elif args.dataset.lower() == 'cifar10':
+        train_dataset = CIFAR10(DATA_PATH, train=True, transform=train_transform, download=True)
+        test_dataset = CIFAR10(DATA_PATH, train=False, transform=test_transform, download=True)
+    elif args.dataset.lower() == 'cifar100':
+        train_dataset = CIFAR100(DATA_PATH, train=True, transform=train_transform, download=True)
+        test_dataset = CIFAR100(DATA_PATH, train=False, transform=test_transform, download=True)
+    elif args.dataset == 'imagenet':
+        train_dir = os.path.join(DATA_PATH, 'ImageNet-sz', str(args.data_size), 'train')
+        test_dir = os.path.join(DATA_PATH, 'ImageNet-sz', str(args.data_size), 'train')
+        train_dataset = ImageFolder(train_dir, transform=train_transform)
+        test_dataset = ImageFolder(test_dir, transform=test_transform)
+    else:
+        raise NameError('No dataset named %s' % args.dataset)
+    return train_dataset, test_dataset
+
+
+def set_transforms(args):
+    if args.dataset.lower() == 'mnist':
+        train_composed = [RandomCrop(32, padding=4), ToTensor()]
+        test_composed = [ToTensor()]
+    elif args.dataset.lower() in ['cifar10', 'cifra100']:
+        train_composed = [RandomCrop(32, padding=4), RandomHorizontalFlip(), ToTensor()]
+        test_composed = [transforms.ToTensor()]
+    elif args.dataset.lower() == 'imagenet':
+        train_composed = [ToTensor(), RandomResizedCrop((args.crop_size, args.crop_size)), RandomHorizontalFlip()]
+        test_composed = [ToTensor(), RandomResizedCrop((args.crop_size, args.crop_size))]
+    else:
+        raise NameError('No dataset named' % args.dataset)
+    return Compose(train_composed), Compose(test_composed)
+
+
+def set_mean_sed(args):
+    if args.dataset.lower() == 'cifar10':
+        mean, std = CIAFR10_MEAN_STD
+    elif args.dataset.lower() == 'cifar100':
+        mean, std = CIAFR100_MEAN_STD
+    elif args.dataset.lower() == 'mnist':
+        mean, std = MNIST_MEAN_STD
+    elif args.dataset.lower() == 'imagenet':
+        mean, std = IMAGENET_MEAN_STD
+    else:
+        raise NameError()
+    return mean, std
+
+'''

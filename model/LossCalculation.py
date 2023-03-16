@@ -195,7 +195,7 @@ def get_loss_calc(reduction='sum',ver=0,mask=None):
             #print(torch.nn.functional.softmax(alpha/torch.norm(alpha,keepdim=True)).shape)
             #print("loss masks shape before:",torch.nn.functional.one_hot(mask,num_classes=alpha.shape[0]).shape)
             #print("alpha shape:",alpha.shape)#11
-            Lossmasks=torch.sum(torch.nn.functional.softmax(alpha/torch.norm(alpha,keepdim=True))*st.to(alpha.device),dim=-1)
+            Lossmasks=torch.sum(torch.nn.functional.softmax(alpha)*st.to(alpha.device),dim=-1)
             #print("losmasks:",Lossmasks.shape)
             #Lossmasks=Lossmasks.view(*mask.shape)
             return torch.nn.functional.cross_entropy(x*Lossmasks,y*Lossmasks,reduction=reduction,)

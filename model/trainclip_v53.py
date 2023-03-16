@@ -370,7 +370,7 @@ class LightningCLIPModule(LightningModule):
             self.logger.log_image(key="CAPHSIC{}".format(self.current_epoch), images=["CAPHSIC{}.jpg".format(self.current_epoch)])
         for handle in self.handles:
             handle.remove()
-        print(self.naninfcount)
+        #print(self.naninfcount)
         del self.model2
         if self.prune:
             for hook in self.pruneHooks:
@@ -455,23 +455,23 @@ class LightningCLIPModule(LightningModule):
         title =model_name+" HSIC" if title is None else model_name+title
         fig, ax = plt.subplots()
         if model_name=="IM":
-            print(self.IMhsic_matrix0) #46 #Comes out inf on val step
-            print(self.IMhsic_matrix2) # 110
+            #print(self.IMhsic_matrix0) #46 #Comes out inf on val step
+            #print(self.IMhsic_matrix2) # 110
             t=self.IMhsic_matrix0.unsqueeze(1)*self.IMhsic_matrix2.unsqueeze(0) #46 x 110
         #print(torch.sum(torch.abs(t)==t))
             r=torch.sqrt(torch.abs(t))
             r[torch.abs(t)==-t]=-r[torch.abs(t)==-t]
-            print("im1",self.IMhsic_matrix1)
-            print("r", r)
+            #print("im1",self.IMhsic_matrix1)
+            #print("r", r)
             hsic_matrix = torch.div(self.IMhsic_matrix1.squeeze().t(), r)
-            print("hsic",hsic_matrix)
+            #print("hsic",hsic_matrix)
         else:
             print(self.CAPhsic_matrix0.shape,self.CAPhsic_matrix2.shape)
             t=self.CAPhsic_matrix0.unsqueeze(1)*self.CAPhsic_matrix2.unsqueeze(0)
             r=torch.sqrt(torch.abs(t))
             r[torch.abs(t)==-t]=-r[torch.abs(t)==-t]
-            print("cap1", self.CAPhsic_matrix1.shape)
-            print("r",r.shape)
+            #print("cap1", self.CAPhsic_matrix1.shape)
+            #print("r",r.shape)
             hsic_matrix = torch.div(self.CAPhsic_matrix1.squeeze().t() , r)
         hsic_matrix=torch.nan_to_num(hsic_matrix,nan=0)
         im = ax.imshow(hsic_matrix.cpu(), origin='lower', cmap='magma')
