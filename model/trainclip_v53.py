@@ -116,7 +116,7 @@ class LightningCLIPModule(LightningModule):
             with torch.no_grad():
                 testBatch=torch.rand(self.hparams.batch_size,self.transformer_width,device=self.device)
                 if not normlogits:
-                    testBatch=testBatch/torch.norm(testBatch,dim=0,keepdim=True)
+                    testBatch=testBatch/torch.norm(testBatch,dim=-1,keepdim=True)
                 self.label=self.calculate_loss(testBatch,testBatch,testBatch,testBatch,testBatch,testBatch).to(self.device,non_blocking=True)
                 #convert this to probabilities in range [0,1]
                 self.label=torch.nn.functional.softmax(self.label)
