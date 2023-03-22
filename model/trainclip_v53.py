@@ -29,7 +29,7 @@ class LightningCLIPModule(LightningModule):
                 logvariance=False,
                 prune=True,
                 meanloss=False,
-                exactlabels=False,
+                exactlabels=0,
                 adam_epsilon: float = 1e-8,
                 warmup_steps: int = 0,
                 weight_decay: float = 0.0,
@@ -112,7 +112,7 @@ class LightningCLIPModule(LightningModule):
         self.initialize_parameters()
         # self.loss=get_loss_calc(reduction='sum',ver=0,mask=torch.ones([1]))
 
-        if exactlabels:
+        if exactlabels==1:
             with torch.no_grad():
                 testBatch=torch.rand(self.hparams.batch_size,self.transformer_width,device=self.device)
                 if not normlogits:
@@ -244,6 +244,8 @@ class LightningCLIPModule(LightningModule):
         #  Option 1: divide down.
         #  Option 2: 1- output...
         # option 3: logarithmic functions? 
+        #print("logits",logits.shape)
+        #print("labels",labels.shape)
         mloss=self.maskloss(logits,labels)
         meanloss=torch.mean(mloss)
         self.log("meanloss",meanloss,enable_graph=False, rank_zero_only=True)

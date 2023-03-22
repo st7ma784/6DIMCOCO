@@ -11,16 +11,16 @@ class parser(HyperOptArgumentParser):
         self.opt_list("--batch_size", default=10, type=int, options=[6,8,10,12], tunable=True)
         self.opt_list("--JSE", default=0, type=int, options=[0], tunable=True)
         self.opt_list("--prune",default=False,type=bool,options=[True,False])
-        self.opt_list("--projection",default="None",type=str,options=["NONE","inv","iinv"])
-        self.opt_list("--normlogits",default=False,type=bool,options=[True,False])
-        self.opt_list("--exactlabels",default=False,type=bool,options=[True,False])
+        self.opt_list("--projection",default="None",type=str,options=["None","inv","iinv"])
+        self.opt_list("--normlogits",default=True,type=bool,options=[True,False])
+        self.opt_list("--exactlabels",default=0,type=int,options=[1,0])
         self.opt_list("--meanloss",default=False,type=bool,options=[True,False])
-        self.opt_list("--maskLosses",default=1,type=int,options=[0,1,2]) #1 and 2 often result in nan in labels?
+        self.opt_list("--maskLosses",default=0,type=int,options=[0,1,2]) #1 and 2 often result in nan in labels?
 
-        self.opt_list("--logitsversion",default=4,type=int,options=[0,1,2,3,4,5]) #1 and 2 often result in nan in labels?
-        self.opt_list("--precision", default=16, options=[16], tunable=False)
+        self.opt_list("--logitsversion",default=4,type=int,options=[0,1,2,3,4,5,6,7,8]) #1 and 2 often result in nan in labels?
+        self.opt_list("--precision", default=32, options=[16], tunable=False)
         self.opt_list("--codeversion", default=6, type=int, options=[6], tunable=False)
-        self.opt_list("--transformer_layers", default=5, type=int, options=[3,4,5,6], tunable=True)
+        self.opt_list("--transformer_layers", default=8, type=int, options=[3,4,5,6], tunable=True)
         self.opt_list("--transformer_heads", default=16, type=int, options=[16], tunable=True)
         self.opt_list("--embed_dim", default=512, type=int, options=[128,512], tunable=True)
         self.opt_list("--transformer_width", default=512, type=int, options=[128,512], tunable=True)

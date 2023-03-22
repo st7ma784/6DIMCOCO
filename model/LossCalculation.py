@@ -24,33 +24,58 @@ def logargs(args):
 
 def get_loss_fn(logitsversion=0,norm=False,log=False):
     baseLogits=calculate_loss
-    logfunction=lambda x:x
-    normfunction=lambda x:x
-    if norm:
-        normfunction=normargs
+    ##logfunction=lambda x:x
+   
         # if log:
     #     logfunction=logargs
     if logitsversion==0:
         def baseLogits(*args):
-            return logfunction(calculate_loss(*normfunction(*args)))
+            return calculate_loss(*args)
     elif logitsversion==1: 
         def baseLogits(*args):
-            return oneminus(logfunction(calculate_loss2(*normfunction(*args))))
+            return oneminus(calculate_loss2(*args))
     elif logitsversion==2: 
         def baseLogits(*args):
-            return oneminus(logfunction(calculate_loss3(*normfunction(*args))))        #one minus here
+            return oneminus(calculate_loss3(*args))      #one minus here
     elif logitsversion==3:
         #this does not work in any arrangement? 
         def baseLogits(*args):
-            return oneminus(logfunction(calculate_loss4(*normfunction(*args))))
+            return oneminus(calculate_loss4(*args))
     elif logitsversion==4:
         #this does not work in any arrangement either?
         def baseLogits(*args):
-            return oneminus(logfunction(calculate_loss5(*normfunction(*args))))
+            return oneminus(calculate_loss5(*args))
     elif logitsversion==5:
         def baseLogits(*args):
-            return oneminus(logfunction(calculate_loss6(*normfunction(*args))))
+            return oneminus(calculate_loss6(*args))
+    elif logitsversion==6:
+        def baseLogits(*args):
+            return oneminus(calculate_loss1(*args))
+    elif logitsversion==7:
+        norm=True
+        def baseLogits(*args):
+            return calculate_lossNorms(*args)
+            
+    elif logitsversion==8:
+        norm=True
+        def baseLogits(*args):
+            return calculate_lossNormsv2(*args)
+        
+                
+    elif logitsversion==9:
+        norm=True
+        def baseLogits(*args):
+            return calculate_lossNormsv3(*args)
+                
+    elif logitsversion==10:
+        norm=True
+        def baseLogits(*args):
+            return calculate_lossNormsv4(*args)
+        
 
+    normfunction=lambda x:x
+    if norm:
+        normfunction=normargs
     def lossfn(*args):
         return baseLogits(*normfunction(*args)) 
     return lossfn
@@ -82,8 +107,22 @@ def calculate_loss(  I, C1, C2, C3, C4, C5):
     return torch.einsum("abcz,defz->abcdef",torch.einsum("az,bz,cz->abcz",I,C1,C2),torch.einsum("az,bz,cz->abcz",C3,C4,C5))
 
     
+    
+def calculate_loss1(  I, C1, C2, C3, C4, C5):
+    return torch.mean(torch.sqrt(torch.abs(reduce(torch.add,[torch.pow(I,2).view( I.shape[0],1,1,1,1,1,-1),
+                                                torch.pow(C1,2).view(1,C1.shape[0],1,1,1,1,-1),
+                                                torch.pow(C2,2).view(1,1,C2.shape[0],1,1,1,-1),
+                                                torch.pow(C3,2).view(1,1,1,C3.shape[0],1,1,-1),
+                                                torch.pow(C4,2).view(1,1,1,1,C4.shape[0],1,-1),
+                                                torch.pow(C5,2).view(1,1,1,1,1,C5.shape[0],-1)]).sub_(
+                        torch.pow(reduce(torch.add,[I.view( I.shape[0],1,1,1,1,1,-1),
+                                                    C1.view(1,C1.shape[0],1,1,1,1,-1),
+                                                    C2.view(1,1,C2.shape[0],1,1,1,-1),
+                                                    C3.view(1,1,1,C3.shape[0],1,1,-1),
+                                                    C4.view(1,1,1,1,C4.shape[0],1,-1),
+                                                    C5.view(1,1,1,1,1,C5.shape[0],-1)]),2),alpha=1/6))),dim=-1)
 def calculate_loss2(  I, C1, C2, C3, C4, C5):
-    return torch.sum(torch.sqrt(reduce(torch.add,[torch.pow(I,2).view( I.shape[0],1,1,1,1,1,-1),
+    return torch.mean(torch.sqrt(reduce(torch.add,[torch.pow(I,2).view( I.shape[0],1,1,1,1,1,-1),
                                                 torch.pow(C1,2).view(1,C1.shape[0],1,1,1,1,-1),
                                                 torch.pow(C2,2).view(1,1,C2.shape[0],1,1,1,-1),
                                                 torch.pow(C3,2).view(1,1,1,C3.shape[0],1,1,-1),
@@ -151,6 +190,78 @@ def calculate_loss6(I, C1, C2, C3, C4, C5):
                                                         C4.view(1,1,1,1,C4.shape[0],1,-1),
                                                         C5.view(1,1,1,1,1,C5.shape[0],-1)]),2),alpha=1/6),dim=-1))
     
+################################################ NORMS ################################################
+
+  
+def calculate_lossNorms(I, C1, C2, C3, C4, C5):
+    mean=reduce(torch.add,[I.view( I.shape[0],1,1,1,1,1,-1),
+                                                        C1.view(1,C1.shape[0],1,1,1,1,-1),
+                                                        C2.view(1,1,C2.shape[0],1,1,1,-1),
+                                                        C3.view(1,1,1,C3.shape[0],1,1,-1),
+                                                        C4.view(1,1,1,1,C4.shape[0],1,-1),
+                                                        C5.view(1,1,1,1,1,C5.shape[0],-1)])
+    scalednorm=mean/mean.norm(dim=-1,keepdim=True)
+    
+    #return dot product of scalednorm and mean x 6
+    out=torch.sum(torch.mul(scalednorm,mean),dim=-1) #this....doesnt work see v4
+    return out
+
+def calculate_lossNormsv2(I, C1, C2, C3, C4, C5):
+    sum=reduce(torch.add,[I.view( I.shape[0],1,1,1,1,1,-1),
+                        C1.view(1,C1.shape[0],1,1,1,1,-1),
+                        C2.view(1,1,C2.shape[0],1,1,1,-1),
+                        C3.view(1,1,1,C3.shape[0],1,1,-1),
+                        C4.view(1,1,1,1,C4.shape[0],1,-1),
+                        C5.view(1,1,1,1,1,C5.shape[0],-1)])
+    out=sum.pow(2)/sum.norm(dim=-1,keepdim=True)
+    out=torch.sum(out,dim=-1)
+    return torch.squeeze(out)
+    #return dot product of scalednorm and mean x 6
+    #return torch.sum(torch.mul(scalednorm,mean),dim=-1)
+
+  
+def calculate_lossNormsv3(I, C1, C2, C3, C4, C5):
+    mean=reduce(torch.add,[I.view( I.shape[0],1,1,1,1,1,-1).div(6),
+                            C1.view(1,C1.shape[0],1,1,1,1,-1).div(6),
+                            C2.view(1,1,C2.shape[0],1,1,1,-1).div(6),
+                            C3.view(1,1,1,C3.shape[0],1,1,-1).div(6),
+                            C4.view(1,1,1,1,C4.shape[0],1,-1).div(6),
+                            C5.view(1,1,1,1,1,C5.shape[0],-1).div(6)])
+    return mean.norm(dim=-1,keepdim=True)
+
+def calculate_lossNormsv4(I, C1, C2, C3, C4, C5):
+    #assert I.shape[0]==C1.shape[0]==C2.shape[0]==C3.shape[0]==C4.shape[0]==C5.shape[0]
+    #check norms are 1
+    # assert torch.allclose(I.norm(dim=-1, keepdim=True),torch.ones_like(I.norm(dim=-1, keepdim=True)))
+    # assert torch.allclose(C1.norm(dim=-1, keepdim=True),torch.ones_like(C1.norm(dim=-1, keepdim=True)))
+    # assert torch.allclose(C2.norm(dim=-1, keepdim=True),torch.ones_like(C2.norm(dim=-1, keepdim=True)))
+    # assert torch.allclose(C3.norm(dim=-1, keepdim=True),torch.ones_like(C3.norm(dim=-1, keepdim=True)))
+    # assert torch.allclose(C4.norm(dim=-1, keepdim=True),torch.ones_like(C4.norm(dim=-1, keepdim=True)))
+    # assert torch.allclose(C5.norm(dim=-1, keepdim=True),torch.ones_like(C5.norm(dim=-1, keepdim=True)))
+
+
+    # print("norms are 1")
+
+    mean=reduce(torch.add,[I.view( I.shape[0],1,1,1,1,1,-1),
+                            C1.view(1,C1.shape[0],1,1,1,1,-1),
+                            C2.view(1,1,C2.shape[0],1,1,1,-1),
+                            C3.view(1,1,1,C3.shape[0],1,1,-1),#.div(6),
+                            C4.view(1,1,1,1,C4.shape[0],1,-1),#.div(6),
+                            C5.view(1,1,1,1,1,C5.shape[0],-1)])
+    mean=torch.div(mean,mean.norm(dim=-1,keepdim=True))
+    # print("max value in mean is ",torch.max(mean.flatten()).item())
+    # print("min value in mean is ",torch.min(mean.flatten()).item())
+
+    # print("max similarity to mean is ",torch.max(torch.sum(torch.mul(mean,I.view(I.shape[0],1,1,1,1,1,-1)),dim=-1).flatten()).item())
+    return reduce(torch.add,[torch.sum(torch.mul(mean,I.view(I.shape[0],1,1,1,1,1,-1)),dim=-1),#replicate down wards
+                             torch.sum(torch.mul(mean,C1.view(1,C1.shape[0],1,1,1,1,-1)),dim=-1),
+                             torch.sum(torch.mul(mean,C2.view(1,1,C2.shape[0],1,1,1,-1)),dim=-1),
+                             torch.sum(torch.mul(mean,C3.view(1,1,1,C3.shape[0],1,1,-1)),dim=-1),
+                             torch.sum(torch.mul(mean,C4.view(1,1,1,1,C4.shape[0],1,-1)),dim=-1),
+                             torch.sum(torch.mul(mean,C5.view(1,1,1,1,1,C5.shape[0],-1)),dim=-1)])
+    #return dot product of scalednorm and mean x 6
+############
+#loss functions
 
 def get_loss_sum(version=False):
     if version:
