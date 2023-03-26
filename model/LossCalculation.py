@@ -72,7 +72,12 @@ def get_loss_fn(logitsversion=0,norm=False,log=False):
         def baseLogits(*args):
             return calculate_lossNormsv4(*args)
         
-
+             
+    elif logitsversion==11:
+        norm=True
+        def baseLogits(*args):
+            return calculate_lossNormsv5(*args)
+        
     normfunction=lambda x:x
     if norm:
         normfunction=normargs
@@ -259,6 +264,35 @@ def calculate_lossNormsv4(I, C1, C2, C3, C4, C5):
                              torch.sum(torch.mul(mean,C3.view(1,1,1,C3.shape[0],1,1,-1)),dim=-1),
                              torch.sum(torch.mul(mean,C4.view(1,1,1,1,C4.shape[0],1,-1)),dim=-1),
                              torch.sum(torch.mul(mean,C5.view(1,1,1,1,1,C5.shape[0],-1)),dim=-1)])
+    #return dot product of scalednorm and mean x 6
+
+    
+def calculate_lossNormsv5(I, C1, C2, C3, C4, C5):
+    #assert I.shape[0]==C1.shape[0]==C2.shape[0]==C3.shape[0]==C4.shape[0]==C5.shape[0]
+    #check norms are 1
+    # assert torch.allclose(I.norm(dim=-1, keepdim=True),torch.ones_like(I.norm(dim=-1, keepdim=True)))
+    # assert torch.allclose(C1.norm(dim=-1, keepdim=True),torch.ones_like(C1.norm(dim=-1, keepdim=True)))
+    # assert torch.allclose(C2.norm(dim=-1, keepdim=True),torch.ones_like(C2.norm(dim=-1, keepdim=True)))
+    # assert torch.allclose(C3.norm(dim=-1, keepdim=True),torch.ones_like(C3.norm(dim=-1, keepdim=True)))
+    # assert torch.allclose(C4.norm(dim=-1, keepdim=True),torch.ones_like(C4.norm(dim=-1, keepdim=True)))
+    # assert torch.allclose(C5.norm(dim=-1, keepdim=True),torch.ones_like(C5.norm(dim=-1, keepdim=True)))
+
+
+    # print("norms are 1")
+
+    mean=reduce(torch.add,[I.view( I.shape[0],1,1,1,1,1,-1),
+                            C1.view(1,C1.shape[0],1,1,1,1,-1),
+                            C2.view(1,1,C2.shape[0],1,1,1,-1),
+                            C3.view(1,1,1,C3.shape[0],1,1,-1),#.div(6),
+                            C4.view(1,1,1,1,C4.shape[0],1,-1),#.div(6),
+                            C5.view(1,1,1,1,1,C5.shape[0],-1)])
+    #perform dot similarity between input and normalised mean of other inputs
+    return reduce(torch.add,[torch.sum(torch.mul(torch.div(mean.sub(I.view(I.shape[0],1,1,1,1,1,-1)),mean.sub(I.view(I.shape[0],1,1,1,1,1,-1)).norm(dim=-1,keepdim=True)),I.view(I.shape[0],1,1,1,1,1,-1)),dim=-1),#replicate down wards
+                             torch.sum(torch.mul(torch.div(mean.sub(C1.view(1,C1.shape[0],1,1,1,1,-1)),mean.sub(C1.view(1,C1.shape[0],1,1,1,1,-1)).norm(dim=-1,keepdim=True)),C1.view(1,C1.shape[0],1,1,1,1,-1)),dim=-1),
+                             torch.sum(torch.mul(torch.div(mean.sub(C2.view(1,1,C2.shape[0],1,1,1,-1)),mean.sub(C2.view(1,1,C2.shape[0],1,1,1,-1)).norm(dim=-1,keepdim=True)),C2.view(1,1,C2.shape[0],1,1,1,-1)),dim=-1),
+                             torch.sum(torch.mul(torch.div(mean.sub(C3.view(1,1,1,C3.shape[0],1,1,-1)),mean.sub(C3.view(1,1,1,C3.shape[0],1,1,-1)).norm(dim=-1,keepdim=True)),C3.view(1,1,1,C3.shape[0],1,1,-1)),dim=-1),
+                             torch.sum(torch.mul(torch.div(mean.sub(C4.view(1,1,1,1,C4.shape[0],1,-1)),mean.sub(C4.view(1,1,1,1,C4.shape[0],1,-1)).norm(dim=-1,keepdim=True)),C4.view(1,1,1,1,C4.shape[0],1,-1)),dim=-1),
+                             torch.sum(torch.mul(torch.div(mean.sub(C5.view(1,1,1,1,1,C5.shape[0],-1)),mean.sub(C5.view(1,1,1,1,1,C5.shape[0],-1)).norm(dim=-1,keepdim=True)),C5.view(1,1,1,1,1,C5.shape[0],-1)),dim=-1)])
     #return dot product of scalednorm and mean x 6
 ############
 #loss functions
