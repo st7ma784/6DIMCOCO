@@ -51,7 +51,7 @@ def get_loss_fn(logitsversion=0,norm=False,log=False):
     elif logitsversion==6:
         def baseLogits(*args):
             return oneminus(calculate_loss1(*args))
-    elif logitsversion==6.5:
+    elif logitsversion==13:
         def baseLogits(*args):
             return oneminus(calculate_loss7(*args))
     elif logitsversion==7:
