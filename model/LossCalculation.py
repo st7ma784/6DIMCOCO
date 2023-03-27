@@ -51,6 +51,9 @@ def get_loss_fn(logitsversion=0,norm=False,log=False):
     elif logitsversion==6:
         def baseLogits(*args):
             return oneminus(calculate_loss1(*args))
+    elif logitsversion==6.5:
+        def baseLogits(*args):
+            return oneminus(calculate_loss7(*args))
     elif logitsversion==7:
         norm=True
         def baseLogits(*args):
@@ -77,12 +80,19 @@ def get_loss_fn(logitsversion=0,norm=False,log=False):
         norm=True
         def baseLogits(*args):
             return calculate_lossNormsv5(*args)
-        
+             
+    elif logitsversion==12:
+        norm=False
+        def baseLogits(*args):
+            return calculate_lossNormsv5(*args)
     normfunction=lambda x:x
     if norm:
         normfunction=normargs
-    def lossfn(*args):
-        return baseLogits(*normfunction(*args)) 
+        def lossfn(*args):
+            return baseLogits(*normfunction(*args)) 
+    else:
+        def lossfn(*args):
+            return baseLogits(*args)
     return lossfn
 
 
@@ -194,7 +204,19 @@ def calculate_loss6(I, C1, C2, C3, C4, C5):
                                                         C3.view(1,1,1,C3.shape[0],1,1,-1),
                                                         C4.view(1,1,1,1,C4.shape[0],1,-1),
                                                         C5.view(1,1,1,1,1,C5.shape[0],-1)]),2),alpha=1/6),dim=-1))
-    
+def calculate_loss7(  I, C1, C2, C3, C4, C5):
+    return torch.sum(torch.abs(reduce(torch.add,[torch.pow(I,2).view( I.shape[0],1,1,1,1,1,-1),
+                                                torch.pow(C1,2).view(1,C1.shape[0],1,1,1,1,-1),
+                                                torch.pow(C2,2).view(1,1,C2.shape[0],1,1,1,-1),
+                                                torch.pow(C3,2).view(1,1,1,C3.shape[0],1,1,-1),
+                                                torch.pow(C4,2).view(1,1,1,1,C4.shape[0],1,-1),
+                                                torch.pow(C5,2).view(1,1,1,1,1,C5.shape[0],-1)]).sub_(
+                        torch.pow(reduce(torch.add,[I.view( I.shape[0],1,1,1,1,1,-1),
+                                                    C1.view(1,C1.shape[0],1,1,1,1,-1),
+                                                    C2.view(1,1,C2.shape[0],1,1,1,-1),
+                                                    C3.view(1,1,1,C3.shape[0],1,1,-1),
+                                                    C4.view(1,1,1,1,C4.shape[0],1,-1),
+                                                    C5.view(1,1,1,1,1,C5.shape[0],-1)]),2),alpha=1/6)),dim=-1)
 ################################################ NORMS ################################################
 
   
