@@ -54,6 +54,9 @@ def get_loss_fn(logitsversion=0,norm=False,log=False):
     elif logitsversion==13:
         def baseLogits(*args):
             return oneminus(calculate_loss7(*args))
+    elif logitsversion==14:
+        def baseLogits(*args):
+            return torch.sum(oneminus(calculate_loss8(*args)),dim=-1)
     elif logitsversion==7:
         norm=True
         def baseLogits(*args):
@@ -85,6 +88,15 @@ def get_loss_fn(logitsversion=0,norm=False,log=False):
         norm=False
         def baseLogits(*args):
             return calculate_lossNormsv5(*args)
+    elif logitsversion==15:
+        norm=True
+        def baseLogits(*args):
+            return calculate_lossNormsv6(*args)
+    elif logitsversion==16:
+        norm=True
+        def baseLogits(*args):
+            return calculate_lossNormsv7(*args)
+
     normfunction=lambda x:x
     if norm:
         normfunction=normargs
@@ -217,6 +229,20 @@ def calculate_loss7(  I, C1, C2, C3, C4, C5):
                                                     C3.view(1,1,1,C3.shape[0],1,1,-1),
                                                     C4.view(1,1,1,1,C4.shape[0],1,-1),
                                                     C5.view(1,1,1,1,1,C5.shape[0],-1)]),2),alpha=1/6)),dim=-1)
+
+def calculate_loss8(  I, C1, C2, C3, C4, C5):
+    return reduce(torch.add,[torch.pow(I,2).view( I.shape[0],1,1,1,1,1,-1),
+                                                torch.pow(C1,2).view(1,C1.shape[0],1,1,1,1,-1),
+                                                torch.pow(C2,2).view(1,1,C2.shape[0],1,1,1,-1),
+                                                torch.pow(C3,2).view(1,1,1,C3.shape[0],1,1,-1),
+                                                torch.pow(C4,2).view(1,1,1,1,C4.shape[0],1,-1),
+                                                torch.pow(C5,2).view(1,1,1,1,1,C5.shape[0],-1)]).sub_(
+                        torch.pow(reduce(torch.add,[I.view( I.shape[0],1,1,1,1,1,-1),
+                                                    C1.view(1,C1.shape[0],1,1,1,1,-1),
+                                                    C2.view(1,1,C2.shape[0],1,1,1,-1),
+                                                    C3.view(1,1,1,C3.shape[0],1,1,-1),
+                                                    C4.view(1,1,1,1,C4.shape[0],1,-1),
+                                                    C5.view(1,1,1,1,1,C5.shape[0],-1)]),2),alpha=1/6)
 ################################################ NORMS ################################################
 
   
@@ -316,6 +342,69 @@ def calculate_lossNormsv5(I, C1, C2, C3, C4, C5):
                              torch.sum(torch.mul(torch.div(mean.sub(C4.view(1,1,1,1,C4.shape[0],1,-1)),mean.sub(C4.view(1,1,1,1,C4.shape[0],1,-1)).norm(dim=-1,keepdim=True)),C4.view(1,1,1,1,C4.shape[0],1,-1)),dim=-1),
                              torch.sum(torch.mul(torch.div(mean.sub(C5.view(1,1,1,1,1,C5.shape[0],-1)),mean.sub(C5.view(1,1,1,1,1,C5.shape[0],-1)).norm(dim=-1,keepdim=True)),C5.view(1,1,1,1,1,C5.shape[0],-1)),dim=-1)])
     #return dot product of scalednorm and mean x 6
+
+       
+def calculate_lossNormsv6(I, C1, C2, C3, C4, C5):
+    '''
+    Trying to replicate the following numpy code in batch form
+
+        mean=(x[i]+ y[j])/2
+        deltaH= np.linalg.norm(np.array([x[i],y[j]]))- np.sqrt(2*np.power(mean,2))
+        z[i,j]= mean-deltaH#np.linalg.norm(np.array([x[i],y[j]]))
+
+        so z = root(6*mean^2)+mean - norm(x,y)
+    '''
+
+    mean=reduce(torch.add,[ torch.abs(I.view( I.shape[0],1,1,1,1,1,-1).div(6)),
+                            torch.abs(C1.view(1,C1.shape[0],1,1,1,1,-1).div(6)),
+                            torch.abs(C2.view(1,1,C2.shape[0],1,1,1,-1).div(6)),
+                            torch.abs(C3.view(1,1,1,C3.shape[0],1,1,-1).div(6)),
+                            torch.abs(C4.view(1,1,1,1,C4.shape[0],1,-1).div(6)),
+                            torch.abs(C5.view(1,1,1,1,1,C5.shape[0],-1).div(6))])
+    mean=torch.sub(mean,torch.sub(torch.abs(torch.sqrt(6*torch.pow(mean,2))),
+            torch.sqrt(reduce(torch.add,[I.view( I.shape[0],1,1,1,1,1,-1).pow(2),
+                                        C1.view(1,C1.shape[0],1,1,1,1,-1).pow(2),
+                                        C2.view(1,1,C2.shape[0],1,1,1,-1).pow(2),
+                                        C3.view(1,1,1,C3.shape[0],1,1,-1).pow(2),
+                                        C4.view(1,1,1,1,C4.shape[0],1,-1).pow(2),
+                                        C5.view(1,1,1,1,1,C5.shape[0],-1).pow(2)]))))                    
+                         
+    
+    return torch.sum(mean,dim=-1)
+
+def calculate_lossNormsv7(I, C1, C2, C3, C4, C5):
+    '''
+    The above only works for values in the range 0-1 range. 
+
+    However, we can improve this with the following formula:
+    return mean2-deltaH 
+    Where
+    mean2=(np.abs(x[i])+ np.abs(y[j])+np.abs(w[k]))/N
+    deltaH= np.linalg.norm(np.array([x[i],y[j],w[k]]))- np.sqrt(N*np.power(mean,2))
+    
+    we'll rewrite this as mean+sqrt(N*mean^2)-norm(x,y)
+    
+    '''
+    mean2 = reduce(torch.add,[ torch.abs(I.view( I.shape[0],1,1,1,1,1,-1))/6,
+                            torch.abs(C1.view(1,C1.shape[0],1,1,1,1,-1))/6,
+                            torch.abs(C2.view(1,1,C2.shape[0],1,1,1,-1))/6,
+                            torch.abs(C3.view(1,1,1,C3.shape[0],1,1,-1))/6,
+                            torch.abs(C4.view(1,1,1,1,C4.shape[0],1,-1))/6,
+                            torch.abs(C5.view(1,1,1,1,1,C5.shape[0],-1))/6]) + torch.sqrt(torch.mul(reduce(torch.add,[ torch.abs(I.view( I.shape[0],1,1,1,1,1,-1).div(6)),
+                            torch.abs(C1.view(1,C1.shape[0],1,1,1,1,-1).div(6)),
+                            torch.abs(C2.view(1,1,C2.shape[0],1,1,1,-1).div(6)),
+                            torch.abs(C3.view(1,1,1,C3.shape[0],1,1,-1).div(6)),
+                            torch.abs(C4.view(1,1,1,1,C4.shape[0],1,-1).div(6)),
+                            torch.abs(C5.view(1,1,1,1,1,C5.shape[0],-1).div(6))]).pow(2),6))
+    #norm =sum(abs(x)**ord)**(1./ord)
+    norm=torch.sqrt(reduce(torch.add,[ torch.abs(I.view( I.shape[0],1,1,1,1,1,-1)).pow(2),
+                            torch.abs(C1.view(1,C1.shape[0],1,1,1,1,-1)).pow(2),
+                            torch.abs(C2.view(1,1,C2.shape[0],1,1,1,-1)).pow(2),
+                            torch.abs(C3.view(1,1,1,C3.shape[0],1,1,-1)).pow(2),
+                            torch.abs(C4.view(1,1,1,1,C4.shape[0],1,-1)).pow(2),
+                            torch.abs(C5.view(1,1,1,1,1,C5.shape[0],-1)).pow(2)]))
+    return torch.sum(torch.sub(mean2,norm),dim=-1)
+
 ############
 #loss functions
 
@@ -362,7 +451,7 @@ def get_loss_calc(reduction='sum',ver=0,mask=None):
             #print(torch.nn.functional.softmax(alpha/torch.norm(alpha,keepdim=True)).shape)
             #print("loss masks shape before:",torch.nn.functional.one_hot(mask,num_classes=alpha.shape[0]).shape)
             #print("alpha shape:",alpha.shape)#11
-            Lossmasks=torch.sum(torch.nn.functional.softmax(alpha)*st.to(alpha.device),dim=-1)
+            Lossmasks=torch.sum(torch.nn.functional.softmax(alpha/torch.norm(alpha,keepdim=True))*st.to(alpha.device),dim=-1)
             #print("losmasks:",Lossmasks.shape)
             #Lossmasks=Lossmasks.view(*mask.shape)
             return torch.nn.functional.cross_entropy(x*Lossmasks,y*Lossmasks,reduction=reduction,)
