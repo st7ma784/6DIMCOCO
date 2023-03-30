@@ -273,10 +273,10 @@ class LightningCLIPModule(LightningModule):
             
     def configure_optimizers(self):
         
-        optimizer = torch.optim.Adam(
+        optimizer = torch.optim.AdamW(
             [p for p in self.parameters()]+[p for p in self.encode_image.parameters()]+[p for p in self.encoder.parameters()], lr=self.hparams.learning_rate, eps=10e-8,
-            weight_decay=0.1,
-            betas=(0.9, 0.95),
+            #weight_decay=0.1,
+            #betas=(0.9, 0.95),
             )
         lr_schedulers = {"scheduler": ReduceLROnPlateau(optimizer), "monitor": "train_loss"}
 
