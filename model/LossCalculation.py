@@ -403,7 +403,7 @@ def calculate_lossNormsv7(I, C1, C2, C3, C4, C5):
                             torch.abs(C3.view(1,1,1,C3.shape[0],1,1,-1)).pow(2),
                             torch.abs(C4.view(1,1,1,1,C4.shape[0],1,-1)).pow(2),
                             torch.abs(C5.view(1,1,1,1,1,C5.shape[0],-1)).pow(2)]))
-    return torch.sum(torch.sub(mean2,norm),dim=-1)
+    return torch.mean(torch.sub(mean2,norm),dim=-1)
 
 ############
 #loss functions
