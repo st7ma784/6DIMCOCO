@@ -147,3 +147,5 @@ models--gpt2/*
 slurm_cmdtrial*
 *.out
 /
+tb_logs/*
+.scale_batch_size*

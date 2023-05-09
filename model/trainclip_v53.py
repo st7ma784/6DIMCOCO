@@ -349,6 +349,10 @@ class LightningCLIPModule(LightningModule):
     def validation_epoch_end(self,acc_val):
         imfeatures=torch.nan_to_num(torch.cat([val["imfeatures"] for val in acc_val],dim=0)).cpu().numpy()
         tfeatures=torch.nan_to_num(torch.cat([val["tfeatures"] for val in acc_val],dim=0)).cpu().numpy()
+        #log imfeatures to wandb for viz
+        # self.logger.log_table("Embeddings",columns=["image Embeddings"],data=[imfeatures.tolist()])
+        # self.logger.log_table("Embeddings",columns=["text Embeddings"],data=[tfeatures.tolist()])
+
         labels=torch.cat([val["classes"] for val in acc_val],dim=0).cpu().numpy()
         if not hasattr(self,"Iclassifier"):
             self.Iclassifier = LogisticRegression(random_state=0, C=0.316, max_iter=1000, verbose=1, n_jobs=-1)
@@ -383,6 +387,21 @@ class LightningCLIPModule(LightningModule):
                 #         prune_module(param_to_prune, im_score, self.args)
                 #then purun accordingly 
         #log the tokenembeddings for the text encoder, 
+    
+    def test_step(self,batch,*args):
+        #do stock loss here
+        image_features=self.encode_image(batch[0])
+
+        return {"imfeatures":image_features, "classes":batch[1]}
+
+    def test_epoch_end(self,acc_val):
+        imfeatures=torch.nan_to_num(torch.cat([val["imfeatures"] for val in acc_val],dim=0)).cpu().numpy()
+        labels=torch.cat([val["classes"] for val in acc_val],dim=0).cpu().numpy()
+        if not hasattr(self,"Iclassifier"):
+            self.Iclassifier = LogisticRegression(random_state=0, C=0.316, max_iter=1000, verbose=1, n_jobs=-1)
+   
+        self.Iclassifier.fit(imfeatures, labels)
+        self.log( "TopK Imagenet",self.Iclassifier.score(imfeatures, labels))
     def test_token_embeddings(self):
         #create int of all the tokens in vocab size
         #embed them all with self.token_embeddings

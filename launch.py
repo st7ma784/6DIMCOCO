@@ -1,5 +1,6 @@
 
 import os,sys
+from pytorch_lightning import loggers as pl_loggers
 
 def wandbtrain(config=None,dir=None,devices=None,accelerator=None,Dataset=None,project="6DIMCLIPTOKSweepv4",entity="st7ma784"):
     import pytorch_lightning
@@ -40,8 +41,12 @@ def train(config={
     # from pl_bolts.datamodules import ImagenetDataModule
     model=LightningCLIPModule( train_batch_size=config["batch_size"],
                                 **config)
+    logger=[]
     if logtool:
         logtool.watch(model, log_freq=1000,log_graph=False)
+        logger.append(logtool)
+    #else:
+        #logger.append(pytorch_lightning.loggers.TensorBoardLogger(dir, name="CLIPv{}".format(version)))
     if dir is None:
         dir=config.get("dir",".")
     if Dataset is None:
@@ -73,33 +78,34 @@ def train(config={
             accelerator=accelerator,
             max_epochs=40,
             #profiler="advanced",
-            logger=logtool,
+            logger=logger,
             strategy="ddp",
             num_nodes=int(os.getenv("SLURM_NNODES",1)),
             callbacks=callbacks,
             gradient_clip_val=0.25,# Not supported for manual optimization
-            accumulate_grad_batches=32,
-            fast_dev_run=False,
+            accumulate_grad_batches=16,
+            fast_dev_run=True,
             precision=p
     )
     if config["batch_size"] !=1:
         
         trainer.fit(model,Dataset)
+        trainer.test(model,Dataset)
     else:
         return 0 #No need to train if batch size is 1
     #do test
-    
-    # TestLoader=ImagenetDataModule(
-    #     data_dir=dir, 
-    #     meta_dir=dir,
-    #     num_imgs_per_val_class=50,
-    #     image_size=224,
-    #     num_workers=4, 
-    #     batch_size=config["batch_size"], 
-    #     shuffle=True,
-    #     pin_memory=True,
-    #     drop_last=True)
-    # trainer.test(model,TestLoader)
+    from BuildImagenet import ImagenetDataModule
+    TestLoader=ImagenetDataModule(
+        data_dir=dir, 
+        meta_dir=dir,
+        num_imgs_per_val_class=50,
+        image_size=224,
+        num_workers=4, 
+        batch_size=config["batch_size"], 
+        shuffle=True,
+        pin_memory=True,
+        drop_last=True)
+    trainer.test(model,TestLoader)
     
 def SlurmRun(trialconfig):
 
