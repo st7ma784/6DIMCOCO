@@ -291,6 +291,8 @@ class LightningCLIPModule(LightningModule):
     def validation_epoch_end(self,acc_val):
         imfeatures=torch.nan_to_num(torch.cat([val["imfeatures"] for val in acc_val],dim=0)).cpu().numpy()
         tfeatures=torch.nan_to_num(torch.cat([val["tfeatures"] for val in acc_val],dim=0)).cpu().numpy()
+        # self.logger.log_table("Embeddings",columns=["image Embeddings","Text Embeddings"],data=[imfeatures,tfeatures])
+
         labels=torch.cat([val["classes"] for val in acc_val],dim=0).cpu().numpy()
         if not hasattr(self,"Iclassifier"):
             self.Iclassifier = LogisticRegression(random_state=0, C=0.316, max_iter=1000, verbose=1, n_jobs=-1)

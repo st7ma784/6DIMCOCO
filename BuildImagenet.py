@@ -3,26 +3,17 @@ from argparse import ArgumentParser
 from typing import Any, Callable, Optional
 
 from pytorch_lightning import LightningDataModule
-from torch.utils.data import DataLoader,ImageFolder
 
-from pl_bolts.datasets import UnlabeledImagenet
-from pl_bolts.transforms.dataset_normalizations import imagenet_normalization
-from pl_bolts.utils import _TORCHVISION_AVAILABLE
-from pl_bolts.utils.stability import under_review
-from pl_bolts.utils.warnings import warn_missing_pkg
-from pysmartdl import SmartDL
+from pySmartDL import SmartDL
 from pathlib import Path
-if _TORCHVISION_AVAILABLE:
-    from torchvision import transforms as transform_lib
-else:  # pragma: no cover
-    warn_missing_pkg("torchvision")
 import torchvision.transforms as transforms
+from torchvision.datasets import ImageFolder
 import io
 import asyncio
 import random
+import torch
 from PIL import Image
 outQ = asyncio.Queue() 
-@under_review()
 class ImagenetDataModule(LightningDataModule):
     name = "imagenet"
     def __init__(
@@ -54,11 +45,6 @@ class ImagenetDataModule(LightningDataModule):
         """
         super().__init__(*args, **kwargs)
 
-        if not _TORCHVISION_AVAILABLE:  # pragma: no cover
-            raise ModuleNotFoundError(
-                "You want to use ImageNet dataset loaded from `torchvision` which is not installed yet."
-            )
-
         self.image_size = image_size
         self.dims = (3, self.image_size, self.image_size)
         self.data_dir = data_dir
@@ -83,9 +69,9 @@ class ImagenetDataModule(LightningDataModule):
         
         train_transform, test_transform = transforms.Compose([
             transforms.RandomResizedCrop(224),
-            transforms.RandomHorizontalFlip(),]),transforms.Compose([
+            transforms.RandomHorizontalFlip(),transforms.ToTensor()]),transforms.Compose([
             transforms.Resize(224),
-            transforms.CenterCrop(224),])
+            transforms.CenterCrop(224),transforms.ToTensor()])
         
         train_dir = os.path.join(self.data_dir, 'ImageNet_224', 'train')
         test_dir = os.path.join(self.data_dir, 'ImageNet_224', 'train')
@@ -93,7 +79,12 @@ class ImagenetDataModule(LightningDataModule):
         self.test_dataset = ImageFolder(test_dir, transform=test_transform)
         
         #return train_dataset, test_dataset
-
+    def train_dataloader(self) -> Any:
+        return torch.utils.data.DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
+    def test_dataloader(self) -> Any:
+        return torch.utils.data.DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
+    def val_dataloader(self) -> Any:
+        return torch.utils.data.DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
 
 
     def prepare_data(self) -> None:
@@ -109,6 +100,7 @@ class ImagenetDataModule(LightningDataModule):
         data_path = self.data_dir
         #check if files exist
         downloads=[]
+        urlsToGo=[]
         for url in urls:
             #get filename
             filename = url.split('/')[-1]
@@ -120,26 +112,19 @@ class ImagenetDataModule(LightningDataModule):
                 path=Path(os.path.join(data_path,filename))
                 path.touch()
             else:
-                obj=SmartDL(url,os.path.join(data_path,filename),progress_bar=False, verify=False)
-                obj.start() 
-                downloads.append(obj)
-        #check if all files are downloaded
-        for obj in downloads:
-            if not obj.isFinished():
-                obj.wait()
-                #now touch each file
-                path=Path(obj.get_dest())
-                path.touch()
-        
+                print("File {} does not exist".format(filename))
+                urlsToGo.append(url)
+        obj=SmartDL(urlsToGo,data_path,progress_bar=True,threads=16, verify=False)
+        obj.start()                
         #rename devkit
         original=os.path.join(data_path,"ILSVRC2012_devkit_t3.tar.gz")
         #move to os.path.join(data_path,"devkit.tar.gz")
-        os.cmd("mv {} {}".format(original,os.path.join(data_path,"devkit.tar.gz")))
+        os.system("mv {} {}".format(original,os.path.join(data_path,"devkit.tar.gz")))
         
         # make train directory and unzip files
         os.makedirs(os.path.join(data_path,"ImageNet-2012","train"),exist_ok=True)
         #extract files
-        os.cmd("tar --touch -xvf {} -C {}".format(os.path.join(data_path,"ILSVRC2012_img_train.tar"),os.path.join(data_path,"ImageNet-2012","train")))
+        os.system("tar --touch -xvf {} -C {}".format(os.path.join(data_path,"ILSVRC2012_img_train.tar"),os.path.join(data_path,"ImageNet-2012","train")))
         #for file in train/*.tar;do
         for file in os.listdir(os.path.join(data_path,"ImageNet-2012","train")):
             #extract
@@ -148,7 +133,7 @@ class ImagenetDataModule(LightningDataModule):
                 #make directory
                 dirname = file.split('/')[-1].split('.')[0]
                 os.makedirs(os.path.join(data_path,"ImageNet-2012","train",dirname),exist_ok=True)
-                os.cmd("tar --touch -xvf {} -C {}".format(file.get_dest(),os.path.join(data_path,dirname)))
+                os.system("tar --touch -xvf {} -C {}".format(file.get_dest(),os.path.join(data_path,dirname)))
         
                        
         '''
@@ -164,16 +149,16 @@ class ImagenetDataModule(LightningDataModule):
         done
         '''
         os.makedirs(os.path.join(data_path,"ImageNet-2012","val"),exist_ok=True)
-        os.cmd("tar --touch -xvf {} -C {}".format(os.path.join(data_path,"ILSVRC2012_img_val.tar"),os.path.join(data_path,"ImageNet-2012","val")))
+        os.system("tar --touch -xvf {} -C {}".format(os.path.join(data_path,"ILSVRC2012_img_val.tar"),os.path.join(data_path,"ImageNet-2012","val")))
         
         for file in os.listdir(os.path.join(data_path,"ImageNet-2012","val")):
             if file.endswith(".tar"):
                 dirname=file.split('/')[-1].split('.')[0]
                 os.makedirs(os.path.join(data_path,"ImageNet-2012","val",dirname),exist_ok=True)
-                os.cmd("tar --touch -xvf {} -C {}".format(file.get_dest(),os.path.join(data_path,dirname)))
+                os.system("tar --touch -xvf {} -C {}".format(file.get_dest(),os.path.join(data_path,dirname)))
         #copy APCT-master/prepare/val_prepare.sh to ImageNet-2012/prepare
-        os.cmd("cp {} {}".format(os.path.join("APCT-master","prepare","val_prepare.sh"),os.path.join(data_path,"ImageNet-2012","prepare")))
-        os.cmd("cd {} && bash val_prepare.sh {}".format(os.path.join(data_path,"ImageNet-2012","prepare"), os.path.join(data_path,"ImageNet-2012","val")))
+        os.system("cp {} {}".format(os.path.join("APCT-master","prepare","val_prepare.sh"),os.path.join(data_path,"ImageNet-2012","prepare")))
+        os.system("cd {} && bash val_prepare.sh {}".format(os.path.join(data_path,"ImageNet-2012","prepare"), os.path.join(data_path,"ImageNet-2012","val")))
         '''
         cd $$data_path/ImageNet-2012/prepare
         bash val_prepare.sh $data_path/ImageNet-2012/val
@@ -246,7 +231,16 @@ class ImagenetDataModule(LightningDataModule):
 
 
 if __name__ == '__main__':
-    dm = ImagenetDataModule()
+    #add arg parser
+    from argparse import ArgumentParser
+    parser = ArgumentParser(description='Prepare ImageNet dataset')
+    #add arguments data_path 
+    parser.add_argument('--data_path', type=str, default='/datasets3', help='path to data directory')
+    path=parser.parse_args().data_path
+    dm = ImagenetDataModule(data_dir=path)
+    dm.prepare_data()
+    dm.setup()
+
     print(dm.test_dataloader()[0])
     print(dm.val_dataloader()[0])
     print(dm.train_dataloader()[0])
