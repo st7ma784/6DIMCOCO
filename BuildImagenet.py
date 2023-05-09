@@ -171,8 +171,8 @@ class ImagenetDataModule(LightningDataModule):
             
         '''
         #resize dataset
-        self.fast_resize(os.path.join(data_path,"ImageNet-2012","train"))
-        self.fast_resize(os.path.join(data_path,"ImageNet-2012","val"))
+        # self.fast_resize(os.path.join(data_path,"ImageNet-2012","train"))
+        # self.fast_resize(os.path.join(data_path,"ImageNet-2012","val"))
         
     def fast_resize(self,dir):
         '''resize all images in a directory to 224x224'''
