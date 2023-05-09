@@ -65,8 +65,6 @@ class PTLModule(pl.LightningModule):
     def train_dataloader(self,batch_size=32):
       
         import torch.utils.data.dataloader as dataloader
-        self.labels=torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.ones(self.batch_size,dtype=torch.float,device=self.device))))))
-        self.labels=torch.nan_to_num(self.labels)
 
 
         return dataloader.DataLoader(self.train_dataset,batch_size=self.batch_size,shuffle=True,num_workers=8,drop_last=True)
@@ -136,19 +134,59 @@ class PTLModule(pl.LightningModule):
             #betas=(0.9, 0.95),
             )
         return [optimizer]
+
+
+from functools import reduce
+class PTLModuleStock(PTLModule):
+    def training_step(self, batch, batch_idx):
+        #The idea of this funtion is to compare how stock loss works....
+
+
+        #same setup as before...
+
+       
+        x=self.emb(batch[0]) # should be Bxf 
+        nx=[self(x+torch.randn_like(x))]*self.n # should be Bxf
+
+        #this time our loss is going to be the stock mm of each of the nx against each other.
+
+        for item in nx:
+            logits=[item@ x.T for x in nx]
+        logits=reduce(torch.add,[reduce(torch.add,[item@ x.T for x in nx]) for item in nx])*self.logit_scale.exp()
+        labels=torch.arange(batch[0].shape[0],device=self.device)
+        loss=torch.nn.functional.cross_entropy(logits,labels)
+      
+        return  {"loss":loss, "labels":batch[0], "embs":nx[0]}  
     
 #we're going to create some cool graphs, each with epochs : score for each of the 6 models and for each method. 
-results={n:[ {i:{}} for i in range(17)] for n in range(2,8)}
-
-
+results={n:{ i:{} for i in range(17)} for n in range(2,8)}
 for n in range(2,8):
+    #do benchmark first
+    model=PTLModuleStock(n=n)
+    trainer = Trainer(
+        gpus=1,
+        max_epochs=20,
+        logger=TensorBoardLogger("tb_logs", name="my_modelstock{}".format(n),version=f"{n}"),
+        auto_scale_batch_size="binsearch",
+        auto_lr_find=True)
+    try:
+        trainer.tune(model)
+
+        trainer.fit(model)
+        #set results n i to be the list of scores
+        results[n]["stock"]=model.trainer.logged_metrics
+    except Exception as e:
+        print(e)
+        results[n][i]=None
+
+
     for i in range(17):
         model=PTLModule(logitsversion=i)
 
         trainer = Trainer(
             gpus=1,
             max_epochs=20,
-            logger=TensorBoardLogger("tb_logs", name="my_model{}".format(i),version=f"{i}"),
+            logger=TensorBoardLogger("tb_logs", name="my_model{}".format(i),version=f"{n}"),
             #callbacks=[ModelCheckpoint(monitor='meanloss',mode='min',save_top_k=3,save_last=True)],
             #fast_dev_run=True,
             #limit_train_batches=0.01,
@@ -164,12 +202,15 @@ for n in range(2,8):
             #auto_select_gpus=True,
             #check_val_every_n_epoch=1,
         )
-        
-        trainer.tune(model)
+        try:
+            trainer.tune(model)
 
-        trainer.fit(model)
-        #set results n i to be the list of scores
-        results[n][i]=model.trainer.logged_metrics
+            trainer.fit(model)
+            #set results n i to be the list of scores
+            results[n][i]=model.trainer.logged_metrics
+        except Exception as e:
+            print(e)
+            results[n][i]=None
 
 #save results
 import pickle
