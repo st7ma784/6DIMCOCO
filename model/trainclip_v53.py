@@ -25,7 +25,7 @@ class LightningCLIPModule(LightningModule):
                 logitsversion=0,
                 normlogits=True,
                 maskLosses=2,
-                projection='inv',
+                projection='None',
                 logvariance=False,
                 prune=True,
                 meanloss=False,
@@ -238,8 +238,8 @@ class LightningCLIPModule(LightningModule):
         labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0]),:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,non_blocking=True) 
 
         logits=self(im,captions[:,0],captions[:,1],captions[:,2],captions[:,3],captions[:,4])
-        #self.log("first logit",logits[0,0,0,0,0,0],enable_graph=False)
-        #self.log("BAD logit",logits[1,2,3,4,5,0],enable_graph=False)
+        self.log("first logit",logits[0,0,0,0,0,0],enable_graph=False)
+        self.log("BAD logit",logits[1,2,3,4,5,0],enable_graph=False)
         # The idea is that good logits are 1s,   bad should be -1s... so if logits are coming back as ~6000....
         #  Option 1: divide down.
         #  Option 2: 1- output...
@@ -250,10 +250,10 @@ class LightningCLIPModule(LightningModule):
         meanloss=torch.mean(mloss)
         self.log("meanloss",meanloss,enable_graph=False, rank_zero_only=True)
         for mask in self.masks:
-           mea=torch.mean(mloss[self.Lossmask==mask])
-           self.log("maskVal={}".format(mask),mea,enable_graph=False, rank_zero_only=True)
-           self.log("proportionmaskVal={}".format(mask),torch.div(mea,meanloss),enable_graph=False, rank_zero_only=True)
-           # self.log("absdeltamaskVal={}".format(mask),torch.sub(loss,loss[self.Lossmasks==mask]),enable_graph=False, rank_zero_only=True)
+            mea=torch.mean(mloss[self.Lossmask==mask])
+            self.log("maskVal={}".format(mask),mea,enable_graph=False, rank_zero_only=True)
+            self.log("proportionmaskVal={}".format(mask),torch.div(mea,meanloss),enable_graph=False, rank_zero_only=True)
+            #self.log("absdeltamaskVal={}".format(mask),torch.sub(loss,loss[self.Lossmasks==mask]),enable_graph=False, rank_zero_only=True)
         
       
         lossim = self.loss(logits, labels,alpha=self.alpha)
@@ -274,7 +274,7 @@ class LightningCLIPModule(LightningModule):
     def configure_optimizers(self):
         
         optimizer = torch.optim.AdamW(
-            [p for p in self.parameters()]+[p for p in self.encode_image.parameters()]+[p for p in self.encoder.parameters()], lr=self.hparams.learning_rate, eps=10e-8,
+            [p for p in self.parameters()]+[p for p in self.encode_image.parameters()]+[p for p in self.encoder.parameters()], lr=self.hparams.learning_rate, eps=10e-7,
             #weight_decay=0.1,
             #betas=(0.9, 0.95),
             )
@@ -338,8 +338,8 @@ class LightningCLIPModule(LightningModule):
         self.log("mean validation stock logits ", logitsI.mean())
         labels=torch.arange(batch[0].shape[0],dtype=torch.long,device=self.device)
 
-        lossim = self.valloss(logitsI* 80, labels)
-        loss1 = self.valloss(logitsT* 80, labels)
+        lossim = self.valloss(logitsI*self.logit_scale, labels)
+        loss1 = self.valloss(logitsT*self.logit_scale, labels)
         loss = lossim+loss1
         loss=loss/2
         loss = loss.mean()

@@ -96,7 +96,14 @@ def get_loss_fn(logitsversion=0,norm=False,log=False):
         norm=True
         def baseLogits(*args):
             return calculate_lossNormsv7(*args)
-
+    elif logitsversion==17:
+        norm=True
+        def baseLogits(*args):
+            return calculate_lossNormsv8(*args)
+    elif logitsversion==18:
+        norm=True
+        def baseLogits(*args):
+            return calculate_lossNormsv9(*args)
     normfunction=lambda x:x
     if norm:
         normfunction=normargs
@@ -405,7 +412,135 @@ def calculate_lossNormsv7(I, C1, C2, C3, C4, C5):
                             torch.abs(C5.view(1,1,1,1,1,C5.shape[0],-1)).pow(2)]))
     return torch.mean(torch.sub(mean2,norm),dim=-1)
 
-############
+def calculate_lossNormsv8(I, C1, C2, C3, C4, C5):
+
+    #calculate the mean ^6 
+    mean2 = reduce(torch.add,[ I.view( I.shape[0],1,1,1,1,1,-1)/6,
+                            C1.view(1,C1.shape[0],1,1,1,1,-1)/6,
+                            C2.view(1,1,C2.shape[0],1,1,1,-1)/6,
+                            C3.view(1,1,1,C3.shape[0],1,1,-1)/6,
+                            C4.view(1,1,1,1,C4.shape[0],1,-1)/6,
+                            C5.view(1,1,1,1,1,C5.shape[0],-1)/6])
+    prod=torch.add(mean2,reduce(torch.mul,
+                    [ torch.abs(I.view( I.shape[0],1,1,1,1,1,-1)),
+                      torch.abs(C1.view(1,C1.shape[0],1,1,1,1,-1)),
+                      torch.abs(C2.view(1,1,C2.shape[0],1,1,1,-1)),
+                      torch.abs(C3.view(1,1,1,C3.shape[0],1,1,-1)),
+                      torch.abs(C4.view(1,1,1,1,C4.shape[0],1,-1)),
+                      torch.abs(C5.view(1,1,1,1,1,C5.shape[0],-1))]) )    
+    mean =torch.div(torch.pow(
+                        reduce(torch.add,
+                            [ torch.abs(I.view( I.shape[0],1,1,1,1,1,-1).div(6)),
+                              torch.abs(C1.view(1,C1.shape[0],1,1,1,1,-1).div(6)),
+                              torch.abs(C2.view(1,1,C2.shape[0],1,1,1,-1).div(6)),
+                              torch.abs(C3.view(1,1,1,C3.shape[0],1,1,-1).div(6)),
+                              torch.abs(C4.view(1,1,1,1,C4.shape[0],1,-1).div(6)),
+                              torch.abs(C5.view(1,1,1,1,1,C5.shape[0],-1).div(6))])
+                        ,6)
+                    ,2)
+    return torch.sum(torch.sub(mean2,mean),dim=-1)
+    #calculate the product of the absolute values of the terms,
+    #compare the product / mean  + mean  
+
+def calculate_lossNormsv9(I,C1,C2,C3,C4,C5):
+    #  # np.sqrt(np.power(mean,2)/N) == np.sqrt(np.power(SUM(X)/N,2)/N) == np.sqrt(np.power(SUM(X),2)/N^3)
+
+    mean = torch.sqrt(torch.pow(reduce(torch.add,[ I.view( I.shape[0],1,1,1,1,1,-1),
+                            C1.view(1,C1.shape[0],1,1,1,1,-1),
+                            C2.view(1,1,C2.shape[0],1,1,1,-1),
+                            C3.view(1,1,1,C3.shape[0],1,1,-1),
+                            C4.view(1,1,1,1,C4.shape[0],1,-1),
+                            C5.view(1,1,1,1,1,C5.shape[0],-1)]),2)/6^3)
+    
+    mean2=reduce(torch.add,[ torch.abs(I).view( I.shape[0],1,1,1,1,1,-1),
+                            torch.abs(C1).view(1,C1.shape[0],1,1,1,1,-1),
+                            torch.abs(C2).view(1,1,C2.shape[0],1,1,1,-1),
+                            torch.abs(C3).view(1,1,1,C3.shape[0],1,1,-1),
+                            torch.abs(C4).view(1,1,1,1,C4.shape[0],1,-1),
+                            torch.abs(C5).view(1,1,1,1,1,C5.shape[0],-1)])/6
+    norm=torch.sqrt(reduce(torch.add,[torch.pow(I,2).view( I.shape[0],1,1,1,1,1,-1),
+                            torch.pow(C1,2).view(1,C1.shape[0],1,1,1,1,-1),
+                            torch.pow(C2,2).view(1,1,C2.shape[0],1,1,1,-1),
+                            torch.pow(C3,3).view(1,1,1,C3.shape[0],1,1,-1),
+                            torch.pow(C4,2).view(1,1,1,1,C4.shape[0],1,-1),
+                            torch.pow(C5,2).view(1,1,1,1,1,C5.shape[0],-1)]))
+
+    print(mean.shape,mean2.shape,norm.shape)
+    return torch.sum(torch.sub(torch.add(mean,mean2),norm),dim=-1)
+def calculate_lossNormsvc(I, C1, C2, C3, C4, C5):
+    #right! 
+    #none of the above are working correctly, so lets just take the mean cosine distance between the vectors
+    '''
+    for 1D case of shape ( 1,F),
+                it's      I x [I,C1,C2,C3,C4,C5]
+                then its C1 x [I,C1,C2,C3,C4,C5]
+                then its C2 x [I,C1,C2,C3,C4,C5]
+                then its C3 x [I,C1,C2,C3,C4,C5]
+                then its C4 x [I,C1,C2,C3,C4,C5]
+                then its C5 x [I,C1,C2,C3,C4,C5]
+                then we subtract I.I, C1.C1, C2.C2, C3.C3, C4.C4, C5.C5
+                then we take the mean of the above 
+    '''
+    
+    '''Lets try this in Batches where shape is (B,F)'''
+    '''
+    for 2D case of shape (B,F),
+        I Similarity is sum(I x [I,C1,C2,C3,C4,C5], dim=-1) which returns a shape (6,B,B)
+        C1 Similarity is sum(C1 x [I,C1,C2,C3,C4,C5], dim=-1) which returns a shape (6,B,B)
+        C2 Similarity is sum(C2 x [I,C1,C2,C3,C4,C5], dim=-1) which returns a shape (6,B,B)
+        C3 Similarity is sum(C3 x [I,C1,C2,C3,C4,C5], dim=-1) which returns a shape (6,B,B)
+        C4 Similarity is sum(C4 x [I,C1,C2,C3,C4,C5], dim=-1) which returns a shape (6,B,B)
+        C5 Similarity is sum(C5 x [I,C1,C2,C3,C4,C5], dim=-1) which returns a shape (6,B,B)
+        we can sum these on dim 0 to get a shape (B,B). We can then subtract (B,B) matrices of  I.I C1.C1 C2.C2 C3.C3 C4.C4 C5.C5            
+        This should give us a (B,B) matrix of the cosine distance between the vectors, this can then be halved because every vector is counted twice
+    '''
+        #stack=torch.stack([I,C1,C2,C3,C4,C5],dim=0)
+    I=I/torch.norm(I,dim=-1,keepdim=True)
+    C1=C1/torch.norm(C1,dim=-1,keepdim=True)
+    C2=C2/torch.norm(C2,dim=-1,keepdim=True)
+    C3=C3/torch.norm(C3,dim=-1,keepdim=True)
+    C4=C4/torch.norm(C4,dim=-1,keepdim=True)
+    C5=C5/torch.norm(C5,dim=-1,keepdim=True)
+    total=reduce(torch.add, [
+                            reduce(torch.add,[  C1@I.T,
+                                                #torch.sum(torch.mul(C1,C1),dim=-1),
+                                                C1@C2.T,
+                                                C1@C3.T,
+                                                C1@C4.T,
+                                                C1@C5.T]),
+                            reduce(torch.add,[  C2@I.T,
+                                                C2@C1.T,
+                                                #torch.sum(torch.mul(C2,C2),dim=-1),
+                                                C2@C3.T,
+                                                C2@C4.T,
+                                                C2@C5.T]),
+                            reduce(torch.add,[  C3@I.T,
+                                                C3@C1.T,
+                                                C3@C2.T,
+                                                #torch.sumtorch.mul(C3,C3),dim=-1),
+                                                C3@C4.T,
+                                                C3@C5.T]),
+                            reduce(torch.add,[  C4@I.T,
+                                                C4@C1.T,
+                                                C4@C2.T,
+                                                C4@C3.T,
+                                                #torch.sum(torch.mul(C4,C4),dim=-1),
+                                                C4@C5.T]),
+                            reduce(torch.add,[  C5@I.T,
+                                                C5@C1.T,
+                                                C5@C2.T,
+                                                C5@C3.T,
+                                                C5@C4.T,
+                                                #torch.sum(torch.mul(C5,C5),dim=-1)
+                                                ])])
+    #print(total.shape)
+    return reduce(torch.add,[ #torch.sum(torch.mul(I,I),dim=-1),
+                                                I@C1.T,
+                                                I@C2.T,
+                                                I@C3.T,
+                                                I@C4.T,
+                                                I@C5.T])/10,total/50 #this is averaged across the 6 vectors, each with 5 elements, then halved because every vector is counted twice
+                    
 #loss functions
 
 def get_loss_sum(version=False):

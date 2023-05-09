@@ -5,8 +5,8 @@ if __name__=="__main__":
         'name':"Final Deploy",
         'method': 'bayes',  # Randomly sample the hyperparameter space (alternatives: grid, bayes)
         'metric': {  # This is the metric we are interested in maximizing
-            'name': 'TProbe',
-            'goal': 'maximize'   
+            'name': 'train_loss',
+            'goal': 'minimize'   
         },
         'parameters': {
             'learning_rate': {
@@ -19,7 +19,7 @@ if __name__=="__main__":
                 'values': ['32']
             },
             'maskLosses': {
-                'values': [0,2]
+                'values': [0,1,2]
             },
             'embed_dim':{
                 'values': [512]
@@ -28,16 +28,16 @@ if __name__=="__main__":
                 'values': [512]
             },
             'logitsversion':{
-                'values':[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16]
+                'values':[16]
             },
             "prune":{
-                'values':[False]#True]
+                'values':[False]
             },
             "meanloss":{
-                'values':[True]#,False]
+                'values':[True,False]
             },
             "projection":{
-                'values':[""]#"None","inv","iinv", ""]
+                'values':["None","inv","iinv", ""]
             },
             'transformer_heads':{
                 'values': [16]

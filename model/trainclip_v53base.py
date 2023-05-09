@@ -77,7 +77,10 @@ class LightningCLIPModule(LightningModule):
         self.naninfcount=0
         print("done")
         from model.LossCalculation import calculate_lossStock as sl
+        from model.LossCalculation import calculate_lossNormsvc
         self.calculate_lossStock=sl
+
+        self.calculate_lossStock2=calculate_lossNormsvc
         if logitsversion==0:
             from model.LossCalculation import calculate_loss as cl
         elif logitsversion==1: 
@@ -159,8 +162,10 @@ class LightningCLIPModule(LightningModule):
     def forward(self, im, captions1, captions2, captions3, captions4, captions5):
         image_features=self.encode_image(im)
         caption_features1=self.encode_text(captions1)
-
-       
+        caption_features2=self.encode_text(captions2)#
+        caption_features3=self.encode_text(captions3)#
+        caption_features4=self.encode_text(captions4)#
+        caption_features5=self.encode_text(captions5)#
 
         if self.projection=="inv":
             image_features=image_features@ self.text_projection
@@ -168,8 +173,13 @@ class LightningCLIPModule(LightningModule):
             image_features=image_features@torch.inverse(self.text_projection)
         elif self.projection=="None":
             caption_features1=caption_features1@self.text_projection
+            caption_features2=caption_features2@self.text_projection#
+            caption_features3=caption_features3@self.text_projection# 
+            caption_features4=caption_features4@self.text_projection#
+            caption_features5=caption_features5@self.text_projection#       
         
-        return self.calculate_lossStock(image_features, caption_features1)[0]*self.logit_scale.exp()
+        return self.calculate_lossStock2(image_features, caption_features1,caption_features2,caption_features3,caption_features4,caption_features5)
+        #return self.calculate_lossStock(image_features, caption_features1)[0]*self.logit_scale.exp()
 
     def on_train_epoch_start(self) -> None:
         if self.prune:
@@ -186,18 +196,19 @@ class LightningCLIPModule(LightningModule):
         labels=torch.arange(batch[0].shape[0],device=self.device)
         im,captions= batch[0],batch[1]
         
-        logits=self(im,captions[:,0],captions[:,1],captions[:,2],captions[:,3],captions[:,4])
+        logitsI,logits=self(im,captions[:,0],captions[:,1],captions[:,2],captions[:,3],captions[:,4])
         self.log("first logit",logits[0,0],enable_graph=False)
         self.log("BAD logit",logits[0,1],enable_graph=False)
         self.log("logit scale",self.logit_scale.exp())
-
+        logitsI=logitsI*self.logit_scale.exp()
+        logits=logits*self.logit_scale.exp()
         # The idea is that good logits are 1s,   bad should be -1s... so if logits are coming back as ~6000....
         #  Option 1: divide down.
         #  Option 2: 1- output...
         # option 3: logarithmic functions? 
 
-        lossim = self.loss(logits, labels)
-        loss1 = self.loss(logits.permute(1,0), labels)
+        lossim = self.loss(logitsI, labels)
+        loss1 = self.loss(logits, labels)
        
         loss = lossim+loss1
         loss=loss/2
@@ -209,10 +220,10 @@ class LightningCLIPModule(LightningModule):
             
     def configure_optimizers(self):
         
-        optimizer = torch.optim.Adam(
+        optimizer = torch.optim.AdamW(
             self.parameters(), lr=self.hparams.learning_rate, eps=10e-8,
-            weight_decay=0.1,
-            betas=(0.9, 0.95),
+            #weight_decay=0.1,
+            #betas=(0.9, 0.95),
             )
         lr_schedulers = {"scheduler": ReduceLROnPlateau(optimizer), "monitor": "train_loss"}
 
