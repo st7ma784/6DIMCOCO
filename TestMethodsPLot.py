@@ -14,7 +14,7 @@ import numpy as np
 class PTLModule(pl.LightningModule):
     def __init__(self,
                 batch_size=16,
-                learning_rate=0.001,
+                learning_rate=0.00001,
                 logitsversion=17,
                 n=6,
                 normlogits=False,
@@ -71,17 +71,16 @@ class PTLModule(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         #batch shape is n
         #print("batch",batch)
-        n=6
+
         x=self.emb(batch[0]) # should be Bxf 
-        nx=[self(x+torch.randn_like(x))]*n # should be Bxf
+        nx=[self(x+torch.randn_like(x))]*self.n # should be Bxf
 
 
-        
-        
         # labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0]),:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,non_blocking=True) 
 
-        logits=self.calculate_loss(*nx).mul(torch.exp(self.logit_scale))
-        #print("logits",logits.shape)
+        logits=torch.mul(torch.nan_to_num(self.calculate_loss(*nx)),self.logit_scale.exp())
+
+        #print("logits",logits)
         #self.log("first logit",logits[0,0,0,0,0,0],enable_graph=False)
         #self.log("BAD logit",logits[1,2,3,4,5,0],enable_graph=False)
         # The idea is that good logits are 1s,   bad should be -1s... so if logits are coming back as ~6000....
@@ -90,19 +89,15 @@ class PTLModule(pl.LightningModule):
         # option 3: logarithmic functions? 
         #print("logits",logits.shape)
         #print("labels",labels.shape)
-        labels=torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.ones_like(batch[0],dtype=torch.float))))))
+        labels=torch.ones_like(batch[0],dtype=torch.float)
+        while len(labels.shape)<len(logits.shape):
+            labels=torch.diag_embed(labels)
+        #print("labels",labels.shape)
+        #labels=torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.ones_like(batch[0],dtype=torch.float))))))
         labels=torch.nan_to_num(labels)
         #print("labels",labels.shape)
-        lossim = self.loss(logits, labels,alpha=self.alpha)
-            
-        
-        loss1 = self.loss(logits.permute(1,2,3,4,5,0), labels,alpha=self.alpha)
-        loss2 = self.loss(logits.permute(2,3,4,5,0,1), labels,alpha=self.alpha)
-        loss3 = self.loss(logits.permute(3,4,5,0,1,2), labels,alpha=self.alpha)
-        loss4 = self.loss(logits.permute(4,5,0,1,2,3), labels,alpha=self.alpha)
-        loss5 = self.loss(logits.permute(5,0,1,2,3,4), labels,alpha=self.alpha)
-        loss=self.meanloss(I=[lossim],T=[loss1,loss2,loss3,loss4,loss5]).mean()
-      
+        loss = self.loss(logits, labels,alpha=self.alpha)
+        self.log("loss",loss,enable_graph=False)
         return  {"loss":loss, "labels":batch[0], "embs":nx[0]}  
 
     def training_epoch_end(self, outputs):
@@ -150,25 +145,53 @@ class PTLModuleStock(PTLModule):
 
         #this time our loss is going to be the stock mm of each of the nx against each other.
 
-        for item in nx:
-            logits=[item@ x.T for x in nx]
-        logits=reduce(torch.add,[reduce(torch.add,[item@ x.T for x in nx]) for item in nx])*self.logit_scale.exp()
-        labels=torch.arange(batch[0].shape[0],device=self.device)
-        loss=torch.nn.functional.cross_entropy(logits,labels)
-      
+        loss=reduce(torch.add,[self.loss(item@ x.T *self.logit_scale.exp(),torch.arange(batch[0].shape[0],device=self.device),alpha=self.alpha) for x in nx  for item in nx])
+        
+        self.log("loss",loss,enable_graph=False)
         return  {"loss":loss, "labels":batch[0], "embs":nx[0]}  
     
 #we're going to create some cool graphs, each with epochs : score for each of the 6 models and for each method. 
-results={n:{ i:{} for i in range(17)} for n in range(2,8)}
-for n in range(2,8):
+results={n:{ i:{} for i in range(17)} for n in range(2,10)}
+
+for n in range(2,14):
+    i=5
+    model=PTLModule(logitsversion=i)
+
+    trainer = Trainer(
+        gpus=1,
+        max_epochs=20,
+        logger=TensorBoardLogger("tb_logs"),
+        #callbacks=[ModelCheckpoint(monitor='meanloss',mode='min',save_top_k=3,save_last=True)],
+        #fast_dev_run=True,
+        #limit_train_batches=0.01,
+        #limit_val_batches=0.01,
+        #limit_test_batches=0.01,
+        #limit_predict_batches=0.01,
+        #precision=16,
+        #amp_level='O2',
+        #amp_backend='apex',
+        #auto_scale_batch_size='binsearch',
+        auto_scale_batch_size="binsearch",
+        auto_lr_find=False,
+        #auto_select_gpus=True,
+        #check_val_every_n_epoch=1,
+    )
+    trainer.tune(model)
+
+    trainer.fit(model)
+    #set results n i to be the list of scores
+    results[n][i]=model.trainer.logged_metrics
+
+
+for n in range(2,14):
     #do benchmark first
     model=PTLModuleStock(n=n)
     trainer = Trainer(
         gpus=1,
         max_epochs=20,
-        logger=TensorBoardLogger("tb_logs", name="my_modelstock{}".format(n),version=f"{n}"),
+        logger=TensorBoardLogger("tb_logs"),
         auto_scale_batch_size="binsearch",
-        auto_lr_find=True)
+        auto_lr_find=False)
     try:
         trainer.tune(model)
 
@@ -177,44 +200,11 @@ for n in range(2,8):
         results[n]["stock"]=model.trainer.logged_metrics
     except Exception as e:
         print(e)
-        results[n][i]=None
-
-
-    for i in range(17):
-        model=PTLModule(logitsversion=i)
-
-        trainer = Trainer(
-            gpus=1,
-            max_epochs=20,
-            logger=TensorBoardLogger("tb_logs", name="my_model{}".format(i),version=f"{n}"),
-            #callbacks=[ModelCheckpoint(monitor='meanloss',mode='min',save_top_k=3,save_last=True)],
-            #fast_dev_run=True,
-            #limit_train_batches=0.01,
-            #limit_val_batches=0.01,
-            #limit_test_batches=0.01,
-            #limit_predict_batches=0.01,
-            #precision=16,
-            #amp_level='O2',
-            #amp_backend='apex',
-            #auto_scale_batch_size='binsearch',
-            auto_scale_batch_size="binsearch",
-            auto_lr_find=True,
-            #auto_select_gpus=True,
-            #check_val_every_n_epoch=1,
-        )
-        try:
-            trainer.tune(model)
-
-            trainer.fit(model)
-            #set results n i to be the list of scores
-            results[n][i]=model.trainer.logged_metrics
-        except Exception as e:
-            print(e)
-            results[n][i]=None
+        results[n]["stock"]=None
 
 #save results
 import pickle
-with open("results.pkl","wb") as f:
+with open("base-v-.pkl","wb") as f:
     pickle.dump(results,f)
     
 

@@ -24,10 +24,7 @@ def logargs(args):
 
 def get_loss_fn(logitsversion=0,norm=False,log=False):
     baseLogits=calculate_loss
-    ##logfunction=lambda x:x
-   
-        # if log:
-    #     logfunction=logargs
+
     if logitsversion==0:
         def baseLogits(*args):
             return calculate_loss(*args)

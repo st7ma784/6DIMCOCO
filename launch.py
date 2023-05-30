@@ -51,10 +51,20 @@ def train(config={
         dir=config.get("dir",".")
     if Dataset is None:
         from BuildSpainDataSet import COCODataModule
-        from BuildLAION import LaionDataModule
         
         #Dataset=LaionDataModule(Cache_dir=dir,batch_size=config["batch_size"])
         Dataset=COCODataModule(Cache_dir=dir,batch_size=config["batch_size"])
+        from BuildImagenet import ImagenetDataModule
+        TestLoader=ImagenetDataModule(
+            data_dir="/datasets3/", 
+            meta_dir=dir,
+            num_imgs_per_val_class=50,
+            image_size=224,
+            num_workers=4, 
+            batch_size=config["batch_size"], 
+            shuffle=True,
+            pin_memory=True,
+            drop_last=True)
     if devices is None:
         devices=config.get("devices","auto")
     if accelerator is None:
@@ -90,23 +100,11 @@ def train(config={
     if config["batch_size"] !=1:
         
         trainer.fit(model,Dataset)
-        trainer.test(model,Dataset)
+        trainer.test(model,TestLoader)
     else:
         return 0 #No need to train if batch size is 1
     #do test
-    from BuildImagenet import ImagenetDataModule
-    TestLoader=ImagenetDataModule(
-        data_dir=dir, 
-        meta_dir=dir,
-        num_imgs_per_val_class=50,
-        image_size=224,
-        num_workers=4, 
-        batch_size=config["batch_size"], 
-        shuffle=True,
-        pin_memory=True,
-        drop_last=True)
-    trainer.test(model,TestLoader)
-    
+  
 def SlurmRun(trialconfig):
 
     job_with_version = '{}v{}'.format("SINGLEGPUTESTLAUNCH", 0)
