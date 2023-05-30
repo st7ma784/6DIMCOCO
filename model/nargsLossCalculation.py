@@ -14,6 +14,7 @@ This code is a copy of the LossCalculation.py file, but with the loss functions 
 
 def oneminus(args):
     return 1-args
+
 def null(*args):
     return args
 
