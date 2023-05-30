@@ -37,7 +37,7 @@ class PTLModule(pl.LightningModule):
         self.maskloss=torch.nn.MSELoss(reduction='none')
 
         torch.autograd.set_detect_anomaly(True)
-        #with torch.no_grad():
+
        
     def forward(self, x):
         
@@ -46,15 +46,7 @@ class PTLModule(pl.LightningModule):
         return x
     def setup(self, stage):
         self.train_dataset = torch.utils.data.TensorDataset(torch.randint(0, 1000, (10000,)))
-        # self.labels=torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.ones(self.batch_size,dtype=torch.float,device=self.device))))))
-        # self.labels=torch.nan_to_num(self.labels)
-
-        #B,N=self.batch_size,6
-        #Views=torch.diag_embed(torch.ones(N,dtype=torch.long)*B-1)+1
-        #Lossmask=torch.sum(reduce(torch.add,list(map(lambda Arr: torch.nn.functional.one_hot(torch.arange(B).view(*Arr),num_classes=B),Views.tolist()))).pow(4),dim=-1)
-
-        #self.masks=torch.unique(torch.flatten(Lossmask,0,-1),dim=0,sorted=False)
-
+   
         self.alpha=None
         from model.LossCalculation import get_loss_sum
         self.meanloss=get_loss_sum(0)
@@ -80,22 +72,11 @@ class PTLModule(pl.LightningModule):
 
         logits=torch.mul(torch.nan_to_num(self.calculate_loss(*nx)),self.logit_scale.exp())
 
-        #print("logits",logits)
-        #self.log("first logit",logits[0,0,0,0,0,0],enable_graph=False)
-        #self.log("BAD logit",logits[1,2,3,4,5,0],enable_graph=False)
-        # The idea is that good logits are 1s,   bad should be -1s... so if logits are coming back as ~6000....
-        #  Option 1: divide down.
-        #  Option 2: 1- output...
-        # option 3: logarithmic functions? 
-        #print("logits",logits.shape)
-        #print("labels",labels.shape)
         labels=torch.ones_like(batch[0],dtype=torch.float)
         while len(labels.shape)<len(logits.shape):
             labels=torch.diag_embed(labels)
-        #print("labels",labels.shape)
-        #labels=torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.ones_like(batch[0],dtype=torch.float))))))
         labels=torch.nan_to_num(labels)
-        #print("labels",labels.shape)
+
         loss = self.loss(logits, labels,alpha=self.alpha)
         self.log("loss",loss,enable_graph=False)
         return  {"loss":loss, "labels":batch[0], "embs":nx[0]}  
@@ -134,16 +115,9 @@ class PTLModule(pl.LightningModule):
 from functools import reduce
 class PTLModuleStock(PTLModule):
     def training_step(self, batch, batch_idx):
-        #The idea of this funtion is to compare how stock loss works....
-
-
-        #same setup as before...
-
-       
+           
         x=self.emb(batch[0]) # should be Bxf 
         nx=[self(x+torch.randn_like(x))]*self.n # should be Bxf
-
-        #this time our loss is going to be the stock mm of each of the nx against each other.
 
         loss=reduce(torch.add,[self.loss(item@ x.T *self.logit_scale.exp(),torch.arange(batch[0].shape[0],device=self.device),alpha=self.alpha) for x in nx  for item in nx])
         
@@ -151,36 +125,31 @@ class PTLModuleStock(PTLModule):
         return  {"loss":loss, "labels":batch[0], "embs":nx[0]}  
     
 #we're going to create some cool graphs, each with epochs : score for each of the 6 models and for each method. 
-results={n:{ i:{} for i in range(17)} for n in range(2,10)}
+results={n:{ i:{} for i in range(17)} for n in range(2,14)}
 
 for n in range(2,14):
-    i=5
-    model=PTLModule(logitsversion=i)
+   
+    model=PTLModule(n=n
+                    ,logitsversion=5)
 
     trainer = Trainer(
         gpus=1,
         max_epochs=20,
         logger=TensorBoardLogger("tb_logs"),
-        #callbacks=[ModelCheckpoint(monitor='meanloss',mode='min',save_top_k=3,save_last=True)],
-        #fast_dev_run=True,
-        #limit_train_batches=0.01,
-        #limit_val_batches=0.01,
-        #limit_test_batches=0.01,
-        #limit_predict_batches=0.01,
-        #precision=16,
-        #amp_level='O2',
-        #amp_backend='apex',
-        #auto_scale_batch_size='binsearch',
         auto_scale_batch_size="binsearch",
         auto_lr_find=False,
         #auto_select_gpus=True,
-        #check_val_every_n_epoch=1,
     )
-    trainer.tune(model)
+    try:
 
-    trainer.fit(model)
-    #set results n i to be the list of scores
-    results[n][i]=model.trainer.logged_metrics
+        trainer.tune(model)
+
+        trainer.fit(model)
+        #set results n i to be the list of scores
+        results[n][5]=model.trainer.logged_metrics
+    except Exception as e:
+        print(e)
+        results[n][5]=None
 
 
 for n in range(2,14):
