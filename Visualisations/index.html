@@ -1,0 +1,95 @@
+<!-- This file is the index for the webpage. We'll have 2 dropdowns, then a graph -->
+<html>
+<jsp:include page="header.jsp" />
+<head>
+    <title>Visualisations</title>
+    <link rel="stylesheet" type="text/css" href="css/style.css">
+    <script src="js/d3.v3.min.js"></script>
+    <script src="js/jquery-1.11.3.min.js"></script>
+    <script src="js/visualisations.js"></script>
+
+</head>
+
+<body>
+
+    
+<form action="/ra/connect" method="POST" id="form">
+   <select name="selected_class" class="form-control" id="all_classes">
+   {% for o in all_classes %}
+      <option  value="{{ o }}" selected>{{ o }}</option>
+   {% endfor %}   
+   </select> 
+   <button class="form-control" id="button">Get gateways</button>
+</form>
+
+<p id="countdown"></p>
+<div class="container">
+    <div draggable="true" class="box">A</div>
+    <div draggable="true" class="box">B</div>
+    <div draggable="true" class="box">C</div>
+  </div>
+<script>
+    $('#button').click( function(event) {
+        event.preventDefault();
+
+        $.post("/ra/connect", $('#form').serialize(), function(data) {
+            //alert(data);
+            countdown = $("#countdown");
+            countdown.append(data + "<br/>");
+        });
+    });
+</script>
+
+<div id="wrapper">
+    <div id="header">
+        <h1>Visualisations</h1>
+    </div>
+    <div id="content">
+        <div id="dropdowns">
+            <!-- on select call method update orbs -->
+            <select id="n">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12">12</option>
+
+            </select>
+            <select id="Logitsversion">
+                <option value="1">1</option>
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+                <option value="4">4</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9">9</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12">12</option>
+            </select>
+        </div>
+        <div id="graph">
+            <svg id="svg">
+                <!-- Create a number of orbs here equal to the value of n -->
+
+                
+
+            </svg>
+        </div>
+    </div>
+
+
+
+
+
+
+</html>
