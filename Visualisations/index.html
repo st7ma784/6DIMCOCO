@@ -1,156 +1,133 @@
-<!-- This file is the index for the webpage. We'll have 2 dropdowns, then a graph -->
 <html>
-<jsp:include page="header.jsp" />
 <head>
     <title>Visualisations</title>
-    <link rel="stylesheet" type="text/css" href="css/style.css">
-    <script src="js/d3.v3.min.js"></script>
-    <script src="js/jquery-1.11.3.min.js"></script>
-    <script src="js/visualisations.js"></script>
-
+   
 </head>
 
 <body>
+<!-- use css -->
+<style>
+    #wrapper {
+        margin: 0 auto;
+    }
 
+    /* anything that is of class orb , set to colour green*/
+    .orb {
+        width: 100px;
+        height: 100px;
+        background-color: red;
+        -moz-border-radius: 50px;
+        -webkit-border-radius: 50px;
+        border-radius: 50px;
+        }
+        
+</style>
+<script src="https://cdn.jsdelivr.net/gh/interactiveJS/interactiveJS@v2.0.1/src/individuals/draggable.min.js">
     
-<form action="/ra/connect" method="POST" id="form">
-   <select name="selected_class" class="form-control" id="all_classes">
-   {% for o in all_classes %}
-      <option  value="{{ o }}" selected>{{ o }}</option>
-   {% endfor %}   
-   </select> 
-   <button class="form-control" id="button">Get gateways</button>
+
+</script>
+<p id="debugger">   </p>
+<button type="button" id="add_orbs" onclick="ADDORB()">Add Orbs</button>
+<script>
+    function orblistener(event) {
+        //get the x and y of the orb
+        var x = event.clientX;
+        var y = event.clientY;
+        var orb = event.target;
+        orb.style.left = x + 'px';
+        orb.style.top = y + 'px';
+        orb.style.position = 'absolute';
+        //send the id and x and y to the server
+        //send the and x and y to the server
+        var id = orb.id;
+        //get all orbs x and y
+        var orbs = document.getElementsByClassName("orb");
+        var x = [];
+        var y = [];
+        //window width and height
+        var width = window.innerWidth;
+        var height = window.innerHeight;
+
+        orb.innerHTML = "x: " + orb.style.left + " y: " + orb.style.top+ "<br>";
+
+        for (var i = 0; i < orbs.length; i++) {
+            x.push(orbs[i].style.left);
+            y.push(orbs[i].style.top);
+        }
+        
+        
+
+
+        //send the x and y to the server
+        var data = { 'x': x, 'y': y, width: width, height: height};
+        let dataJSON = JSON.stringify(data);
+        let request = new XMLHttpRequest();
+
+        request.onreadystatechange = function(){
+            if (request.readyState === 4) {
+                //alert(request.response);
+                document.getElementById("S").innerHTML = request.response;
+            }
+        };
+        const action = "POST";
+        const endpoint = "http://127.0.0.1:5000/data";
+        request.open(action, endpoint);
+        request.setRequestHeader("Content-Type", "application/json");
+        request.send(dataJSON);
+        }
+    
+    function ADDORB() {
+        // Remove the last row from the table
+        
+        var orb = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        node = document.getElementById('graph');
+        node.appendChild(orb);
+        // count the number of children in the graph
+        nodes = document.getElementById('graph').childNodes;
+        orb.setAttribute("class", "orb");
+        orb.setAttribute("id", "orb"+nodes.length);
+        
+        //add to html
+        document.getElementById("demo").innerHTML = "Added";
+
+        node.insertAdjacentHTML('afterend', '<div id="orb'+nodes.length+'" class="orb" draggable="true" ondragend="orblistener(event)"></d>');
+        // when i add like this it doesn't immediately show the node
+        node.appendChild(orb);
+        // refresh the page
+        
+        node.innerHTML = node.innerHTML;
+        }
+</script>
+<button type="button" id="remove_orbs" onclick="REMOVEORB()">Remove Orbs</button>
+<p id="demo"></p>
+<script>
+    function REMOVEORB() {
+        // Remove the last row from the table
+        document.getElementById("demo").innerHTML = "REmoved";
+        //undo the insertAdjacentHTML from the addOrb function
+        //count the number of children in the graph
+        let nodes = document.getElementById('graph').childNodes;
+        //remove the last child
+        //remove from html
+        let id = "orb"+nodes.length;
+        nodes[nodes.length-1].remove();
+        //check html for the id 
+        document.getElementById(id).remove();
+}
+</script>
+<form id="form" class="js-from" method=post >
+    <label for="method">method:</label><br>
+    <input type="text" id="method" name="method"><br>
 </form>
 
-<p id="countdown"></p>
-<script>
-    $('#button').click( function(event) {
-        event.preventDefault();
-        
-        $.post("/ra/connect", $('#form').serialize(), function(data) {
-            //alert(data);
-            // do something here with response;
-            countdown = $("#countdown");
-            countdown.append(data + "<br/>");
-        });
-    });
-</script>
-
-<div id="wrapper">
-    <div id="header">
-        <h1>Visualisations</h1>
-    </div>
-    <div id="content">
-        <div id="dropdowns">
-            <!-- on select call method update orbs -->
-            <select id="n">
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3" selected>3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-                <option value="6">6</option>
-                <option value="7">7</option>
-                <option value="8">8</option>
-                <option value="9">9</option>
-                <option value="10">10</option>
-                <option value="11">11</option>
-                <option value="12">12</option>
-
-            </select>
-            <select id="Logitsversion">
-                <option value="1">1</option>
-                <option value="2">2</option>
-                <option value="3" selected>3</option>
-                <option value="4">4</option>
-                <option value="5">5</option>
-                <option value="6">6</option>
-                <option value="7">7</option>
-                <option value="8">8</option>
-                <option value="9">9</option>
-                <option value="10">10</option>
-                <option value="11">11</option>
-                <option value="12">12</option>
-            </select>
-        </div>
-        <div id="graph">
-            <svg id="svg">
-                <!-- Create a number of orbs here equal to the value of n -->
-
-                
-
-            </svg>
-        </div>
-    </div>
+<div id="header">
+    <h1>Visualisations</h1>
 </div>
-
-<script>
-    $('#n').select( function(event) {
-        event.preventDefault();
-        
-        $.post("/ra/updateN", $('#form').serialize(), function(data) {
-            //alert(data);
-            // do something here with response;
-            //number of items in the dropdown 
-            var n = $('#n').val();
-            //number of items on graph should be equal to n
-            var numItems = $('.orb').length;
-            //if n is greater than numItems, add more orbs
-            if (n > numItems) {
-                for (var i = numItems; i < n; i++) {
-                    //add an orb
-                    var orb = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                    orb.setAttribute("class", "orb");
-                    orb.setAttribute("cx", 50);
-                    orb.setAttribute("cy", 50);
-                    orb.setAttribute("r", 50);
-                    orb.setAttribute("fill", "red");
-                    orb.setAttribute("stroke", "black");
-                    orb.setAttribute("stroke-width", 2);
-                    //set draggable
-                    orb.setAttribute("draggable", "true");
-                    document.getElementById("graph").appendChild(orb);
-                }
-            }
-            // if we have too many we must remove some
-            else if (n < numItems) {
-                for (var i = numItems; i > n; i--) {
-                    //remove an orb
-                    var orb = document.getElementsByClassName("orb")[i-1];
-                    orb.parentNode.removeChild(orb);
-                }
-            }
-        });
-    });
-</script>
-
 <div class="container" id="graph">
-   
-    </div>
-<script>
-    //when an orb is dragged, send the new position(s) to the server, reply will be the new value of s
-    $('#logitsversion').select( function(event) {
-        
-        $.post("/ra/updateMethod", $('#form').serialize(), function(data) {
-            //returned data is the new value of s
-            //alert(data);
-            output = $("#S");
-            //set value of S
-            output.html(data);
-        });
-    });
-    $('#graph').on('drag', '.orb', function(event) {
-        event.preventDefault();
-        
-        $.post("/ra/getS", $('#form').serialize(), function(data) {
-            //returned data is the new value of s
-            //alert(data);
-            output = $("#S");
-            //set value of S
-            output.html(data);
-        });
-    });
-</script>
+
+</div> 
+
 <p id="S"></p>
+
 
 </html>

@@ -1,6 +1,6 @@
 import torch
 from flask import Flask, render_template, request, jsonify
-
+import json
 
 #use this to append the path to the model folder
 from nargsLossCalculation import get_loss_fn
@@ -26,29 +26,39 @@ func=lambda x: x**2
 def index():
     return render_template("./index.html")
 
-@app.route('/ra/connect', methods=['GET', 'POST'])
-def connect_management():
-    user = request.form.get('selected_class')
-    print('user:', user)
-    return str(user)
-@app.route('/ra/updateMethod', methods=['GET', 'POST'])
+@app.route('/', methods=['POST'])
 def ImportLogitMethod():
     #read in the value of the dropdown
     global func
-    method = request.form.get('Logitsversion')
+    method = request.values.get('method')
+    #print(method)
     func=get_loss_fn(method)
-    coords=request.form.get('coords')
-    return func(*coords)
-
-@app.route('/ra/getS', methods=['GET', 'POST'])
+    return render_template("./index.html")
+@app.route('/data', methods=['GET','POST'])
 def getS():
-    #read all the x and y from all orbs in graph
+    #data will be sent as a jsonified dict of x and y
+    global func
+    data=request.get_json()
+    #print(data)
+    #un stringify the data
+    x=filter(lambda a: a != '',data['x'])
+    y=filter(lambda a: a != '',data['y'])
+    
+    #print(x,y)
+    width=data['width']
+    height=data['height']
+    wh=torch.tensor([[width,height]])/2
+    #convert ("numberpx") to number
+    x=[float(x[:-2]) for x in x]
+    y=[float(y[:-2]) for y in y]
+    #print("x",x,"y",y)
     #the div container "graph" has all the orbs
-    xys=[torch.tensor([orb.cx,orb.cy]) for orb in request.form.get('graph')]
+    xys=[(torch.tensor([[x,y]])-wh)/wh for x,y in zip(x,y)]
     #y=[orb.cy for orb in request.form.get('graph')]
-    return func(*xys).item()
+    #for xy in xys:
+    #    print(xy)
+    #print( xy.shape for xy in xys)
+    return str(func(*xys).item())
      
-
-
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=5000, debug=True)
