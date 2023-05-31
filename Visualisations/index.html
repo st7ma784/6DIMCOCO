@@ -23,17 +23,13 @@
 </form>
 
 <p id="countdown"></p>
-<div class="container">
-    <div draggable="true" class="box">A</div>
-    <div draggable="true" class="box">B</div>
-    <div draggable="true" class="box">C</div>
-  </div>
 <script>
     $('#button').click( function(event) {
         event.preventDefault();
-
+        
         $.post("/ra/connect", $('#form').serialize(), function(data) {
             //alert(data);
+            // do something here with response;
             countdown = $("#countdown");
             countdown.append(data + "<br/>");
         });
@@ -86,10 +82,75 @@
             </svg>
         </div>
     </div>
+</div>
 
+<script>
+    $('#n').select( function(event) {
+        event.preventDefault();
+        
+        $.post("/ra/updateN", $('#form').serialize(), function(data) {
+            //alert(data);
+            // do something here with response;
+            //number of items in the dropdown 
+            var n = $('#n').val();
+            //number of items on graph should be equal to n
+            var numItems = $('.orb').length;
+            //if n is greater than numItems, add more orbs
+            if (n > numItems) {
+                for (var i = numItems; i < n; i++) {
+                    //add an orb
+                    var orb = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                    orb.setAttribute("class", "orb");
+                    orb.setAttribute("cx", 50);
+                    orb.setAttribute("cy", 50);
+                    orb.setAttribute("r", 50);
+                    orb.setAttribute("fill", "red");
+                    orb.setAttribute("stroke", "black");
+                    orb.setAttribute("stroke-width", 2);
+                    //set draggable
+                    orb.setAttribute("draggable", "true");
+                    document.getElementById("graph").appendChild(orb);
+                }
+            }
+            // if we have too many we must remove some
+            else if (n < numItems) {
+                for (var i = numItems; i > n; i--) {
+                    //remove an orb
+                    var orb = document.getElementsByClassName("orb")[i-1];
+                    orb.parentNode.removeChild(orb);
+                }
+            }
+        });
+    });
+</script>
 
-
-
-
+<div class="container" id="graph">
+   
+    </div>
+<script>
+    //when an orb is dragged, send the new position(s) to the server, reply will be the new value of s
+    $('#logitsversion').select( function(event) {
+        
+        $.post("/ra/updateMethod", $('#form').serialize(), function(data) {
+            //returned data is the new value of s
+            //alert(data);
+            output = $("#S");
+            //set value of S
+            output.html(data);
+        });
+    });
+    $('#graph').on('drag', '.orb', function(event) {
+        event.preventDefault();
+        
+        $.post("/ra/getS", $('#form').serialize(), function(data) {
+            //returned data is the new value of s
+            //alert(data);
+            output = $("#S");
+            //set value of S
+            output.html(data);
+        });
+    });
+</script>
+<p id="S"></p>
 
 </html>
