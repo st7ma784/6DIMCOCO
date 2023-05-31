@@ -5,7 +5,7 @@ from flask import Flask, render_template, request, jsonify
 #use this to append the path to the model folder
 from nargsLossCalculation import get_loss_fn
 #this is the index page,
-app = Flask(__name__)
+app = Flask(__name__,template_folder='.')
 
 #there is n orbs on the html page. 
 # Each orb has a unique id and an x,y coordinate
@@ -24,7 +24,7 @@ func=lambda x: x**2
 
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return render_template("./index.html")
 
 @app.route('/ra/connect', methods=['GET', 'POST'])
 def connect_management():
@@ -51,4 +51,4 @@ def getS():
 
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=8080, debug=True)
+    app.run(host="127.0.0.1", port=5000, debug=True)

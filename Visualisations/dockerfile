@@ -14,4 +14,4 @@ EXPOSE 8080
 #run flask app
 
 
-CMD ["python", "flask.py"]
+CMD ["python", "app.py"]
