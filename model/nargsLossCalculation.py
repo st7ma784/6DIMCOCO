@@ -201,6 +201,12 @@ def calculate_loss3( *Args):
     #results in nan labels 
     
 
+def calcloss( *Args):
+    n=len(Args)
+
+    return torch.sum(reduce(torch.add,[torch.sqrt(torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])).sub_(
+                            torch.pow(reduce(torch.add,[arg.view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]),2),alpha=1/n)) for i,arg in enumerate(Args)]),dim=-1)
+
 
 def calculate_loss4(*Args):
     #tested and not working
