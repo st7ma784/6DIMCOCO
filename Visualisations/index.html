@@ -1,17 +1,13 @@
 <html>
 <head>
     <title>Visualisations</title>
-   
 </head>
-
 <body>
 <!-- use css -->
 <style>
     #wrapper {
         margin: 0 auto;
     }
-
-    /* anything that is of class orb , set to colour green*/
     .orb {
         width: 100px;
         height: 100px;
@@ -22,23 +18,17 @@
         }
         
 </style>
-<script src="https://cdn.jsdelivr.net/gh/interactiveJS/interactiveJS@v2.0.1/src/individuals/draggable.min.js">
-    
-
-</script>
+<script src="https://cdn.jsdelivr.net/gh/interactiveJS/interactiveJS@v2.0.1/src/individuals/draggable.min.js"></script>
 <p id="debugger">   </p>
 <button type="button" id="add_orbs" onclick="ADDORB()">Add Orbs</button>
 <script>
     function orblistener(event) {
-        //get the x and y of the orb
         var x = event.clientX;
         var y = event.clientY;
         var orb = event.target;
         orb.style.left = x + 'px';
         orb.style.top = y + 'px';
         orb.style.position = 'absolute';
-        //send the id and x and y to the server
-        //send the and x and y to the server
         var id = orb.id;
         //get all orbs x and y
         var orbs = document.getElementsByClassName("orb");
@@ -55,9 +45,6 @@
             y.push(orbs[i].style.top);
         }
         
-        
-
-
         //send the x and y to the server
         var data = { 'x': x, 'y': y, width: width, height: height};
         let dataJSON = JSON.stringify(data);
@@ -66,6 +53,8 @@
         request.onreadystatechange = function(){
             if (request.readyState === 4) {
                 //alert(request.response);
+                //split the response by commas
+                
                 document.getElementById("S").innerHTML = request.response;
             }
         };
@@ -86,15 +75,11 @@
         nodes = document.getElementById('graph').childNodes;
         orb.setAttribute("class", "orb");
         orb.setAttribute("id", "orb"+nodes.length);
-        
-        //add to html
         document.getElementById("demo").innerHTML = "Added";
 
         node.insertAdjacentHTML('afterend', '<div id="orb'+nodes.length+'" class="orb" draggable="true" ondragend="orblistener(event)"></d>');
-        // when i add like this it doesn't immediately show the node
         node.appendChild(orb);
-        // refresh the page
-        
+      
         node.innerHTML = node.innerHTML;
         }
 </script>
@@ -102,23 +87,14 @@
 <p id="demo"></p>
 <script>
     function REMOVEORB() {
-        // Remove the last row from the table
         document.getElementById("demo").innerHTML = "REmoved";
-        //undo the insertAdjacentHTML from the addOrb function
-        //count the number of children in the graph
         let nodes = document.getElementById('graph').childNodes;
-        //remove the last child
-        //remove from html
         let id = "orb"+nodes.length;
         nodes[nodes.length-1].remove();
         //check html for the id 
         document.getElementById(id).remove();
 }
 </script>
-<form id="form" class="js-from" method=post >
-    <label for="method">method:</label><br>
-    <input type="text" id="method" name="method"><br>
-</form>
 
 <div id="header">
     <h1>Visualisations</h1>
