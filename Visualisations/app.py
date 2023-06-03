@@ -18,7 +18,8 @@ async def getS():
     x=[float(x[:-2]) for x in filter(lambda a: a != '',data['x'])]
     y=[float(y[:-2]) for y in filter(lambda a: a != '',data['y'])]
     xys=[(torch.tensor([[x,y]])-wh)/wh for x,y in zip(x,y)]
-    outputs={k:str(func(*xys).item())+"<br>" for k,func in functions.items()}
+    with torch.no_grad():
+        outputs={k:str(func(*xys).item())+"<br>" for k,func in functions.items()}
     return jsonify(outputs)
 
 if __name__ == "__main__":
