@@ -6,7 +6,7 @@ if __name__ == "__main__":
     functions={i:get_loss_fn(i,norm=True) for i in range(1,17)}
 
     app = Flask(__name__,template_folder='.')
-    app.config["SERVER_NAME"] = "scc-lanfotech.lancs.ac.uk:80"
+    app.config["SERVER_NAME"] = "scc-lanfotech.lancs.ac.uk:5000"
     #app.config["SERVER_NAME"] = "localhost:5000"
     @app.route("/",subdomain="smander") 
     def index():
@@ -24,5 +24,5 @@ if __name__ == "__main__":
             return jsonify({k:str(func(*xys).item())+"<br>" for k,func in functions.items()})
     # run at /smander
 
-    app.run(host="0.0.0.0", port=80, debug=False)
+    app.run(host="0.0.0.0", port=5000, debug=False)
   
