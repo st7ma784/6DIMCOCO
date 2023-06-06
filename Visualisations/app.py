@@ -6,11 +6,11 @@ if __name__ == "__main__":
     functions={i:get_loss_fn(i,norm=True) for i in range(1,17)}
 
     app = Flask(__name__,template_folder='.')
-    @app.route("/") 
+    @app.route("/", subdomain="vis") 
     def index():
         return render_template("./index.html")
 
-    @app.route('/smander/data', methods=['GET','POST'])
+    @app.route('/smander/data', methods=['GET','POST'], subdomain="vis")
     async def getS():
         data=request.get_json()
         wh=torch.tensor([[data['width'],data['height']]])/2
