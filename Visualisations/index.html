@@ -61,6 +61,21 @@
         top: 0;
         right: 0;
     }
+    /* set axis to middle of screen */
+    #xAxis {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+    }
+    #yAxis {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+            border-left: 1px solid black;
+        height: 100%;
+    }
+    
 </style>
 
 <script src="https://cdn.jsdelivr.net/gh/interactiveJS/interactiveJS@v2.0.1/src/individuals/draggable.min.js"></script>
@@ -155,7 +170,11 @@
     </span>
 </div>
 <div class="container" id="graph">
-
+<!-- create "axis" for the graph -->
+<!-- add horizontal line  -->
+<div id="yAxis"> </div>
+<hr id="xAxis">
+<!-- add vertical line -->
 </div> 
 <p id="S"></p>
 </html>
