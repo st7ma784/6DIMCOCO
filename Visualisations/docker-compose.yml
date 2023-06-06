@@ -5,6 +5,8 @@ services:
     container_name: vis
     ports:
       - 5000:5000
+    expose:
+      - 5000
     restart: always
     networks:
       - vis
@@ -14,9 +16,11 @@ services:
     container_name: watchtower
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock
-    command: vis
+    command: --interval 10 vis
     restart: always
 
 networks:
   vis:
-    driver: bridge
+    driver: bridge  
+    
+
