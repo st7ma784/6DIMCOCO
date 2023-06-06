@@ -5,12 +5,10 @@ services:
     container_name: vis
     ports:
       - 80:5000
-    expose:
-      - 80:5000
     restart: always
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
-      
+
   watchtower:
     image: containrrr/watchtower
     container_name: watchtower
