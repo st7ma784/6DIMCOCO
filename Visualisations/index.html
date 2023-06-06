@@ -46,6 +46,12 @@
     .tooltip:hover .tooltiptext {
     visibility: visible;
     }
+    /* Align controls to top right */
+    #Controls {
+        position: absolute;
+        top: 0;
+        right: 0;
+    }
 </style>
 
 <script src="https://cdn.jsdelivr.net/gh/interactiveJS/interactiveJS@v2.0.1/src/individuals/draggable.min.js"></script>
@@ -75,8 +81,8 @@
             }
         };
         const action = "POST";
-        const endpoint = "http://smander.scc-lanfotech.lancs.ac.uk:80/data";
-        //const endpoint = "http://127.0.0.1:5000/data";
+        //const endpoint = "http://smander.scc-lanfotech.lancs.ac.uk:80/data";
+        const endpoint = "http://127.0.0.1:5000/data";
         //get endpoint from the server
         // this may vary depending on the server
         //const endpoint = "http://"+window.location.hostname+":5000/data";
@@ -96,7 +102,7 @@
         orb.setAttribute("id", "orb"+nodes.length);
         var x = Math.floor(Math.random() *  window.innerWidth);
         var y = Math.floor(Math.random() * window.innerHeight);
-        node.insertAdjacentHTML('afterend', '<div id="orb'+nodes.length+'" style="left:'+x+'px;top:'+y+'px;position:absolute;" class="orb" draggable="true" ondragend="orblistener(event)">"x: "' + x + '"px y: "' + y+ 'px"<br>";</d>');
+        node.insertAdjacentHTML('afterend', '<div id="orb'+nodes.length+'" style="left:'+x+'px;top:'+y+'px;position:absolute;" class="orb" draggable="true" ondragend="orblistener(event)">"x: ' + x + 'px <br> y: ' + y+ 'px <br>";</d>');
         node.appendChild(orb);
         node.innerHTML = node.innerHTML;
         doUpdate();
@@ -109,7 +115,7 @@
         orb.style.left = x + 'px';
         orb.style.top = y + 'px';
         orb.style.position = 'absolute';
-        orb.innerHTML = "x: " + x + " y: " +y + "<br>";
+        orb.innerHTML = "x: " + x + " <br> y: " +y + "<br>";
         doUpdate();
         }
     function REMOVEORB() {
@@ -123,10 +129,11 @@
        
     }
 </script>
-
+<h1>Similarities Visualization</h1>
+<div id="Controls">
 <button type="button" id="add_orbs" onclick="ADDORB()">Add Orbs</button>
 <button type="button" id="remove_orbs" onclick="REMOVEORB()">Remove Orbs</button>
-
+</div>
 
 <div class="tooltip">How To use...
   <span class="tooltiptext">This app shows the similarity between "orbs" on the screen. We trial 20 different Methods as described in Stephen Mander's Thesis. <br>
