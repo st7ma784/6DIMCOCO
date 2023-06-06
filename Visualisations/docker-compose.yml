@@ -3,8 +3,7 @@ services:
   vis:
     image: st7ma784/vis:latest
     container_name: vis
-    ports:
-      - "80:5000"
+    network-mode: host
     restart: always
     labels:
       - "com.centurylinklabs.watchtower.enable=true"
