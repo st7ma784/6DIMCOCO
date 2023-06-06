@@ -10,6 +10,9 @@
 name: Publish Docker image
 
 on:
+  push:
+    paths:
+      - Visualisations/**
   release:
     types: [published]
 
