@@ -30,7 +30,7 @@
     /* Tooltip text */
     .tooltip .tooltiptext {
     visibility: hidden;
-    width: 120px;
+    width: 240px;
     background-color: black;
     color: #fff;
     text-align: center;
@@ -41,7 +41,16 @@
     position: absolute;
     z-index: 1;
     }
-
+    /* buttons bigger */
+    .b {
+        font-size: 20px;
+        padding: 15px 32px;
+        text-align: center;
+        display: inline-block;
+        margin: 4px 2px;
+        cursor: pointer;
+        border-radius: 12px;
+    }
     /* Show the tooltip text when you mouse over the tooltip container */
     .tooltip:hover .tooltiptext {
     visibility: visible;
@@ -81,8 +90,8 @@
             }
         };
         const action = "POST";
-        //const endpoint = "http://smander.scc-lanfotech.lancs.ac.uk:80/data";
-        const endpoint = "http://127.0.0.1:5000/data";
+        const endpoint = "http://smander.scc-lanfotech.lancs.ac.uk:80/data";
+        //const endpoint = "http://smander.localhost:5000/data";
         //get endpoint from the server
         // this may vary depending on the server
         //const endpoint = "http://"+window.location.hostname+":5000/data";
@@ -131,8 +140,9 @@
 </script>
 <h1>Similarities Visualization</h1>
 <div id="Controls">
-<button type="button" id="add_orbs" onclick="ADDORB()">Add Orbs</button>
-<button type="button" id="remove_orbs" onclick="REMOVEORB()">Remove Orbs</button>
+
+<button type="button" class="b" id="add_orbs" onclick="ADDORB()">Add Orbs</button>
+<button type="button" class="b" id="remove_orbs" onclick="REMOVEORB()">Remove Orbs</button>
 </div>
 
 <div class="tooltip">How To use...
