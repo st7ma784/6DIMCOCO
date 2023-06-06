@@ -13,9 +13,9 @@ on:
   push:
     paths:
       - Visualisations/**
-      - .github/workflows/docker-publish.yml
-  release:
-    types: [published]
+      #- .github/workflows/docker-publish.yml
+  #release:
+  #  types: [published]
 
 jobs:
   push_to_registry:
