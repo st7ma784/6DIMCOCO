@@ -6,7 +6,7 @@ if __name__ == "__main__":
     functions={i:get_loss_fn(i,norm=True) for i in range(1,17)}
 
     app = Flask(__name__,template_folder='.')
-    @app.route("/smander", methods=["GET", "POST"]) 
+    @app.route("/smander") 
     def index():
         return render_template("./index.html")
 
@@ -20,6 +20,7 @@ if __name__ == "__main__":
         
         with torch.no_grad():                   
             return jsonify({k:str(func(*xys).item())+"<br>" for k,func in functions.items()})
-        
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    # run at /smander
+
+    app.run(host="0.0.0.0", port=5000, debug=False, threaded=True,)
   
