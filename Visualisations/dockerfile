@@ -4,6 +4,6 @@ RUN pip install --requirement /tmp/requirements.txt
 WORKDIR /app
 COPY . /app
 
-EXPOSE 80/tcp
+EXPOSE 5000/tcp
 
 ENTRYPOINT ["python", "app.py"]
