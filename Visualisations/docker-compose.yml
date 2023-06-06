@@ -5,12 +5,11 @@ services:
     container_name: vis
     pull_policy: always
     ports:
-      - 5000:5000
+      - 80:80
     expose:
-      - 5000
+      - 80:80
     restart: always
-    networks:
-      - vis
+
     
   watchtower:
     image: containrrr/watchtower
@@ -19,9 +18,5 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     command: --interval 10 vis
     restart: always
-
-networks:
-  vis:
-    driver: bridge  
 
 
