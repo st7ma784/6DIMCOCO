@@ -75,7 +75,7 @@
             }
         };
         const action = "POST";
-        const endpoint = "http://scc-lanfotech.lancs.ac.uk/data";
+        const endpoint = "http://scc-lanfotech.lancs.ac.uk:80/data";
         //const endpoint = "http://127.0.0.1:5000/data";
         //get endpoint from the server
         // this may vary depending on the server
@@ -126,7 +126,7 @@
 
 <button type="button" id="add_orbs" onclick="ADDORB()">Add Orbs</button>
 <button type="button" id="remove_orbs" onclick="REMOVEORB()">Remove Orbs</button>
-<p id="S"></p>
+
 
 <div class="tooltip">How To use...
   <span class="tooltiptext">This app shows the similarity between "orbs" on the screen. We trial 20 different Methods as described in Stephen Mander's Thesis. <br>
@@ -135,10 +135,10 @@
     <br>3. Drag orbs around the screen to change their position. <br>
     <br>4. The similarity between the orbs is shown in the box below. <br>
 
-</span>
+    </span>
 </div>
 <div class="container" id="graph">
 
 </div> 
-
+<p id="S"></p>
 </html>
