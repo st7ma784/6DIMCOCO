@@ -6,7 +6,7 @@ if __name__ == "__main__":
     functions={i:get_loss_fn(i,norm=True) for i in range(1,17)}
 
     app = Flask(__name__,template_folder='.')
-    app.config["SERVER_NAME"] = "scc-lanfotech.ac.uk:80"
+    app.config["SERVER_NAME"] = "127.0.0.1:5000"
 
     @app.route("/", subdomain="smander") 
     def index():
