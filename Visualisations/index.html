@@ -134,7 +134,7 @@
         orb.setAttribute("id", "orb"+nodes.length);
         var x = Math.floor(Math.random() *  window.innerWidth);
         var y = Math.floor(Math.random() * window.innerHeight);
-        rx,ry = convertxytorelxy(x,y);
+        var [rx, ry] = convertxytorelxy(x,y);
         node.insertAdjacentHTML('afterend', '<div id="orb'+nodes.length+'" style="left:'+x+'px;top:'+y+'px;position:absolute;" class="orb" draggable="true" ondragend="orblistener(event)"> x: ' + rx + 'px <br> y: ' + ry+ 'px <br> </d>');
         node.appendChild(orb);
         node.innerHTML = node.innerHTML;
@@ -153,7 +153,7 @@
         orb.style.left = x + 'px';
         orb.style.top = y + 'px';
         orb.style.position = 'absolute';
-        rx,ry = convertxytorelxy(x,y);
+        var [rx,ry] = convertxytorelxy(x,y);
         orb.innerHTML = "x: " + rx + " <br> y: " +ry + "<br>";
         doUpdate();
         }
