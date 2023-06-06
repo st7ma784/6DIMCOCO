@@ -1,8 +1,9 @@
 version: "3"
 services:
   vis:
-    image: st7ma784/vis
+    image: st7ma784/vis:latest
     container_name: vis
+    pull_policy: always
     ports:
       - 5000:5000
     expose:
@@ -22,5 +23,5 @@ services:
 networks:
   vis:
     driver: bridge  
-    
+
 
