@@ -7,7 +7,7 @@ if __name__ == "__main__":
 
     app = Flask(__name__,template_folder='.')
     app.config["SERVER_NAME"] = "scc-lanfotech.lancs.ac.uk:80"
-
+    #app.config["SERVER_NAME"] = "localhost:5000"
     @app.route("/",subdomain="smander") 
     def index():
         return render_template("./index.html")
