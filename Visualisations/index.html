@@ -110,9 +110,11 @@
         const endpoint = "http://scc-lanfotech.lancs.ac.uk:80/demo/data";
         //check if normed is checked
         var normed = document.getElementById("norm").checked;
-        if (normed) {
+        if (normed=== true) {
             endpoint = "http://scc-lanfotech.lancs.ac.uk:80/demo/norm/data";
-        //const endpoint = "http://smander.localhost:5000/data";
+        }
+        
+            //const endpoint = "http://smander.localhost:5000/data";
         //get endpoint from the server
         // this may vary depending on the server
         //const endpoint = "http://"+window.location.hostname+":5000/data";
