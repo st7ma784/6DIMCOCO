@@ -14,13 +14,40 @@
         border-radius: 50px;
 
         }
-    /* <!-- align S to the bottom  --> */
     #S {
         position: absolute;
         bottom: 0;
         left: 0;
     }
+
+    /* Tooltip container */
+    .tooltip {
+    position: relative;
+    display: inline-block;
+    border-bottom: 1px dotted black; /* If you want dots under the hoverable text */
+    }
+
+    /* Tooltip text */
+    .tooltip .tooltiptext {
+    visibility: hidden;
+    width: 120px;
+    background-color: black;
+    color: #fff;
+    text-align: center;
+    padding: 5px 0;
+    border-radius: 6px;
+    
+    /* Position the tooltip text - see examples below! */
+    position: absolute;
+    z-index: 1;
+    }
+
+    /* Show the tooltip text when you mouse over the tooltip container */
+    .tooltip:hover .tooltiptext {
+    visibility: visible;
+    }
 </style>
+
 <script src="https://cdn.jsdelivr.net/gh/interactiveJS/interactiveJS@v2.0.1/src/individuals/draggable.min.js"></script>
 <script>
     function doUpdate(){
@@ -48,7 +75,11 @@
             }
         };
         const action = "POST";
-        const endpoint = "http://scc-lanfotech.lancs.ac.uk:80/data";
+        const endpoint = "http://scc-lanfotech.lancs.ac.uk/smander/data";
+        //const endpoint = "http://127.0.0.1:5000/data";
+        //get endpoint from the server
+        // this may vary depending on the server
+        //const endpoint = "http://"+window.location.hostname+":5000/data";
         request.open(action, endpoint);
         request.setRequestHeader("Content-Type", "application/json");
         request.send(dataJSON);
@@ -97,6 +128,15 @@
 <button type="button" id="remove_orbs" onclick="REMOVEORB()">Remove Orbs</button>
 <p id="S"></p>
 
+<div class="tooltip">How To use...
+  <span class="tooltiptext">This app shows the similarity between "orbs" on the screen. We trial 20 different Methods as described in Stephen Mander's Thesis. <br>
+    <br>1. Click "Add Orbs" to add orbs to the screen. <br>
+    <br>2. Click "Remove Orbs" to remove orbs from the screen. <br>
+    <br>3. Drag orbs around the screen to change their position. <br>
+    <br>4. The similarity between the orbs is shown in the box below. <br>
+
+</span>
+</div>
 <div class="container" id="graph">
 
 </div> 
