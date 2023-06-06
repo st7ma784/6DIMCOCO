@@ -22,5 +22,5 @@ if __name__ == "__main__":
             return jsonify({k:str(func(*xys).item())+"<br>" for k,func in functions.items()})
     # run at /smander
 
-    app.run(host="0.0.0.0", port=5000, debug=False, threaded=True,)
+    app.run(host="0.0.0.0", port=5000, debug=False)
   
