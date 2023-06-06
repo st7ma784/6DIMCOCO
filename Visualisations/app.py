@@ -10,7 +10,7 @@ if __name__ == "__main__":
     def index():
         return render_template("./index.html")
 
-    @app.route('/smander/data', methods=['GET','POST'], subdomain="vis")
+    @app.route('/data', methods=['GET','POST'], subdomain="vis")
     async def getS():
         data=request.get_json()
         wh=torch.tensor([[data['width'],data['height']]])/2
