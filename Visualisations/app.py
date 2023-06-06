@@ -20,7 +20,7 @@ if __name__ == "__main__":
         
         with torch.no_grad():                   
             return jsonify({k:str(func(*xys).item())+"<br>" for k,func in functions.items()})
-    @app.route('/demo/normed/data', methods=['GET','POST'])
+    @app.route('/demo/norm/data', methods=['GET','POST'])
     async def getnormS():
         data=request.get_json()
         wh=torch.tensor([[data['width'],data['height']]])/2
