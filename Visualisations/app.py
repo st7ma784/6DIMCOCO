@@ -6,16 +6,16 @@ if __name__ == "__main__":
     functions={i:get_loss_fn(i,norm=True) for i in range(1,17)}
 
     app = Flask(__name__,template_folder='.')
-    #app.config["SERVER_NAME"] = "scc-lanfotech.lancs.ac.uk:5000"
+    #app.config["SERVER_NAME"] = "scc-lanfotech.lancs.ac.uk:80"
     #app.config["SERVER_NAME"] = "localhost:5000"
-    @app.route("/") 
-    def index():
-        return render_template("./index.html")
-    @app.route("/") 
+    # @app.route("/") 
+    # def index():
+    #     return render_template("./index.html")
+    @app.route("/smander") 
     def index():
         return render_template("./index.html")
     
-    @app.route('/data', methods=['GET','POST'])
+    @app.route('/smander/data', methods=['GET','POST'])
     async def getS():
         data=request.get_json()
         wh=torch.tensor([[data['width'],data['height']]])/2
