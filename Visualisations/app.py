@@ -4,7 +4,7 @@ from nargsLossCalculation import get_loss_fn
 from functools import reduce
 
 def mean(args):
-    return reduce(torch.add,args)/len(args)
+    return reduce(torch.add,args/len(args))
 def std(args):
     return torch.sqrt(mean([(a-mean(args))**2 for a in args]))
 def variance(args):
