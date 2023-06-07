@@ -7,6 +7,8 @@ def mean(args):
     return reduce(torch.add,args)/len(args)
 def std(args):
     return torch.sqrt(mean([(a-mean(args))**2 for a in args]))
+def variance(args):
+    return mean([(a-mean(args))**2 for a in args])
 def l2mean(args):
     return torch.sqrt(mean([a**2 for a in args]))
 def lsqrtmean(args):
@@ -18,7 +20,7 @@ def dynmean(args):
 if __name__ == "__main__":
     functions={i:get_loss_fn(i,norm=False) for i in range(1,17)}
     normedfunctions={i:get_loss_fn(i,norm=True) for i in range(1,17)}
-    usefulpoints={"mean":mean,"std":std,"l2mean":l2mean,"l3mean":l3mean,"lsqrtmean":lsqrtmean,"dynmean":dynmean}
+    usefulpoints={"mean":mean,"variance":variance, "std":std,"l2mean":l2mean,"l3mean":l3mean,"lsqrtmean":lsqrtmean,"dynmean":dynmean}
     app = Flask(__name__,template_folder='.')
     @app.route("/demo") 
     def index():
