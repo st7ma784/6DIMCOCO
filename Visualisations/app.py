@@ -57,7 +57,7 @@ if __name__ == "__main__":
         
         with torch.no_grad(): 
             out = {name:(torch.nan_to_num(func(xys))*wh).tolist() for name,func in usefulpoints.items()}
-            print(out)# these are all relative to the width and height of the image
+            #print(out)# these are all relative to the width and height of the image
 
             return jsonify(out)
     # run at /smander
