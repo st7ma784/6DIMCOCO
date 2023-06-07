@@ -9,11 +9,14 @@ def std(args):
     return torch.sqrt(mean([(a-mean(args))**2 for a in args]))
 def l2mean(args):
     return torch.sqrt(mean([a**2 for a in args]))
-
+def lsqrtmean(args):
+    return torch.pow(mean([torch.sqrt(a) for a in args]),2)
+def l3mean(args):
+    return torch.pow(mean([torch.pow(a,3) for a in args]),1/3)
 if __name__ == "__main__":
     functions={i:get_loss_fn(i,norm=False) for i in range(1,17)}
     normedfunctions={i:get_loss_fn(i,norm=True) for i in range(1,17)}
-    usefulpoints=[mean,std,l2mean]
+    usefulpoints={"mean":mean,"std":std,"l2mean":l2mean,"l3mean":l3mean,"lsqrtmean":lsqrtmean}
     app = Flask(__name__,template_folder='.')
     @app.route("/demo") 
     def index():
@@ -49,7 +52,7 @@ if __name__ == "__main__":
         xys=[(torch.tensor([[x,y]],requires_grad=False)-wh)/wh for x,y in zip(x,y)]
         
         with torch.no_grad(): 
-            out = [(func(xys)*wh).tolist() for func in usefulpoints]
+            out = {name:(func(xys)*wh).tolist() for name,func in usefulpoints.items()}
             print(out)# these are all relative to the width and height of the image
 
             return jsonify(out)
