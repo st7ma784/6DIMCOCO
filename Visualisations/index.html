@@ -76,7 +76,11 @@
             border-left: 1px solid black;
         height: 100%;
     }
-    
+    .stats {
+        position: absolute;
+        bottom: 0;
+        right: 0;
+        }
 </style>
 
 <script src="https://cdn.jsdelivr.net/gh/interactiveJS/interactiveJS@v2.0.1/src/individuals/draggable.min.js"></script>
@@ -100,6 +104,7 @@
         
         let request = new XMLHttpRequest();
         let checked= document.getElementById("norm").checked
+        let verbose= document.getElementById("verbose").checked
 
         request.onreadystatechange = function(){
             if (request.readyState === 4) {
@@ -113,7 +118,14 @@
         if (checked=== true) {
             endpoint = "http://scc-lanfotech.lancs.ac.uk:80/demo/norm/data";
         }
-        
+        if (verbose=== true) {
+            updatestatpoints(dataJSON);
+        }
+        else {
+            document.getElementById("mean").innerHTML = "";
+            document.getElementById("std").innerHTML = "";
+            document.getElementById("l2mean").innerHTML = "";
+        }
             //const endpoint = "http://smander.localhost:5000/data";
         //get endpoint from the server
         // this may vary depending on the server
@@ -122,7 +134,33 @@
         request.setRequestHeader("Content-Type", "application/json");
         request.send(dataJSON);
         }
-    
+    function updatestatpoints(dataJSON){
+        // send request to /demo/points
+        let request = new XMLHttpRequest();
+        request.onreadystatechange = function(){
+            if (request.readyState === 4) {
+                //the reply is a jsonified list of coordinates. 
+                //we need to parse it into mean, std , l2mean
+                var points = JSON.parse(request.response);
+                var mean = points[0];
+                var std = points[1];
+                var l2mean = points[2];
+                //update the html
+                //show the mean
+                document.getElementById("mean").innerHTML = "Mean: " + mean;
+                //show the std
+                document.getElementById("std").innerHTML = "Std: " + std;
+                //show the l2mean
+                document.getElementById("l2mean").innerHTML = "L2 Mean: " + l2mean;
+            }
+        };
+        const action = "POST";
+        const endpoint = "http://scc-lanfotech.lancs.ac.uk:80/demo/points";
+        request.open(action, endpoint);
+        request.setRequestHeader("Content-Type", "application/json");
+        request.send(dataJSON);
+
+    }
     function ADDORB() {
         // Remove the last row from the table
         var orb = document.createElementNS("http://www.w3.org/2000/svg", "circle");
@@ -196,5 +234,15 @@
 <hr id="xAxis">
 <!-- add vertical line -->
 </div> 
+<div id="stats">
+    <p id="mean"></p>
+    <br>
+    <p id="std"></p>
+    <br>
+    <p id="l2mean"></p>
+
+</div>
+
+
 <p id="S"></p>
 </html>
