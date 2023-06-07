@@ -49,7 +49,7 @@ if __name__ == "__main__":
         xys=[(torch.tensor([[x,y]],requires_grad=False)-wh)/wh for x,y in zip(x,y)]
         
         with torch.no_grad(): 
-            mean, std, l2mean = [func(xys).item() for func in usefulpoints]
+            mean, std, l2mean = [func(xys).tolist() for func in usefulpoints]
             print(mean,std,l2mean)                  
             return jsonify([mean,std,l2mean])
     # run at /smander
