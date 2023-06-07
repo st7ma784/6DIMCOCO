@@ -52,7 +52,7 @@ if __name__ == "__main__":
         xys=[(torch.tensor([[x,y]],requires_grad=False)-wh)/wh for x,y in zip(x,y)]
         
         with torch.no_grad(): 
-            out = {name:(func(xys)*wh).tolist() for name,func in usefulpoints.items()}
+            out = {name:(torch.nan_to_num(func(xys))*wh).tolist() for name,func in usefulpoints.items()}
             print(out)# these are all relative to the width and height of the image
 
             return jsonify(out)
