@@ -17,6 +17,8 @@ def l3mean(args):
     return torch.pow(mean([torch.pow(a,3) for a in args]),1/3)
 def dynmean(args):
     return torch.pow(mean([torch.pow(a,len(args)) for a in args]),1/len(args))
+
+
 if __name__ == "__main__":
     functions={i:get_loss_fn(i,norm=False) for i in range(1,17)}
     normedfunctions={i:get_loss_fn(i,norm=True) for i in range(1,17)}
