@@ -4,7 +4,7 @@ from nargsLossCalculation import get_loss_fn
 from functools import reduce
 
 def mean(args):
-    return reduce(torch.add,*args)/len(args)
+    return reduce(torch.add,args)/len(args)
 def std(args):
     return torch.sqrt(mean([(a-mean(args))**2 for a in args]))
 def l2mean(args):
@@ -49,7 +49,7 @@ if __name__ == "__main__":
         xys=[(torch.tensor([[x,y]],requires_grad=False)-wh)/wh for x,y in zip(x,y)]
         
         with torch.no_grad(): 
-            mean, std, l2mean = [func(*xys).item() for func in usefulpoints]
+            mean, std, l2mean = [func(xys).item() for func in usefulpoints]
             print(mean,std,l2mean)                  
             return jsonify([mean,std,l2mean])
     # run at /smander
