@@ -49,10 +49,10 @@ if __name__ == "__main__":
         xys=[(torch.tensor([[x,y]],requires_grad=False)-wh)/wh for x,y in zip(x,y)]
         
         with torch.no_grad(): 
-            mean, std, l2mean = [func(xys)*wh for func in usefulpoints]
-            print(mean,std,l2mean)# these are all relative to the width and height of the image
+            out = [(func(xys)*wh).tolist() for func in usefulpoints]
+            print(out)# these are all relative to the width and height of the image
 
-            return jsonify([mean,std,l2mean])
+            return jsonify(out)
     # run at /smander
     app.run(host="0.0.0.0", port=5000, debug=False)
   
