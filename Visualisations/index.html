@@ -108,7 +108,14 @@
 
         request.onreadystatechange = function(){
             if (request.readyState === 4) {
-                document.getElementById("S").innerHTML = request.response;
+                // reply is a jsonified list of similarities
+                // we need to parse it into a list of strings
+                var similarities = JSON.parse(request.response);
+                // split this into new lines for the html
+                similarities = similarities.join("<br>");
+                //update the html
+                document.getElementById("S").innerHTML = similarities;                
+                //document.getElementById("S").innerHTML = request.response;
             }
         };
         const action = "POST";

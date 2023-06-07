@@ -28,7 +28,7 @@ if __name__ == "__main__":
         xys=[(torch.tensor([[x,y]],requires_grad=False)-wh)/wh for x,y in zip(x,y)]
         
         with torch.no_grad():                   
-            return jsonify({k:str(func(*xys).item())+"<br>" for k,func in functions.items()})
+            return jsonify([str(func(*xys).item()) for func in functions.values()])
     @app.route('/demo/norm/data', methods=['GET','POST'])
     async def getnormS():
         data=request.get_json()
@@ -38,7 +38,7 @@ if __name__ == "__main__":
         xys=[(torch.tensor([[x,y]],requires_grad=False)-wh)/wh for x,y in zip(x,y)]
         
         with torch.no_grad():                   
-            return jsonify({k:str(func(*xys).item())+"<br>" for k,func in normedfunctions.items()})
+            return jsonify([str(func(*xys).item()) for func in normedfunctions.values()])
     # run at /smander
     @app.route('/demo/points', methods=['GET','POST'])
     async def getmetricS():
