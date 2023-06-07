@@ -13,7 +13,7 @@ def l2mean(args):
 if __name__ == "__main__":
     functions={i:get_loss_fn(i,norm=False) for i in range(1,17)}
     normedfunctions={i:get_loss_fn(i,norm=True) for i in range(1,17)}
-    usefulpoints=
+    usefulpoints=[mean,std,l2mean]
     app = Flask(__name__,template_folder='.')
     @app.route("/demo") 
     def index():
@@ -49,7 +49,7 @@ if __name__ == "__main__":
         xys=[(torch.tensor([[x,y]],requires_grad=False)-wh)/wh for x,y in zip(x,y)]
         
         with torch.no_grad(): 
-            mean, std, l2mean = mean(xys), std(xys), l2mean(xys)
+            mean, std, l2mean = [func(*xys).item() for func in usefulpoints]
             print(mean,std,l2mean)                  
             return jsonify([mean,std,l2mean])
     # run at /smander
