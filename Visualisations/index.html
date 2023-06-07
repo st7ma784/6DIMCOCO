@@ -129,9 +129,7 @@
             updatestatpoints(dataJSON);
         }
         else {
-            document.getElementById("mean").innerHTML = "";
-            document.getElementById("std").innerHTML = "";
-            document.getElementById("l2mean").innerHTML = "";
+            document.getElementById("stats").innerHTML = "";
         }
             //const endpoint = "http://smander.localhost:5000/data";
         //get endpoint from the server
@@ -146,20 +144,56 @@
         let request = new XMLHttpRequest();
         request.onreadystatechange = function(){
             if (request.readyState === 4) {
-                //the reply is a jsonified list of coordinates. 
-                //we need to parse it into mean, std , l2mean
+                //the reply is a jsonified dict of coordinates. 
+                //we need to parse it into Key Value pairs
                 var points = JSON.parse(request.response);
-                var mean = points[0];
-                var std = points[1];
-                var l2mean = points[2];
-                //update the html
-                //show the mean
-                document.getElementById("mean").innerHTML = "Mean: " + mean;
-                //show the std
-                document.getElementById("std").innerHTML = "Std: " + std;
-                //show the l2mean
-                document.getElementById("l2mean").innerHTML = "L2 Mean: " + l2mean;
-            }
+                // add stats to the html
+                //create list of strings from key:value pairs
+                var stats = [];
+                for (var key in points) {
+                    if (points.hasOwnProperty(key)) {
+                        stats.push(key + ": " + points[key]);
+                    }
+                }
+                // split this into new lines for the html
+                stats = stats.join("<br>");
+                document.getElementById("stats").innerHTML=stats; 
+
+
+
+
+                // //update the html
+                // for (var key in points) {
+                //     if (points.hasOwnProperty(key)) {
+                //         //add points to the graph
+                //         var orb = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                //         node = document.getElementById('output');
+
+                //         node.appendChild(orb);
+                //         orb.setAttribute("class", "statorb");
+                //         orb.setAttribute("id", key);
+                //         orb.style.left = points[key][0]+window.width/2 + "px"; 
+                //         orb.style.top = points[key][1]+window.height/2 + "px";
+                //         orb.setAttribute("cx", points[key][0]);
+                //         orb.setAttribute("cy", points[key][1]);
+                //         orb.setAttribute("r", 5);
+                //         orb.setAttribute("fill", "grey");
+                //         orb.setAttribute("stroke", "black");
+                //         orb.setAttribute("stroke-width", 1);
+                //         //add tooltip
+                //         var tooltip = document.createElement("span");
+                //         tooltip.setAttribute("class", "tooltip");
+                //         tooltip.setAttribute("id", "tooltip"+key);
+                //         tooltip.innerHTML = key;
+                //         node.appendChild(tooltip);
+                //         //add tooltip text
+                //         var tooltiptext = document.createElement("span");
+                //         tooltiptext.setAttribute("class", "tooltiptext");
+                //         tooltiptext.setAttribute("id", "tooltiptext"+key);
+                //         tooltiptext.innerHTML = key;
+                //         tooltip.appendChild(tooltiptext);
+                //         //make draggable
+                //         }
         };
         const action = "POST";
         const endpoint = "http://scc-lanfotech.lancs.ac.uk:80/demo/points";
@@ -245,11 +279,6 @@
 <!-- add vertical line -->
 </div> 
 <div id="stats">
-    <p id="mean"></p>
-    <br>
-    <p id="std"></p>
-    <br>
-    <p id="l2mean"></p>
 
 </div>
 
