@@ -46,7 +46,7 @@ if __name__ == "__main__":
         
         with torch.no_grad():                   
             return jsonify([str(func(*xys).item()) for func in normedfunctions.values()])
-    # run at /smander
+    # these 2 functions really could be combined into one, but I'm lazy and there may be future reasons to keep them seperate
     @app.route('/demo/points', methods=['GET','POST'])
     async def getmetricS():
         data=request.get_json()
