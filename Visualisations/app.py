@@ -13,10 +13,12 @@ def lsqrtmean(args):
     return torch.pow(mean([torch.sqrt(a) for a in args]),2)
 def l3mean(args):
     return torch.pow(mean([torch.pow(a,3) for a in args]),1/3)
+def dynmean(args):
+    return torch.pow(mean([torch.pow(a,len(args)) for a in args]),1/len(args)
 if __name__ == "__main__":
     functions={i:get_loss_fn(i,norm=False) for i in range(1,17)}
     normedfunctions={i:get_loss_fn(i,norm=True) for i in range(1,17)}
-    usefulpoints={"mean":mean,"std":std,"l2mean":l2mean,"l3mean":l3mean,"lsqrtmean":lsqrtmean}
+    usefulpoints={"mean":mean,"std":std,"l2mean":l2mean,"l3mean":l3mean,"lsqrtmean":lsqrtmean,"dynmean":dynmean}
     app = Flask(__name__,template_folder='.')
     @app.route("/demo") 
     def index():
