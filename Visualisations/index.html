@@ -100,7 +100,7 @@
             y.push(orbs[i].style.top);
         }
         
-        var data = { 'x': x, 'y': y, 'stats': document.getElementById("verbose").checked, 'norm': document.getElementById("norm").checked, 'width':  window.innerWidth, 'height': window.innerHeight};
+        var data = { 'x': x, 'y': y, stats: document.getElementById("verbose").checked, norm: document.getElementById("norm").checked, width:  window.innerWidth, height: window.innerHeight};
         let dataJSON = JSON.stringify(data);
         
         let request = new XMLHttpRequest();
@@ -125,14 +125,16 @@
         };
         const action = "POST";
         
-        var endpoint = "http://scc-lanfotech.lancs.ac.uk:80/demo/data";
+        const endpoint = "http://scc-lanfotech.lancs.ac.uk:80/demo/data";
         //check if normed is checked
         //const endpoint = "http://smander.localhost:5000/data";
         //get endpoint from the server
         // this may vary depending on the server
         //const endpoint = "http://"+window.location.hostname+":5000/data";
+
         request.open(action, endpoint);
         request.setRequestHeader("Content-Type", "application/json");
+
         request.send(dataJSON);
         }
     function updatestatpoints(dataJSON){
