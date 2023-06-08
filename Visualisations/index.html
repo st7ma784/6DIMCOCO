@@ -99,8 +99,9 @@
             x.push(orbs[i].style.left);
             y.push(orbs[i].style.top);
         }
-        
-        var data = { 'x': x, 'y': y, stats: document.getElementById("verbose").checked, norm: document.getElementById("norm").checked, width:  window.innerWidth, height: window.innerHeight};
+        let isNorm = document.getElementById("norm").checked;
+        let isStats = document.getElementById("verbose").checked;
+        var data = { 'x': x, 'y': y, "stats": isStats, "norm":isNorm, "width":  window.innerWidth, "height": window.innerHeight};
         let dataJSON = JSON.stringify(data);
         
         let request = new XMLHttpRequest();
