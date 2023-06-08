@@ -107,7 +107,9 @@
 
         request.onreadystatechange = function(){
             if (request.readyState === 4) {
+                //the reply is a jsonified dict of key value points to print.
                 var points = JSON.parse(request.response);
+
                 // add stats to the html
                 //create list of strings from key:value pairs
                 var stats = [];
@@ -130,7 +132,7 @@
         // this may vary depending on the server
         //const endpoint = "http://"+window.location.hostname+":5000/data";
         request.open(action, endpoint);
-        //request.setRequestHeader("Content-Type", "application/json");
+        request.setRequestHeader("Content-Type", "application/json");
         request.send(dataJSON);
         }
     function updatestatpoints(dataJSON){
