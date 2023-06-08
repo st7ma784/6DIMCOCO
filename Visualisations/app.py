@@ -40,11 +40,13 @@ if __name__ == "__main__":
         
         if stats:
             out={name:(torch.nan_to_num(func(xys))*wh).tolist() for name,func in usefulpoints.items()}
+            #getting error that > not supported between instances of int and str??
+
         normed=data['norm']
         if normed:
-            out.update({name:(torch.nan_to_num(func(*xys))).tolist() for name,func in normedfunctions.items()})
+            out.update({str(name):(torch.nan_to_num(func(*xys))).tolist() for name,func in normedfunctions.items()})
         else:
-            out.update({name:(torch.nan_to_num(func(*xys))).tolist() for name,func in functions.items()})
+            out.update({str(name):(torch.nan_to_num(func(*xys))).tolist() for name,func in functions.items()})
         return jsonify(out)
     #return jsonify([str(func(*xys).item()) for func in functions.values()])
     # @app.route('/demo/norm/data', methods=['GET','POST'])
