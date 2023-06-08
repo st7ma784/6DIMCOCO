@@ -40,7 +40,7 @@ if __name__ == "__main__":
         
         if stats:
             out.update({name:(torch.nan_to_num(func(xys))*wh).tolist() for name,func in usefulpoints.items()})
-        normed=data['normed']
+        normed=data['norm']
         if normed:
             out.update({name:(torch.nan_to_num(func(*xys))*wh).tolist() for name,func in normedfunctions.items()})
         else:
