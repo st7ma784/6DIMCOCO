@@ -60,42 +60,34 @@ def get_loss_fn(logitsversion=0,norm=False,log=False):
         def baseLogits(*args):
             return torch.sum(oneminus(calculate_loss8(*args)),dim=-1)
     elif logitsversion==7:
-        norm=True
         def baseLogits(*args):
             return calculate_lossNorms(*args)
             
     elif logitsversion==8:
-        norm=True
         def baseLogits(*args):
             return calculate_lossNormsv2(*args)
         
                 
     elif logitsversion==9:
-        norm=True
         def baseLogits(*args):
             return calculate_lossNormsv3(*args)
                 
     elif logitsversion==10:
-        norm=True
         def baseLogits(*args):
             return calculate_lossNormsv4(*args)
         
              
     elif logitsversion==11:
-        norm=True
         def baseLogits(*args):
             return calculate_lossNormsv5(*args)
              
     elif logitsversion==12:
-        norm=False
         def baseLogits(*args):
-            return calculate_lossNormsv5(*args)
+            return calculate_lossNormsv8(*args)
     elif logitsversion==15:
-        norm=True
         def baseLogits(*args):
             return calculate_lossNormsv6(*args)
     elif logitsversion==16:
-        norm=True
         def baseLogits(*args):
             return calculate_lossNormsv7(*args)
 
@@ -320,6 +312,16 @@ def calculate_lossNormsv7(*Args):
     norm=torch.sqrt(reduce(torch.add,[ torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]))
     return torch.sum(torch.sub(mean2,norm),dim=-1)
 
+def calculate_lossNormsv8(*Args):
+
+    #function to produce similarity of all args with std deviation
+
+    
+    n=len(Args)
+    mean2 = reduce(torch.add,[torch.div(torch.abs(arg),n).view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]) + torch.sqrt(torch.mul(reduce(torch.add,[ torch.div(torch.abs(arg),n).view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]).pow(2),n))
+    #norm =sum(abs(x)**ord)**(1./ord)
+    norm=torch.sqrt(reduce(torch.add,[ torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]))
+    return torch.sum(torch.sub(mean2,norm),dim=-1)
 
 ############
 #loss functions
