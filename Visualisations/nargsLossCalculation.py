@@ -320,9 +320,9 @@ def calculate_lossNormsv8(*Args):
     n=len(Args)
 
     mean = reduce(torch.add,[torch.div(arg,n).view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)])
-    deviation= reduce(torch.add, [torch.pow(mean-n.view(*list([1]*i+[n.shape[0]]+[1]*(n-1-i)+[-1])),2) for i in range(n)])
+    deviation= reduce(torch.add, [torch.pow((mean-n).view(*list([1]*i+[n.shape[0]]+[1]*(n-1-i)+[-1])),2) for i in range(n)])
     print(deviation.shape)
-    
+
     return torch.sum(torch.sqrt(deviation),dim=-1)
 
 ############
