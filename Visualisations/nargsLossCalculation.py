@@ -316,12 +316,12 @@ def calculate_lossNormsv8(*Args):
 
     #function to produce similarity of all args with std deviation
 
-    
+
     n=len(Args)
-    mean2 = reduce(torch.add,[torch.div(torch.abs(arg),n).view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]) + torch.sqrt(torch.mul(reduce(torch.add,[ torch.div(torch.abs(arg),n).view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]).pow(2),n))
-    #norm =sum(abs(x)**ord)**(1./ord)
-    norm=torch.sqrt(reduce(torch.add,[ torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]))
-    return torch.sum(torch.sub(mean2,norm),dim=-1)
+
+    mean = reduce(torch.add,[torch.div(arg,n).view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)])
+    deviation= reduce(torch.add, [torch.pow(mean-n.view(*list([1]*i+[n.shape[0]]+[1]*(n-1-i)+[-1])),2) for i in range(n)])
+    return torch.sum(torch.sqrt(deviation),dim=-1)
 
 ############
 #loss functions
