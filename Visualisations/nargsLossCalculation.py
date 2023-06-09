@@ -61,20 +61,20 @@ def get_loss_fn(logitsversion=0,norm=False,log=False):
             return torch.sum(oneminus(calculate_loss8(*args)),dim=-1)
     elif logitsversion==7:
         def baseLogits(*args):
-            return calculate_lossNorms(*args)
+            return oneminus(calculate_lossNorms(*args))
             
     elif logitsversion==8:
         def baseLogits(*args):
-            return calculate_lossNormsv2(*args)
+            return oneminus(calculate_lossNormsv2(*args))
         
                 
     elif logitsversion==9:
         def baseLogits(*args):
-            return calculate_lossNormsv3(*args)
+            return oneminus(calculate_lossNormsv3(*args))
                 
     elif logitsversion==10:
         def baseLogits(*args):
-            return calculate_lossNormsv4(*args)
+            return oneminus(calculate_lossNormsv4(*args))
         
              
     elif logitsversion==11:
@@ -83,13 +83,13 @@ def get_loss_fn(logitsversion=0,norm=False,log=False):
              
     elif logitsversion==12:
         def baseLogits(*args):
-            return calculate_lossNormsv8(*args)
+            return oneminus(calculate_lossNormsv8(*args))
     elif logitsversion==15:
         def baseLogits(*args):
-            return calculate_lossNormsv6(*args)
+            return oneminus(calculate_lossNormsv6(*args))
     elif logitsversion==16:
         def baseLogits(*args):
-            return calculate_lossNormsv7(*args)
+            return oneminus(calculate_lossNormsv7(*args))
 
     normfunction=lambda x:x
     if norm:
