@@ -48,5 +48,5 @@ if __name__=="__main__":
         }
     }
     # Create the sweep
-    sweep_id = wandb.sweep(sweep_config, project="6DimCachespliteinSweep", entity="st7ma784")
+    sweep_id = wandb.sweep(sweep_config, project="6DimSweep", entity="st7ma784")
     print(sweep_id)
