@@ -170,9 +170,9 @@ if __name__ == "__main__":
         
         normed=data['norm']
         if normed:
-            out.update({str(name):draw(torch.nan_to_num(func(xys,xys,xys,xys))).tolist() for name,func in normedfunctions.items()})
+            out.update({str(name):draw(torch.nan_to_num(func(xys,xys,xys,xys))) for name,func in normedfunctions.items()})
         else:
-            out.update({str(name):draw(torch.nan_to_num(func(xys,xys,xys,xys))).tolist() for name,func in functions.items()})
+            out.update({str(name):draw(torch.nan_to_num(func(xys,xys,xys,xys))) for name,func in functions.items()})
             
         #we now have out as a dict with name: graph for each method. 
         #lets return each of these and hope it doesnt exploded 
