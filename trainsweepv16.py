@@ -28,7 +28,7 @@ if __name__=="__main__":
                 'values': [512]
             },
             'logitsversion':{
-                'values':[16]
+                'values':[14]
             },
             "prune":{
                 'values':[False]
