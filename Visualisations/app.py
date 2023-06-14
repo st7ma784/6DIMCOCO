@@ -183,7 +183,7 @@ if __name__ == "__main__":
                 as_attachment=True,
                 download_name='4DGraphMethod{}.png'.format(k)
               )
-        pass
+        
   
        
     #return jsonify([str(func(*xys).item()) for func in functions.values()])
