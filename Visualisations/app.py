@@ -180,7 +180,7 @@ if __name__ == "__main__":
              send_file(
                 stream,
                 as_attachment=True,
-                download_name='4DGraphMethod{}.jpeg'.format(k)
+                download_name='4DGraphMethod{}.png'.format(k)
               )
         pass
   
