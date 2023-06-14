@@ -31,7 +31,7 @@ if __name__=="__main__":
                 'values':[14]
             },
             "prune":{
-                'values':[False]
+                'values':[False,True]
             },
             "meanloss":{
                 'values':[True,False]
