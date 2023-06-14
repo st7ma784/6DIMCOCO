@@ -164,7 +164,8 @@ if __name__ == "__main__":
         wh=torch.tensor([[data['width'],data['height']]])/2
         x=[float(x[:-2]) for x in filter(lambda a: a != '',data['x'])]
         y=[float(y[:-2]) for y in filter(lambda a: a != '',data['y'])]
-        xys=[(torch.tensor([[x,y]],requires_grad=False)-wh)/wh for x,y in zip(x,y)]
+        xys=torch.stack([torch.tensor([[x,y]],requires_grad=False)for x,y in zip(x,y)])-wh
+        xys=xys/wh 
         out={}
         
         normed=data['norm']
