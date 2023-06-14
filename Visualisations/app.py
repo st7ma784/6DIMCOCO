@@ -170,7 +170,9 @@ if __name__ == "__main__":
         
         normed=data['norm']
         if normed:
-            out.update({str(name):draw(torch.nan_to_num(func(xys,xys,xys,xys))) for name,func in normedfunctions.items()})
+            out.update({str(name):send_file(draw(torch.nan_to_num(func(xys,xys,xys,xys))),
+                as_attachment=True,
+                download_name='4DGraphMethod{}.png'.format(name)) for name,func in normedfunctions.items()})
         else:
             out.update({str(name):send_file(draw(torch.nan_to_num(func(xys,xys,xys,xys))),
                 as_attachment=True,
