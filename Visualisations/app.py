@@ -172,18 +172,10 @@ if __name__ == "__main__":
         if normed:
             out.update({str(name):draw(torch.nan_to_num(func(xys,xys,xys,xys))) for name,func in normedfunctions.items()})
         else:
-            out.update({str(name):draw(torch.nan_to_num(func(xys,xys,xys,xys))) for name,func in functions.items()})
-            
-        #we now have out as a dict with name: graph for each method. 
-        #lets return each of these and hope it doesnt exploded 
-        for k,v in out.items():
-             v.seek(0)
-             send_file(
-                v,
+            out.update({str(name):send_file(draw(torch.nan_to_num(func(xys,xys,xys,xys))),
                 as_attachment=True,
-                download_name='4DGraphMethod{}.png'.format(k)
-              )
-        return jsonify({})
+                download_name='4DGraphMethod{}.png'.format(name)) for name,func in functions.items()})
+        return *out.values()
   
        
     #return jsonify([str(func(*xys).item()) for func in functions.values()])
