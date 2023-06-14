@@ -60,7 +60,7 @@ if __name__ == '__main__':
     parser.add_argument('--dir', type=str, default='/nobackup/projects/bdlan05/smander3/data', help='where to save')
     parser.add_argument('--sweep', type=str, default=None, help='Sweepid')
     parser.add_argument('--logdir', type=str,default=".", help='Where to save logs')
-    parser.add_argument('--project', type=str, default="6DimCachespliteinSweep", help='wandb project')
+    parser.add_argument('--project', type=str, default="6DimSweep", help='wandb project')
     parser.add_argument('--entity', type=str, default="st7ma784", help='wandb entity')
     args=parser.parse_args()
     NumTrials=args.num_trials
