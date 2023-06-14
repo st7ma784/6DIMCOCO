@@ -4,8 +4,8 @@ from nargsLossCalculation import get_loss_fn
 from functools import reduce
 from glob import glob
 from io import BytesIO
-from zipfile import ZipFile
-import os
+import numpy as np
+from matplotlib import pyplot as plt
 def mean(args):
     return reduce(torch.add,[a/len(args) for a in args])
 def std(args):
@@ -24,7 +24,7 @@ def square(logits):
     #a function that takes numpy logits and plots them on an x and y axis
     plt.figure(figsize=(logits.shape[0],logits.shape[1]))
     plt.imshow(logits)
-    img_buf = io.BytesIO()
+    img_buf = BytesIO()
     plt.savefig(img_buf, format='png')
     return img_buf    
 
@@ -52,7 +52,7 @@ def cubes(logits):
     #plt.title("Batch MSE loss between random values and perfect case in n=3 dimensions")
     # Displaying the graph
     #save graph to IO buffer and return 
-    img_buf = io.BytesIO()
+    img_buf = BytesIO()
     plt.savefig(img_buf, format='png')
     return img_buf
 
@@ -82,13 +82,14 @@ def hsquare(logits):
     #plt.title("Perfect case logits in n=4 dimensions plotted on a (B^2, B^2) ")
     # Displaying the graph
     #save graph to IO buffer and return 
-    img_buf = io.BytesIO()
+    img_buf = BytesIO()
     plt.savefig(img_buf, format='png')
     return img_buf
 # Defining the main() function
-def hypcubes(side):
+def hypcubes(logits):
     # Defining the size of the axes
-    u,v,w,x, y, z = np.indices((B,B,B,B, B, B))
+    side=logits.shape[0]
+    u,v,w,x, y, z = np.indices(logits.shape)
     # Defining the length of the sides of the cubes
     cube =  (u < side) & (v < side) & (w < side)& (x < side) & (y < side) & (z < side)
     # Defining the shape of the figure to be a cube
@@ -96,7 +97,7 @@ def hypcubes(side):
     # Defining the colors for the cubes
     colors = np.empty(voxelarray.shape, dtype=object)
     # Defining the color of the cube
-    c=np.sqrt(np.sqrt(torch.softmax(Blogits.flatten()).unflatten(0,(B,B,B,B,B,B)).cpu().numpy()))*2
+    c=np.sqrt(np.sqrt(torch.softmax(logits.flatten()).unflatten(0,(u,v,w,x, y, z)).cpu().numpy()))*2
     colors[cube] = c.astype(str)[cube]
     # Defining the axes and the figure object
     ax = plt.figure(figsize=(9, 9)).add_subplot(projection='3d')
@@ -108,7 +109,7 @@ def hypcubes(side):
     #save graph to IO buffer and return 
     
 
-    img_buf = io.BytesIO()
+    img_buf = BytesIO()
     plt.savefig(img_buf, format='png')
     return img_buf
 def draw(logits):
@@ -164,7 +165,6 @@ if __name__ == "__main__":
         x=[float(x[:-2]) for x in filter(lambda a: a != '',data['x'])]
         y=[float(y[:-2]) for y in filter(lambda a: a != '',data['y'])]
         xys=[(torch.tensor([[x,y]],requires_grad=False)-wh)/wh for x,y in zip(x,y)]
-        stats=data['stats']
         out={}
         
         normed=data['norm']
@@ -178,7 +178,7 @@ if __name__ == "__main__":
         for k,v in out.items():
              v.seek(0)
              send_file(
-                stream,
+                v,
                 as_attachment=True,
                 download_name='4DGraphMethod{}.png'.format(k)
               )
