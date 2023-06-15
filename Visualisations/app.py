@@ -174,9 +174,10 @@ if __name__ == "__main__":
         with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED, False) as zip_file:
             items=normedfunctions.items() if normed else functions.items()
             for name, func in items:
-                zfile=zip_file.writestr('4DNormedGraphMethod{}.png'.format(name), draw(torch.nan_to_num(func(xys,xys,xys,xys))))
-                print(zfile)
-                zfile.create_system = 0  
+                zip_file.writestr('4DNormedGraphMethod{}.png'.format(name), draw(torch.nan_to_num(func(xys,xys,xys,xys))))
+            for zf in zip_file.filelist:
+                zf.create_system = 0
+                print(zf) 
                 #this might help with windows?      
         zip_buffer.seek(0)
       
