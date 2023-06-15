@@ -172,9 +172,9 @@ if __name__ == "__main__":
         zip_buffer = BytesIO()
         with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:              
             if normed:
-                map(lambda x: zip_file.writestr('4DNormedGraphMethod{}.png'.format(x[0]), draw(torch.nan_to_num(x[1](xys,xys,xys,xys)))),normedfunctions.items())
+                map(lambda x: zip_file.write('4DNormedGraphMethod{}.png'.format(x[0]), draw(torch.nan_to_num(x[1](xys,xys,xys,xys)))),normedfunctions.items())
             else:
-                map(lambda x: zip_file.writestr('4DGraphMethod{}.png'.format(x[0]), draw(torch.nan_to_num(x[1](xys,xys,xys,xys)))),functions.items())
+                map(lambda x: zip_file.write('4DGraphMethod{}.png'.format(x[0]), draw(torch.nan_to_num(x[1](xys,xys,xys,xys)))),functions.items())
 
         zip_buffer.seek(0)
         return send_file(zip_buffer, attachment_filename='Graphs{}.zip'.format("normed" if normed else "raw"), as_attachment=True)
