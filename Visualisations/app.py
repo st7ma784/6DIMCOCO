@@ -175,7 +175,7 @@ if __name__ == "__main__":
             map(lambda x: send_file(draw(torch.nan_to_num(x[1](xys,xys,xys,xys))),
                                     as_attachment=True,
                                     download_name='4DGraphMethod{}.png'.format(x[0])), functions.items())
-        return 200
+        return "success",200
 
     app.run(host="0.0.0.0", port=5000, debug=False)
   
