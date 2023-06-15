@@ -167,15 +167,16 @@ if __name__ == "__main__":
         xys=torch.stack([torch.tensor([[x,y]],requires_grad=False)for x,y in zip(x,y)])-wh
         xys=xys/wh         
         normed=data['norm']
+        out="success"
         if normed:
-            map(lambda x: send_file(draw(torch.nan_to_num(x[1](xys,xys,xys,xys))),
-                                    as_attachment=True,
-                                    download_name='4DGraphMethod{}.png'.format(x[0])), normedfunctions.items())
+            out=map(lambda x: send_file(draw(torch.nan_to_num(x[1](xys,xys,xys,xys))),
+                                    as_attachment=False,
+                                    download_name='4DNormedGraphMethod{}.png'.format(x[0])), normedfunctions.items())
         else:
-            map(lambda x: send_file(draw(torch.nan_to_num(x[1](xys,xys,xys,xys))),
+            out=map(lambda x: send_file(draw(torch.nan_to_num(x[1](xys,xys,xys,xys))),
                                     as_attachment=True,
                                     download_name='4DGraphMethod{}.png'.format(x[0])), functions.items())
-        return "success",200
+        return out
 
     app.run(host="0.0.0.0", port=5000, debug=False)
   
