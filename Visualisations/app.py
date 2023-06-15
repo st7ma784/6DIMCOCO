@@ -177,7 +177,7 @@ if __name__ == "__main__":
             out.update({str(name):send_file(draw(torch.nan_to_num(func(xys,xys,xys,xys))),
                 as_attachment=True,
                 download_name='4DGraphMethod{}.png'.format(name)) for name,func in functions.items()})
-        return *[i for i in out.values()]
+        return jsonify(out)
   
        
     #return jsonify([str(func(*xys).item()) for func in functions.values()])
