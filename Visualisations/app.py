@@ -174,10 +174,10 @@ if __name__ == "__main__":
             if normed:
                 map(lambda x: zip_file.writestr('4DNormedGraphMethod{}.png'.format(x[0]), draw(torch.nan_to_num(x[1](xys,xys,xys,xys)))),normedfunctions.items())
             else:
-                map(lambda x: zip_file.writestr('4DNormedGraphMethod{}.png'.format(x[0]), draw(torch.nan_to_num(x[1](xys,xys,xys,xys)))),functions.items())
+                map(lambda x: zip_file.writestr('4DGraphMethod{}.png'.format(x[0]), draw(torch.nan_to_num(x[1](xys,xys,xys,xys)))),functions.items())
 
         zip_buffer.seek(0)
-        return send_file(zip_buffer, attachment_filename='Graphs.zip', as_attachment=True)
+        return send_file(zip_buffer, attachment_filename='Graphs{}.zip'.format("normed" if normed else "raw"), as_attachment=True)
 
     app.run(host="0.0.0.0", port=5000, debug=False)
   
