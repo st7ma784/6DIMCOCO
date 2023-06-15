@@ -181,7 +181,7 @@ if __name__ == "__main__":
         try:
             with zipfile.ZipFile(zip_buffer) as archive:
                 archive.printdir()
-                print(zip_buffer.tell())
+                print(archive.namelist())
         except zipfile.BadZipFile as error:
             print(error)
         zip_buffer.seek(0)
