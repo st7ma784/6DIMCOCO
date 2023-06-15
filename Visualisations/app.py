@@ -183,7 +183,7 @@ if __name__ == "__main__":
         except zipfile.BadZipFile as error:
             print(error)
         zip_buffer.seek(0)
-        return send_file(zip_buffer,download_name= "Graphs{}.zip",as_attachment=True)
+        return send_file(zip_buffer,download_name= "Graphs{}.zip",as_attachment=False, mimetype='application/zip')
 
     app.run(host="0.0.0.0", port=5000, debug=True )
   
