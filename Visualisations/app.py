@@ -175,7 +175,7 @@ if __name__ == "__main__":
             items=normedfunctions.items() if normed else functions.items()
             for name, func in items:
                 print(name)
-                zip_file.writestr('4DGraphMethod{}.png'.format(name), draw(torch.nan_to_num(func(xys,xys,xys,xys))))
+                zip_file.writestr('4DGraphMethod{}.png'.format(name), draw(torch.nan_to_num(func(xys,xys,xys,xys))).getvalue())
             for zf in zip_file.filelist:
                 zf.create_system = 0
         try:
