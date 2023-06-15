@@ -167,16 +167,16 @@ if __name__ == "__main__":
         xys=torch.stack([torch.tensor([[x,y]],requires_grad=False)for x,y in zip(x,y)])-wh
         xys=xys/wh         
         normed=data['norm']
-        out="success"
-        if normed:
-            out=map(lambda x: send_file(draw(torch.nan_to_num(x[1](xys,xys,xys,xys))),
-                                    as_attachment=False,
-                                    download_name='4DNormedGraphMethod{}.png'.format(x[0])), normedfunctions.items())
-        else:
-            out=map(lambda x: send_file(draw(torch.nan_to_num(x[1](xys,xys,xys,xys))),
-                                    as_attachment=True,
-                                    download_name='4DGraphMethod{}.png'.format(x[0])), functions.items())
-        return out
+
+        zip_buffer = io.BytesIO()
+        with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:              
+            if normed:
+                map(lambda x: zip_file.writestr('4DNormedGraphMethod{}.png'.format(x[0]), draw(torch.nan_to_num(x[1](xys,xys,xys,xys)))),normedfunctions.items())
+            else:
+                map(lambda x: zip_file.writestr('4DNormedGraphMethod{}.png'.format(x[0]), draw(torch.nan_to_num(x[1](xys,xys,xys,xys)))),functions.items())
+
+        zip_buffer.seek(0)
+        return send_file(zip_buffer, attachment_filename='Graphs.zip', as_attachment=True)
 
     app.run(host="0.0.0.0", port=5000, debug=False)
   
