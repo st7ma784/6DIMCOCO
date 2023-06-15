@@ -147,15 +147,14 @@
         const action = "POST";
         request.onreadystatechange = function(){
             if (request.readyState === 4) {
-                //the reply is a flask.send_file zip of the graphs to download with a downloadname
-                var zip = request.response;
+                
                 // check mime type
                 if (request.getResponseHeader("Content-Type") != "application/zip") {
                     alert("Error: no graphs found");
                     return;
                 }
-                
-                var blob = new Blob([zip], {type: "application/zip"});
+
+                var blob = new Blob([request.response], {type: "application/zip"});
                 // check zip isn't empty
                 if (blob.size > 0) {
                     // create a link to download the zip
@@ -164,8 +163,11 @@
                     link.download = "graphs.zip";
                     link.click();
                     // remove the link
-                link.remove();
+                    link.remove();
 
+                }
+                else {
+                    alert("Error: no graphs found");
                 }
             }
         
