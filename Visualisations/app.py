@@ -165,19 +165,17 @@ if __name__ == "__main__":
         x=[float(x[:-2]) for x in filter(lambda a: a != '',data['x'])]
         y=[float(y[:-2]) for y in filter(lambda a: a != '',data['y'])]
         xys=torch.stack([torch.tensor([[x,y]],requires_grad=False)for x,y in zip(x,y)])-wh
-        xys=xys/wh 
-        out={}
-        
+        xys=xys/wh         
         normed=data['norm']
         if normed:
-            out.update({str(name):send_file(draw(torch.nan_to_num(func(xys,xys,xys,xys))),
-                as_attachment=True,
-                download_name='4DGraphMethod{}.png'.format(name)) for name,func in normedfunctions.items()})
+            map(lambda x: send_file(draw(torch.nan_to_num(x[1](xys,xys,xys,xys))),
+                                    as_attachment=True,
+                                    download_name='4DGraphMethod{}.png'.format(x[0])), normedfunctions.items()})
         else:
-            out.update({str(name):send_file(draw(torch.nan_to_num(func(xys,xys,xys,xys))),
-                as_attachment=True,
-                download_name='4DGraphMethod{}.png'.format(name)) for name,func in functions.items()})
-        return out
+            map(lambda x: send_file(draw(torch.nan_to_num(x[1](xys,xys,xys,xys))),
+                                    as_attachment=True,
+                                    download_name='4DGraphMethod{}.png'.format(x[0])), functions.items()})
+        return 200
 
     app.run(host="0.0.0.0", port=5000, debug=False)
   
