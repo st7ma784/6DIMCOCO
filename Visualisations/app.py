@@ -27,6 +27,7 @@ def square(logits):
     plt.imshow(logits)
     img_buf = BytesIO()
     plt.savefig(img_buf, format='png')
+    img_buf.seek(0)
     return img_buf    
 
 
@@ -55,6 +56,7 @@ def cubes(logits):
     #save graph to IO buffer and return 
     img_buf = BytesIO()
     plt.savefig(img_buf, format='png')
+    img_buf.seek(0)
     return img_buf
 
 def hsquare(logits):
@@ -85,6 +87,7 @@ def hsquare(logits):
     #save graph to IO buffer and return 
     img_buf = BytesIO()
     plt.savefig(img_buf, format='png')
+    img_buf.seek(0)
     return img_buf
 # Defining the main() function
 def hypcubes(logits):
@@ -112,6 +115,7 @@ def hypcubes(logits):
 
     img_buf = BytesIO()
     plt.savefig(img_buf, format='png')
+    img_buf.seek(0)
     return img_buf
 def draw(logits):
     # Defining the side of the cube
@@ -171,18 +175,21 @@ if __name__ == "__main__":
         #
         zip_buffer = BytesIO()
 
-        with zipfile.ZipFile(zip_buffer, "wb", zipfile.ZIP_DEFLATED, False) as zip_file:              
+        with zipfile.ZipFile(zip_buffer, "wb", zipfile.ZIP_DEFLATED, False) as zip_file:
+
             if normed:
                 for name, func in normedfunctions.items():
-                    zip_file.writestr('4DNormedGraphMethod{}.png'.format(name), draw(torch.nan_to_num(func(xys,xys,xys,xys))).read())
+                    zip_file.writestr('4DNormedGraphMethod{}.png'.format(name), draw(torch.nan_to_num(func(xys,xys,xys,xys))))
+
             else:
                 for name, func in functions.items():
-                    zip_file.writestr('4DGraphMethod{}.png'.format(name), draw(torch.nan_to_num(func(xys,xys,xys,xys))).read())
+                    zip_file.writestr('4DGraphMethod{}.png'.format(name), draw(torch.nan_to_num(func(xys,xys,xys,xys))))
+            
             for zfile in zip_file.filelist:
                 zfile.create_system = 0  
                 #this might help with windows?      
-
-        return send_file(zip_buffer.getvalue(),download_name= 'Graphs{}.zip'.format("normed" if normed else "raw"), as_attachment=True)
+        zip_buffer.seek(0)
+        return send_file(zip_buffer,download_name= 'Graphs{}.zip'.format("normed" if normed else "raw"), as_attachment=True)
 
     app.run(host="0.0.0.0", port=5000, debug=False)
   
