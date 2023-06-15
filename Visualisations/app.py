@@ -182,6 +182,7 @@ if __name__ == "__main__":
             with zipfile.ZipFile(zip_buffer) as archive:
                 archive.printdir()
                 print(archive.namelist())
+            print("Zip file created successfully")
         except zipfile.BadZipFile as error:
             print(error)
         zip_buffer.seek(0)
