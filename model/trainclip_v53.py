@@ -338,8 +338,8 @@ class LightningCLIPModule(LightningModule):
         self.log("mean validation stock logits ", logitsI.mean())
         labels=torch.arange(batch[0].shape[0],dtype=torch.long,device=self.device)
 
-        lossim = self.valloss(logitsI*self.logit_scale, labels)
-        loss1 = self.valloss(logitsT*self.logit_scale, labels)
+        lossim = self.valloss(logitsI*self.logit_scale.exp(), labels)
+        loss1 = self.valloss(logitsT*self.logit_scale.exp(), labels)
         loss = lossim+loss1
         loss=loss/2
         loss = loss.mean()
