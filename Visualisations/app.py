@@ -171,7 +171,7 @@ if __name__ == "__main__":
         #
         zip_buffer = BytesIO()
 
-        with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED, False) as zip_file:
+        with zipfile.ZipFile(zip_buffer, "w") as zip_file:
             items=normedfunctions.items() if normed else functions.items()
             for name, func in items:
                 print(name)
