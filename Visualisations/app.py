@@ -170,13 +170,17 @@ if __name__ == "__main__":
         normed=data['norm']
 
         zip_buffer = BytesIO()
-        with zipfile.ZipFile(zip_buffer, "a") as zip_file:              
+        with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:              
             if normed:
                 for name, func in normedfunctions.items():
                     zip_file.writestr('4DNormedGraphMethod{}.png'.format(name), draw(torch.nan_to_num(func(xys,xys,xys,xys))).getvalue())
             else:
                 for name, func in functions.items():
                     zip_file.writestr('4DNormedGraphMethod{}.png'.format(name), draw(torch.nan_to_num(func(xys,xys,xys,xys))).getvalue())
+            for zfile in zip_file.filelist:
+                zfile.create_system = 0  
+                #this might help with windows?      
+
         zip_buffer.seek(0)
         return send_file(zip_buffer,download_name= 'Graphs{}.zip'.format("normed" if normed else "raw"), as_attachment=True)
 
