@@ -155,7 +155,7 @@ if __name__ == "__main__":
             out.update({str(name):(torch.nan_to_num(func(*xys))).tolist() for name,func in normedfunctions.items()})
         else:
             out.update({str(name):(torch.nan_to_num(func(*xys))).tolist() for name,func in functions.items()})
-        return out
+        return jsonify(out)
     
     @torch.no_grad()
     @app.route('/demo/Plotfour', methods=['GET','POST'])
@@ -177,7 +177,7 @@ if __name__ == "__main__":
             out.update({str(name):send_file(draw(torch.nan_to_num(func(xys,xys,xys,xys))),
                 as_attachment=True,
                 download_name='4DGraphMethod{}.png'.format(name)) for name,func in functions.items()})
-        return jsonify(out)
+        return out
 
     app.run(host="0.0.0.0", port=5000, debug=False)
   
