@@ -27,7 +27,7 @@ def square(logits):
     plt.imshow(logits)
     img_buf = BytesIO()
     plt.savefig(img_buf, format='png')
-    return img_buf.getvalue()
+    return img_buf
 
 
 def cubes(logits):
@@ -55,7 +55,7 @@ def cubes(logits):
     #save graph to IO buffer and return 
     img_buf = BytesIO()
     plt.savefig(img_buf, format='png')
-    return img_buf.getvalue()
+    return img_buf
 
 def hsquare(logits):
     # Defining the size of the axes
@@ -85,7 +85,7 @@ def hsquare(logits):
     #save graph to IO buffer and return 
     img_buf = BytesIO()
     plt.savefig(img_buf, format='png')
-    return img_buf.getvalue()
+    return img_buf
 # Defining the main() function
 def hypcubes(logits):
     # Defining the size of the axes
@@ -112,7 +112,7 @@ def hypcubes(logits):
 
     img_buf = BytesIO()
     plt.savefig(img_buf, format='png')
-    return img_buf.getvalue()
+    return img_buf
 def draw(logits):
     # Defining the side of the cube
     sides = len(logits.shape) #(subtract to take slices)
