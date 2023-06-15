@@ -147,14 +147,22 @@
         const action = "POST";
         request.onreadystatechange = function(){
             if (request.readyState === 4) {
-                //the reply is a flask send_file zip of the graphs
-                //download the zip
-                var blob = new Blob([request.response], {type: 'application/zip'});
+                //the reply is a flask.send_file zip of the graphs to download with a downloadname
+                var zip = request.response;
+                var downloadname = request.getResponseHeader("downloadname");
+                // create a blob from the zip
+                var blob = new Blob([zip], {type: "application/zip"});
+                // create a url from the blob
+                var url = URL.createObjectURL(blob);
+                // create a link to the url
                 var link = document.createElement('a');
-                link.href = window.URL.createObjectURL(blob);
-                link.download = "graphs.zip";
+                link.href = url;
+                link.download = downloadname;
+                // click the link to download
                 link.click();
-
+                // remove the link
+                link.remove();
+                
                 }
             }
         
