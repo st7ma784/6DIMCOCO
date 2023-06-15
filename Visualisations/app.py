@@ -180,7 +180,8 @@ if __name__ == "__main__":
                 zf.create_system = 0
         try:
             with zipfile.ZipFile(zip_buffer) as archive:
-             archive.printdir()
+                archive.printdir()
+                print(zip_buffer.tell())
         except zipfile.BadZipFile as error:
             print(error)
         zip_buffer.seek(0)
