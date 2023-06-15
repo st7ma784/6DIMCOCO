@@ -149,18 +149,21 @@
             if (request.readyState === 4) {
                 //the reply is a flask.send_file zip of the graphs to download with a downloadname
                 var zip = request.response;
-                var downloadname = request.getResponseHeader("downloadname");
-                // create a blob from the zip
+                // check mime type
+                if (request.getResponseHeader("Content-Type") != "application/zip") {
+                    alert("Error: no graphs found");
+                    return;
+                }
+                
                 var blob = new Blob([zip], {type: "application/zip"});
-                // create a url from the blob
-                var url = URL.createObjectURL(blob);
-                // create a link to the url
-                var link = document.createElement('a');
-                link.href = url;
-                link.download = downloadname;
-                // click the link to download
-                link.click();
-                // remove the link
+                // check zip isn't empty
+                if (blob.size > 0) {
+                    // create a link to download the zip
+                    var link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(blob);
+                    link.download = "graphs.zip";
+                    link.click();
+                    // remove the link
                 link.remove();
 
                 }
