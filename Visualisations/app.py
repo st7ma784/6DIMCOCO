@@ -155,7 +155,7 @@ if __name__ == "__main__":
             out.update({str(name):(torch.nan_to_num(func(*xys))).tolist() for name,func in normedfunctions.items()})
         else:
             out.update({str(name):(torch.nan_to_num(func(*xys))).tolist() for name,func in functions.items()})
-        return jsonify(out)
+        return out
     
     @torch.no_grad()
     @app.route('/demo/Plotfour', methods=['GET','POST'])
