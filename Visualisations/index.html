@@ -162,13 +162,10 @@
                 link.click();
                 // remove the link
                 link.remove();
-                
+
                 }
             }
         
-        // const endpoint = "http://scc-lanfotech.lancs.ac.uk:80/demo/Plotfour";
-        // const endpoint = "http://127.0.0.1:5000/demo/Plotfour";
-        // get endpoint from the server host environment
         const endpoint = "http://"+window.location.hostname+":80/demo/Plotfour";
 
         request.open(action, endpoint);
