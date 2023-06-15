@@ -178,33 +178,6 @@ if __name__ == "__main__":
                 as_attachment=True,
                 download_name='4DGraphMethod{}.png'.format(name)) for name,func in functions.items()})
         return jsonify(out)
-  
-       
-    #return jsonify([str(func(*xys).item()) for func in functions.values()])
-    # @app.route('/demo/norm/data', methods=['GET','POST'])
-    # async def getnormS():
-    #     data=request.get_json()
-    #     wh=torch.tensor([[data['width'],data['height']]])/2
-    #     x=[float(x[:-2]) for x in filter(lambda a: a != '',data['x'])]
-    #     y=[float(y[:-2]) for y in filter(lambda a: a != '',data['y'])]
-    #     xys=[(torch.tensor([[x,y]],requires_grad=False)-wh)/wh for x,y in zip(x,y)]
-        
-    #     with torch.no_grad():                   
-    #         return jsonify([str(func(*xys).item()) for func in normedfunctions.values()])
-    # # these 2 functions really could be combined into one, but I'm lazy and there may be future reasons to keep them seperate
-    # @app.route('/demo/points', methods=['GET','POST'])
-    # async def getmetricS():
-    #     data=request.get_json()
-    #     wh=torch.tensor([[data['width'],data['height']]])/2
-    #     x=[float(x[:-2]) for x in filter(lambda a: a != '',data['x'])]
-    #     y=[float(y[:-2]) for y in filter(lambda a: a != '',data['y'])]
-    #     xys=[(torch.tensor([[x,y]],requires_grad=False)-wh)/wh for x,y in zip(x,y)]
-        
-    #     with torch.no_grad(): 
-           
-    #         #print(out)# these are all relative to the width and height of the image
 
-    #         return jsonify(out)
-    # run at /smander
     app.run(host="0.0.0.0", port=5000, debug=False)
   
