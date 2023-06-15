@@ -178,12 +178,7 @@ if __name__ == "__main__":
                 zip_file.writestr('4DGraphMethod{}.png'.format(name), draw(torch.nan_to_num(func(xys,xys,xys,xys))))
             for zf in zip_file.filelist:
                 zf.create_system = 0
-        
-                #this might help with windows?      
         zip_buffer.seek(0)
-        
-        
-
         return send_file(zip_buffer,download_name= 'Graphs{}.zip'.format("normed" if normed else "raw"), as_attachment=True)
 
     app.run(host="0.0.0.0", port=5000, debug=False)
