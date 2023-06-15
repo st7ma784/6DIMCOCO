@@ -188,5 +188,5 @@ if __name__ == "__main__":
         zip_buffer.seek(0)
         return send_file(zip_buffer,download_name= 'Graphs{}.zip'.format("normed" if normed else "raw"), as_attachment=True)
 
-    app.run(host="0.0.0.0", port=5000, debug=False)
+    app.run(host="0.0.0.0", port=5000, debug=True)
   
