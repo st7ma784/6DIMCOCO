@@ -179,7 +179,7 @@ if __name__ == "__main__":
             zip_file.close()
         
         try:
-            with zipfile.ZipFile(zip_buffer) as archive:
+            with zipfile.ZipFile(zip_buffer,"r") as archive:
                 archive.printdir()
                 print(archive.namelist())
             print("Zip file created successfully")
