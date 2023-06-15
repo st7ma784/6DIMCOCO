@@ -168,7 +168,7 @@ if __name__ == "__main__":
         xys=xys/wh         
         normed=data['norm']
 
-        zip_buffer = io.BytesIO()
+        zip_buffer = BytesIO()
         with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:              
             if normed:
                 map(lambda x: zip_file.writestr('4DNormedGraphMethod{}.png'.format(x[0]), draw(torch.nan_to_num(x[1](xys,xys,xys,xys)))),normedfunctions.items())
