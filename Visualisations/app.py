@@ -4,6 +4,7 @@ from nargsLossCalculation import get_loss_fn
 from functools import reduce
 from glob import glob
 from io import BytesIO
+from zipfile import ZipFile
 import numpy as np
 from matplotlib import pyplot as plt
 def mean(args):
@@ -169,7 +170,7 @@ if __name__ == "__main__":
         normed=data['norm']
 
         zip_buffer = BytesIO()
-        with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:              
+        with ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:              
             if normed:
                 map(lambda x: zip_file.writestr('4DNormedGraphMethod{}.png'.format(x[0]), draw(torch.nan_to_num(x[1](xys,xys,xys,xys)))),normedfunctions.items())
             else:
