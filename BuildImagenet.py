@@ -73,8 +73,8 @@ class ImagenetDataModule(LightningDataModule):
             transforms.Resize(224),
             transforms.CenterCrop(224),transforms.ToTensor()])
         
-        train_dir = os.path.join(self.data_dir, 'ImageNet_224', 'train')
-        test_dir = os.path.join(self.data_dir, 'ImageNet_224', 'train')
+        train_dir = os.path.join(self.data_dir, 'ImageNet-2012', 'train')
+        test_dir = os.path.join(self.data_dir, 'ImageNet-2012', 'val')
         self.train_dataset = ImageFolder(train_dir, transform=train_transform)
         self.test_dataset = ImageFolder(test_dir, transform=test_transform)
         
@@ -113,13 +113,19 @@ class ImagenetDataModule(LightningDataModule):
                 path.touch()
             else:
                 print("File {} does not exist".format(filename))
-                urlsToGo.append(url)
-        obj=SmartDL(urlsToGo,data_path,progress_bar=True,threads=16, verify=False)
-        obj.start()                
+                if not filename=="ILSVRC2012_devkit_t3.tar.gz":
+
+                    urlsToGo.append(url)
+                else: # check if devkit exists
+                    if not os.path.exists(os.path.join(data_path,"devkit.tar.gz")):
+                        urlsToGo.append(url)
+        if len(urlsToGo)>0:
+            obj=SmartDL(urlsToGo,data_path,progress_bar=True,threads=16, verify=False)
+            obj.start()                
         #rename devkit
         original=os.path.join(data_path,"ILSVRC2012_devkit_t3.tar.gz")
         #move to os.path.join(data_path,"devkit.tar.gz")
-        os.system("mv {} {}".format(original,os.path.join(data_path,"devkit.tar.gz")))
+        os.system("cp {} {}".format(original,os.path.join(data_path,"devkit.tar.gz")))
         
         # make train directory and unzip files
         os.makedirs(os.path.join(data_path,"ImageNet-2012","train"),exist_ok=True)
@@ -129,11 +135,14 @@ class ImagenetDataModule(LightningDataModule):
         for file in os.listdir(os.path.join(data_path,"ImageNet-2012","train")):
             #extract
             if file.endswith(".tar"):
-                #extract tar
-                #make directory
-                dirname = file.split('/')[-1].split('.')[0]
-                os.makedirs(os.path.join(data_path,"ImageNet-2012","train",dirname),exist_ok=True)
-                os.system("tar --touch -xvf {} -C {}".format(file.get_dest(),os.path.join(data_path,dirname)))
+                #check if directory exists
+                if not os.path.exists(os.path.join(data_path,"ImageNet-2012","train",file.split('/')[-1].split('.')[0])):
+                    os.makedirs(os.path.join(data_path,"ImageNet-2012","train",file.split('/')[-1].split('.')[0]),exist_ok=True)
+                    #extract tar
+                    #make directory
+                    dirname = file.split('/')[-1].split('.')[0]
+                    os.makedirs(os.path.join(data_path,"ImageNet-2012","train",dirname),exist_ok=True)
+                    os.system("tar --touch -xvf {} -C {}".format(file,os.path.join(data_path,dirname)))
         
                        
         '''
@@ -148,32 +157,26 @@ class ImagenetDataModule(LightningDataModule):
         rm $file
         done
         '''
-        os.makedirs(os.path.join(data_path,"ImageNet-2012","val"),exist_ok=True)
-        os.system("tar --touch -xvf {} -C {}".format(os.path.join(data_path,"ILSVRC2012_img_val.tar"),os.path.join(data_path,"ImageNet-2012","val")))
-        
-        for file in os.listdir(os.path.join(data_path,"ImageNet-2012","val")):
-            if file.endswith(".tar"):
-                dirname=file.split('/')[-1].split('.')[0]
-                os.makedirs(os.path.join(data_path,"ImageNet-2012","val",dirname),exist_ok=True)
-                os.system("tar --touch -xvf {} -C {}".format(file.get_dest(),os.path.join(data_path,dirname)))
-        #copy APCT-master/prepare/val_prepare.sh to ImageNet-2012/prepare
-        os.system("cp {} {}".format(os.path.join("APCT-master","prepare","val_prepare.sh"),os.path.join(data_path,"ImageNet-2012","prepare")))
-        os.system("cd {} && bash val_prepare.sh {}".format(os.path.join(data_path,"ImageNet-2012","prepare"), os.path.join(data_path,"ImageNet-2012","val")))
-        '''
-        cd $$data_path/ImageNet-2012/prepare
-        bash val_prepare.sh $data_path/ImageNet-2012/val
-        ''' 
-        #now lets resize the images
-
-        '''
-        # resize dataset
-        python $file_path/prepare/resize.py --data_path $data_path
+        #check if val directory exists
+        if not os.path.exists(os.path.join(data_path,"ImageNet-2012","val")):
+            print("File {} doesnt exists".format(os.path.join(data_path,"ImageNet-2012","val")))
             
-        '''
-        #resize dataset
-        # self.fast_resize(os.path.join(data_path,"ImageNet-2012","train"))
-        # self.fast_resize(os.path.join(data_path,"ImageNet-2012","val"))
-        
+            os.makedirs(os.path.join(data_path,"ImageNet-2012","val"),exist_ok=True)
+            os.system("tar --touch -xvf {} -C {}".format(os.path.join(data_path,"ILSVRC2012_img_val.tar"),os.path.join(data_path,"ImageNet-2012","val")))
+            
+            for file in os.listdir(os.path.join(data_path,"ImageNet-2012","val")):
+                if file.endswith(".tar"):
+                    dirname=file.split('/')[-1].split('.')[0]
+                    os.makedirs(os.path.join(data_path,"ImageNet-2012","val",dirname),exist_ok=True)
+                    os.system("tar --touch -xvf {} -C {}".format(file,os.path.join(data_path,dirname)))
+        #copy APCT-master/prepare/val_prepare.sh to ImageNet-2012/prepare
+
+
+        #if there arent files in the val directory, then we need to run the val_prepare.sh script
+        if len(os.listdir(os.path.join(data_path,"ImageNet-2012","val"))) == 0:
+            os.system("cp {} {}".format(os.path.join("APCT-master","prepare","val_prepare.sh"),os.path.join(data_path,"ImageNet-2012","prepare")))
+            os.system("cd {} && bash val_prepare.sh {}".format(os.path.join(data_path,"ImageNet-2012","prepare"), os.path.join(data_path,"ImageNet-2012","val")))
+    
     def fast_resize(self,dir):
         '''resize all images in a directory to 224x224'''
         #we will use PIL to resize images to 224x224 and save them in a new directory
@@ -208,7 +211,7 @@ class ImagenetDataModule(LightningDataModule):
             #open image
             buffer=io.BytesIO()
             #await reading into buffer
-            await self.read(imagepath,buffer,size)
+                await self.read(imagepath,buffer,size)
           
             #save image
             await self.save(buffer,os.path.join(new_dir,imagepath))   
@@ -240,10 +243,18 @@ if __name__ == '__main__':
     dm = ImagenetDataModule(data_dir=path)
     dm.prepare_data()
     dm.setup()
-
-    print(dm.test_dataloader()[0])
-    print(dm.val_dataloader()[0])
-    print(dm.train_dataloader()[0])
+    for batch in dm.train_dataloader():
+        print(batch[0].shape)
+        break
+    for batch in dm.val_dataloader():
+        print(batch[0].shape)
+        break
+    for batch in dm.test_dataloader():
+        print(batch[0].shape)
+        break
+#    print(dm.test_dataloader()[0])
+#    print(dm.val_dataloader()[0])
+#    print(dm.train_dataloader()[0])
 
     '''
     from torchvision.transforms import *

@@ -3,7 +3,7 @@
 #$ -l ngpus=1
 #$ -l ncpus=6
 #$ -l h_vmem=80G
-#$ -l h_rt=24:00:00
+#$ -l h_rt=12:00:00
 #$ -M st7ma784@gmail.com
 #$ -m beas
 source /etc/profile
@@ -22,4 +22,4 @@ export ISHEC=1
 export NCCL_DEBUG=INFO
 export NCCL_DEBUG_SUBSYS=ALL
 export wandb='9cf7e97e2460c18a89429deed624ec1cbfb537bc'
-python trainagent.py --data_dir $global_scratch --sweep_id abcddefg
+python trainagent.py --data_dir $global_scratch --sweep_id blv7sotu
