@@ -174,16 +174,15 @@ if __name__ == "__main__":
         with zipfile.ZipFile(zip_buffer, "wb", zipfile.ZIP_DEFLATED, False) as zip_file:              
             if normed:
                 for name, func in normedfunctions.items():
-                    zip_file.writestr('4DNormedGraphMethod{}.png'.format(name), draw(torch.nan_to_num(func(xys,xys,xys,xys))))
+                    zip_file.writestr('4DNormedGraphMethod{}.png'.format(name), draw(torch.nan_to_num(func(xys,xys,xys,xys))).read())
             else:
                 for name, func in functions.items():
-                    zip_file.writestr('4DGraphMethod{}.png'.format(name), draw(torch.nan_to_num(func(xys,xys,xys,xys))))
+                    zip_file.writestr('4DGraphMethod{}.png'.format(name), draw(torch.nan_to_num(func(xys,xys,xys,xys))).read())
             for zfile in zip_file.filelist:
                 zfile.create_system = 0  
                 #this might help with windows?      
 
-        zip_buffer.seek(0)
-        return send_file(zip_buffer,download_name= 'Graphs{}.zip'.format("normed" if normed else "raw"), as_attachment=True)
+        return send_file(zip_buffer.getvalue(),download_name= 'Graphs{}.zip'.format("normed" if normed else "raw"), as_attachment=True)
 
     app.run(host="0.0.0.0", port=5000, debug=False)
   
