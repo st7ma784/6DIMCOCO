@@ -2,7 +2,6 @@ import torch
 from flask import Flask, render_template, request, jsonify, send_file
 from nargsLossCalculation import get_loss_fn
 from functools import reduce
-from glob import glob
 from io import BytesIO
 import zipfile
 import numpy as np
@@ -171,12 +170,10 @@ if __name__ == "__main__":
         #
         zip_buffer = BytesIO()
 
-        with zipfile.ZipFile(zip_buffer, "w") as zip_file:
-            items=list(normedfunctions.items()) if normed else list(functions.items())
-            for name, func in items:
-                print(name)
+        with zipfile.ZipFile(zip_buffer, "w") as zip_file:            
+            for name, func in normedfunctions.items() if normed else functions.items():
+                
                 zip_file.writestr("4DGraphMethod{}.png".format(name), draw(torch.nan_to_num(func(xys,xys,xys,xys))).getvalue())
-            zip_file.close()
         
         try:
             with zipfile.ZipFile(zip_buffer,"r") as archive:
@@ -186,7 +183,7 @@ if __name__ == "__main__":
         except zipfile.BadZipFile as error:
             print(error)
         zip_buffer.seek(0)
-        return send_file(zip_buffer,download_name= 'Graphs{}.zip'.format("normed" if normed else "raw"), as_attachment=True)
+        return send_file(zip_buffer,download_name= "Graphs{}.zip",as_attachment=True)
 
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    app.run(host="0.0.0.0", port=5000, debug=True )
   
