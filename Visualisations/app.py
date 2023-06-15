@@ -172,7 +172,7 @@ if __name__ == "__main__":
         zip_buffer = BytesIO()
 
         with zipfile.ZipFile(zip_buffer, "w") as zip_file:
-            items=normedfunctions.items() if normed else functions.items()
+            items=list(normedfunctions.items()) if normed else list(functions.items())
             for name, func in items:
                 print(name)
                 zip_file.writestr("4DGraphMethod{}.png".format(name), draw(torch.nan_to_num(func(xys,xys,xys,xys))).getvalue())
