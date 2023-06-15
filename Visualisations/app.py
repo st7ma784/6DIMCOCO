@@ -168,15 +168,16 @@ if __name__ == "__main__":
         xys=torch.stack([torch.tensor([[x,y]],requires_grad=False)for x,y in zip(x,y)])-wh
         xys=xys/wh         
         normed=data['norm']
-
+        #
         zip_buffer = BytesIO()
+
         with zipfile.ZipFile(zip_buffer, "wb", zipfile.ZIP_DEFLATED, False) as zip_file:              
             if normed:
                 for name, func in normedfunctions.items():
-                    zip_file.writestr('4DNormedGraphMethod{}.png'.format(name), draw(torch.nan_to_num(func(xys,xys,xys,xys))).getvalue())
+                    zip_file.writestr('4DNormedGraphMethod{}.png'.format(name), draw(torch.nan_to_num(func(xys,xys,xys,xys))))
             else:
                 for name, func in functions.items():
-                    zip_file.writestr('4DGraphMethod{}.png'.format(name), draw(torch.nan_to_num(func(xys,xys,xys,xys))).getvalue())
+                    zip_file.writestr('4DGraphMethod{}.png'.format(name), draw(torch.nan_to_num(func(xys,xys,xys,xys))))
             for zfile in zip_file.filelist:
                 zfile.create_system = 0  
                 #this might help with windows?      
