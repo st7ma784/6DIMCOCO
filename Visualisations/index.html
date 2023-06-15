@@ -157,12 +157,10 @@
                 var blob = new Blob([request.response], {type: "application/zip"});
                 // check zip isn't empty
                 if (blob.size > 0) {
-                    // create a link to download the zip
                     var link = document.createElement('a');
                     link.href = window.URL.createObjectURL(blob);
                     link.download = "graphs.zip";
                     link.click();
-                    // remove the link
                     link.remove();
 
                 }
@@ -170,7 +168,7 @@
                     alert("Error: no zips found");
                 }
             }
-        
+        };
         const endpoint = "http://"+window.location.hostname+":80/demo/Plotfour";
 
         request.open(action, endpoint);
