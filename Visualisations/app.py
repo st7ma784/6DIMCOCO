@@ -170,7 +170,7 @@ if __name__ == "__main__":
         normed=data['norm']
 
         zip_buffer = BytesIO()
-        with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED, False) as zip_file:              
+        with zipfile.ZipFile(zip_buffer, "w") as zip_file:              
             if normed:
                 map(lambda x: zip_file.write('4DNormedGraphMethod{}.png'.format(x[0]), draw(torch.nan_to_num(x[1](xys,xys,xys,xys)))),normedfunctions.items())
             else:
