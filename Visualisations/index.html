@@ -127,7 +127,7 @@
         };
         const action = "POST";
         // get endpoint from the server host environment
-        const endpoint = "http://"+window.location.hostname+":80/demo/data";
+        const endpoint = "http://"+window.location.hostname+":5000/demo/data";
 
 
         //const endpoint = "http://scc-lanfotech.lancs.ac.uk:80/demo/data";
@@ -146,30 +146,25 @@
         let request = new XMLHttpRequest();
         const action = "POST";
         request.onreadystatechange = function(){
-            if (request.readyState === 4) {
+            if (this.readyState == 4 && this.status == 200){
+                //the reply is a make_response(send_file(...))
+
+                // create a blob from the response
+                var blob = new Blob([this.response], {type: "application/zip"});
                 
-                // check mime type
-                if (request.getResponseHeader("Content-Type") != "application/zip") {
-                    alert("Error: no graphs found");
-                    return;
-                }
+                var url = window.URL.createObjectURL(blob);
+                var link = document.createElement('a');
+                link.href = url;
+                link.click();
 
-                var blob = new Blob([request.response], {type: "application/zip"});
-                // check zip isn't empty
-                if (blob.size > 0) {
-                    var link = document.createElement('a');
-                    link.href = window.URL.createObjectURL(blob);
-                    link.download = "graphs.zip";
-                    link.click();
-                    link.remove();
-
-                }
-                else {
-                    alert("Error: no zips found");
-                }
+                setTimeout(() => {
+                    window.URL.revokeObjectURL(url);
+                    link.remove(); } , 100);
             }
         };
-        const endpoint = "http://"+window.location.hostname+":80/demo/Plotfour";
+
+        
+        const endpoint = "http://"+window.location.hostname+":5000/demo/Plotfour";
 
         request.open(action, endpoint);
         request.setRequestHeader("Content-Type", "application/json");
