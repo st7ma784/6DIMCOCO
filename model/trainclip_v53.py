@@ -346,7 +346,7 @@ class LightningCLIPModule(LightningModule):
         self.log('val_loss-stock', loss, prog_bar=True,enable_graph=False, rank_zero_only=True)
         return {"loss": loss, "imfeatures":image_features, "tfeatures":captions,"classes":batch[2]}
 
-    def validation_epoch_end(self,acc_val):
+    def on_validation_epoch_end(self,acc_val):
         imfeatures=torch.nan_to_num(torch.cat([val["imfeatures"] for val in acc_val],dim=0)).cpu().numpy()
         tfeatures=torch.nan_to_num(torch.cat([val["tfeatures"] for val in acc_val],dim=0)).cpu().numpy()
         #log imfeatures to wandb for viz
@@ -394,7 +394,7 @@ class LightningCLIPModule(LightningModule):
 
         return {"imfeatures":image_features, "classes":batch[1]}
 
-    def test_epoch_end(self,acc_val):
+    def on_test_epoch_end(self,acc_val):
         imfeatures=torch.nan_to_num(torch.cat([val["imfeatures"] for val in acc_val],dim=0)).cpu().numpy()
         labels=torch.cat([val["classes"] for val in acc_val],dim=0).cpu().numpy()
         if not hasattr(self,"Iclassifier"):
