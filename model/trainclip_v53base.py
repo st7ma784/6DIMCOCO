@@ -299,7 +299,7 @@ class LightningCLIPModule(LightningModule):
         loss = loss.mean()
         return {"loss": loss, "imfeatures":image_features, "tfeatures":captions,"classes":batch[2]}
 
-    def validation_epoch_end(self,acc_val):
+    def on_validation_epoch_end(self,acc_val):
         imfeatures=torch.nan_to_num(torch.cat([val["imfeatures"] for val in acc_val],dim=0)).cpu().numpy()
         tfeatures=torch.nan_to_num(torch.cat([val["tfeatures"] for val in acc_val],dim=0)).cpu().numpy()
         # self.logger.log_table("Embeddings",columns=["image Embeddings","Text Embeddings"],data=[imfeatures,tfeatures])

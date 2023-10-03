@@ -44,7 +44,7 @@ def train(config={
     from pytorch_lightning.callbacks import TQDMProgressBar,EarlyStopping
     from model.LossCalculation import calculate_loss,calculate_loss2,calculate_loss3,calculate_loss4,calculate_loss5,calculate_lossStock
     from model.PruneCalculation import PruneHook
-    from model.trainclip_v53base import LightningCLIPModule
+    from model.trainclip_v53 import LightningCLIPModule
     # from pl_bolts.datamodules import ImagenetDataModule
     model=LightningCLIPModule( train_batch_size=config["batch_size"],
                                 **config)
@@ -63,7 +63,7 @@ def train(config={
         Dataset=COCODataModule(Cache_dir=dir,batch_size=config["batch_size"])
         from BuildImagenet import ImagenetDataModule
         TestLoader=ImagenetDataModule(
-            data_dir="/datasets3/", 
+            data_dir=dir, 
             meta_dir=dir,
             num_imgs_per_val_class=50,
             image_size=224,
