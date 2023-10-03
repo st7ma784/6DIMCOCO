@@ -211,7 +211,7 @@ class ImagenetDataModule(LightningDataModule):
             #open image
             buffer=io.BytesIO()
             #await reading into buffer
-                await self.read(imagepath,buffer,size)
+            await self.read(imagepath,buffer,size)
           
             #save image
             await self.save(buffer,os.path.join(new_dir,imagepath))   

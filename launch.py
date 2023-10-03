@@ -4,16 +4,23 @@ from pytorch_lightning import loggers as pl_loggers
 
 def wandbtrain(config=None,dir=None,devices=None,accelerator=None,Dataset=None,project="6DIMCLIPTOKSweepv4",entity="st7ma784"):
     import pytorch_lightning
-
+    import wandb
     if config is not None:
         config=config.__dict__
         dir=config.get("dir",dir)
+        wandb.login(key='9cf7e97e2460c18a89429deed624ec1cbfb537bc')
+
         logtool= pytorch_lightning.loggers.WandbLogger( project=project,entity=entity, save_dir=dir)
 
     else: 
         #We've got no config, so we'll just use the default, and hopefully a trainAgent has been passed
         import wandb
         print("here")
+        wandb.login(key='9cf7e97e2460c18a89429deed624ec1cbfb537bc')
+        #n=wandb.init(project="SPARC-VisGenome",entity="st7ma784",name="VRE-Vis",config=args)
+
+        #logtool= pl.loggers.WandbLogger( project="SPARC-VisGenome",entity="st7ma784",name="VRE-Vis",experiment=run,save_dir=savepath,log_model=True)
+
         run=wandb.init(project=project,entity=entity,name=project,config=config)
         logtool= pytorch_lightning.loggers.WandbLogger( project=project,entity=entity,experiment=run, save_dir=dir)
         config=run.config.as_dict()
