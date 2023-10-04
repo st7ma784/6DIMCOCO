@@ -347,7 +347,7 @@ class LightningCLIPModule(LightningModule):
         self.results.append({"imfeatures":image_features, "tfeatures":captions,"classes":batch[2]})
         return {"loss": loss}
 
-    def on_validation_epoch_end(self,acc_val):
+    def on_validation_epoch_end(self):
         imfeatures=torch.nan_to_num(torch.cat([val["imfeatures"] for val in self.results],dim=0)).cpu().numpy()
         tfeatures=torch.nan_to_num(torch.cat([val["tfeatures"] for val in self.results],dim=0)).cpu().numpy()
         #log imfeatures to wandb for viz
