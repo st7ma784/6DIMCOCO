@@ -298,7 +298,7 @@ class LightningCLIPModule(LightningModule):
         self.CAPhsic_matrix2=torch.zeros([],device=self.device)
         
         self.eval()
-        
+        self.results=[]
 
     def validation_step(self,batch,*args):
         #do stock loss here
@@ -344,16 +344,17 @@ class LightningCLIPModule(LightningModule):
         loss=loss/2
         loss = loss.mean()
         self.log('val_loss-stock', loss, prog_bar=True,enable_graph=False, rank_zero_only=True)
-        return {"loss": loss, "imfeatures":image_features, "tfeatures":captions,"classes":batch[2]}
+        self.results.append({"imfeatures":image_features, "tfeatures":captions,"classes":batch[2]})
+        return {"loss": loss}
 
     def on_validation_epoch_end(self,acc_val):
-        imfeatures=torch.nan_to_num(torch.cat([val["imfeatures"] for val in acc_val],dim=0)).cpu().numpy()
-        tfeatures=torch.nan_to_num(torch.cat([val["tfeatures"] for val in acc_val],dim=0)).cpu().numpy()
+        imfeatures=torch.nan_to_num(torch.cat([val["imfeatures"] for val in self.results],dim=0)).cpu().numpy()
+        tfeatures=torch.nan_to_num(torch.cat([val["tfeatures"] for val in self.results],dim=0)).cpu().numpy()
         #log imfeatures to wandb for viz
         # self.logger.log_table("Embeddings",columns=["image Embeddings"],data=[imfeatures.tolist()])
         # self.logger.log_table("Embeddings",columns=["text Embeddings"],data=[tfeatures.tolist()])
 
-        labels=torch.cat([val["classes"] for val in acc_val],dim=0).cpu().numpy()
+        labels=torch.cat([val["classes"] for val in self.results],dim=0).cpu().numpy()
         if not hasattr(self,"Iclassifier"):
             self.Iclassifier = LogisticRegression(random_state=0, C=0.316, max_iter=1000, verbose=1, n_jobs=-1)
         if not hasattr(self,"Tclassifier"):
@@ -364,7 +365,7 @@ class LightningCLIPModule(LightningModule):
         self.Tclassifier.fit(tfeatures, labels)
         self.log( "TProbe",self.Tclassifier.score(tfeatures, labels))
 
-        self.log('val_loss-stock', torch.stack([val["loss"] for val in acc_val],dim=0).mean(), prog_bar=True,enable_graph=False, rank_zero_only=True)
+        self.log('val_loss-stock', torch.stack([val["loss"] for val in self.results],dim=0).mean(), prog_bar=True,enable_graph=False, rank_zero_only=True)
         self.unfreeze()
         self.train()
         self.plot_results("IM","IMHSIC{}.jpg".format(self.current_epoch))
@@ -387,21 +388,24 @@ class LightningCLIPModule(LightningModule):
                 #         prune_module(param_to_prune, im_score, self.args)
                 #then purun accordingly 
         #log the tokenembeddings for the text encoder, 
-    
+        del self.results
     def test_step(self,batch,*args):
         #do stock loss here
         image_features=self.encode_image(batch[0])
 
         return {"imfeatures":image_features, "classes":batch[1]}
 
-    def on_test_epoch_end(self,acc_val):
-        imfeatures=torch.nan_to_num(torch.cat([val["imfeatures"] for val in acc_val],dim=0)).cpu().numpy()
-        labels=torch.cat([val["classes"] for val in acc_val],dim=0).cpu().numpy()
+    def on_test_epoch_start(self):
+        self.results=[]
+    def on_test_epoch_end(self):
+        imfeatures=torch.nan_to_num(torch.cat([val["imfeatures"] for val in self.results],dim=0)).cpu().numpy()
+        labels=torch.cat([val["classes"] for val in self.results],dim=0).cpu().numpy()
         if not hasattr(self,"Iclassifier"):
             self.Iclassifier = LogisticRegression(random_state=0, C=0.316, max_iter=1000, verbose=1, n_jobs=-1)
    
         self.Iclassifier.fit(imfeatures, labels)
         self.log( "TopK Imagenet",self.Iclassifier.score(imfeatures, labels))
+        del self.results
     def test_token_embeddings(self):
         #create int of all the tokens in vocab size
         #embed them all with self.token_embeddings

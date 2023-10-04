@@ -152,10 +152,10 @@ class COCODataModule(pl.LightningDataModule):
                 self.splits['val'].append(name)
             elif name.startswith("test"):
                 self.splits['test'].append(name)
-            if not os.path.exists(os.path.join(location,name)) and not (name.startswith("annotations") and os.path.exists(os.path.join(location,"annotations"))):
+            if not os.path.exists(os.path.join(location,name)):
                 print(os.path.join(location,name))
                 objs.append(obj)
-                obj.start(blocking=False,  )#There are security problems with Hostename 'images.cocodataset.org' and Certificate 'images.cocodataset.org' so we need to disable the SSL verification
+                obj.start(blocking=True )#There are security problems with Hostename 'images.cocodataset.org' and Certificate 'images.cocodataset.org' so we need to disable the SSL verification
         for obj in objs:
             while not obj.isFinished():
                 time.sleep(5)
