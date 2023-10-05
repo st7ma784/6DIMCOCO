@@ -174,7 +174,7 @@ class ImagenetDataModule(LightningDataModule):
 
         #if there arent files in the val directory, then we need to run the val_prepare.sh script
         if len(os.listdir(os.path.join(data_path,"ImageNet-2012","val"))) == 0:
-            os.system("cp {} {}".format(os.path.join("APCT-master","prepare","val_prepare.sh"),os.path.join(data_path,"ImageNet-2012","prepare")))
+            os.system("cp {} {}".format(os.path.join("APCT","prepare","val_prepare.sh"),os.path.join(data_path,"ImageNet-2012","prepare")))
             os.system("cd {} && bash val_prepare.sh {}".format(os.path.join(data_path,"ImageNet-2012","prepare"), os.path.join(data_path,"ImageNet-2012","val")))
     
     def fast_resize(self,dir):

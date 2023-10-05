@@ -344,7 +344,8 @@ class LightningCLIPModule(LightningModule):
         loss=loss/2
         loss = loss.mean()
         self.log('val_loss-stock', loss, prog_bar=True,enable_graph=False, rank_zero_only=True)
-        self.results.append({"imfeatures":image_features, "tfeatures":captions,"classes":batch[2]})
+        self.results.append({"imfeatures":image_features, "tfeatures":captions,"classes":batch[2],"loss": loss})
+
         return {"loss": loss}
 
     def on_validation_epoch_end(self):
