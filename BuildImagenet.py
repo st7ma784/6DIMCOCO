@@ -136,36 +136,26 @@ class ImagenetDataModule(LightningDataModule):
         # make train directory and unzip files
         os.makedirs(os.path.join(data_path,"ImageNet-2012","train"),exist_ok=True)
         #extract files
-        os.system("tar --touch -xvf {} -C {}".format(os.path.join(data_path,"ILSVRC2012_img_train.tar"),os.path.join(data_path,"ImageNet-2012","train")))
         #for file in train/*.tar;do
         files= os.listdir(os.path.join(data_path,"ImageNet-2012","train"))
+    
+        files=list(filter(lambda x: x.endswith(".tar"),files))
+        #if there are no folders in train, then extract
+        if len(files)==0:
+            os.system("tar --touch -xvf {} -C {}".format(os.path.join(data_path,"ILSVRC2012_img_train.tar"),os.path.join(data_path,"ImageNet-2012","train")))
+            files= os.listdir(os.path.join(data_path,"ImageNet-2012","train"))
+    
+            files=list(filter(lambda x: x.endswith(".tar"),files))
+            with Pool(16) as executor:
+                executor.map(self.extract_tar,files,[os.path.join(data_path,"ImageNet-2012","train")]*len(files))
 
-        files=filter(lambda x: x.endswith(".tar"),files)
-        with Pool(16) as executor:
-            executor.map(self.extract_tar,files,[os.path.join(data_path,"ImageNet-2012","train")]*len(files))
-
-
-        
-                       
-        '''
-        for file in *.tar;do
-        filename=$(basename $file .tar)
-        if [ ! -d $filename ];then
-            mkdir -pv $filename
-        else
-            rm -rf $filename
-        fi
-        tar --touch -xvf $file -C $filename
-        rm $file
-        done
-        '''
         #check if val directory exists
-        if not os.path.exists(os.path.join(data_path,"ImageNet-2012","val")):
-            print("File {} doesnt exists".format(os.path.join(data_path,"ImageNet-2012","val")))
-            
-            os.makedirs(os.path.join(data_path,"ImageNet-2012","val"),exist_ok=True)
-            os.system("tar --touch -xvf {} -C {}".format(os.path.join(data_path,"ILSVRC2012_img_val.tar"),os.path.join(data_path,"ImageNet-2012","val")))
-             
+        os.makedirs(os.path.join(data_path,"ImageNet-2012","val"),exist_ok=True)
+
+        files=os.listdir(os.path.join(data_path,"ImageNet-2012","val"))
+        if len(files)==0:
+            #os.system("tar --touch -xvf {} -C {}".format(os.path.join(data_path,"ILSVRC2012_img_val.tar"),os.path.join(data_path,"ImageNet-2012","val")))
+            tarfile.open(os.path.join(data_path,"ILSVRC2012_img_val.tar")).extractall(os.path.join(data_path,"ImageNet-2012","val"))
             #filter so that we only have tar files
             files=filter(lambda x: x.endswith(".tar"),os.listdir(os.path.join(data_path,"ImageNet-2012","val")))
             #extract in a multithreaded way
@@ -173,9 +163,8 @@ class ImagenetDataModule(LightningDataModule):
                 executor.map(self.extract_tar,files,[os.path.join(data_path,"ImageNet-2012","val")]*len(files))
       
         if len(os.listdir(os.path.join(data_path,"ImageNet-2012","val"))) == 0:
-            os.makedirs(os.path.join(data_path,"ImageNet-2012"), exist_ok=True)
-            os.system("cp {} {}".format(os.path.join("APCT","prepare","val_prepare.sh"),os.path.join(data_path,"ImageNet-2012")))
-            os.system("cd {} && bash val_prepare.sh {}".format(os.path.join(data_path,"ImageNet-2012"), os.path.join(data_path,"ImageNet-2012","val")))
+            os.system("cp {} {}".format(os.path.join("APCT","prepare","val_prepare.sh"),os.path.join(data_path,"ImageNet-2012","val")))
+            os.system("cd {} && bash val_prepare.sh {}".format(os.path.join(data_path,"ImageNet-2012","val"), os.path.join(data_path,"ImageNet-2012","val")))
     
     def fast_resize(self,dir):
         '''resize all images in a directory to 224x224'''
