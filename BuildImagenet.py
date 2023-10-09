@@ -3,7 +3,7 @@ from argparse import ArgumentParser
 from typing import Any, Callable, Optional
 
 from pytorch_lightning import LightningDataModule
-
+from multiprocessing import Pool
 from pySmartDL import SmartDL
 from pathlib import Path
 import torchvision.transforms as transforms
@@ -12,6 +12,7 @@ import io
 import asyncio
 import random
 import torch
+import tarfile
 from PIL import Image
 outQ = asyncio.Queue() 
 class ImagenetDataModule(LightningDataModule):
@@ -86,7 +87,12 @@ class ImagenetDataModule(LightningDataModule):
     def val_dataloader(self) -> Any:
         return torch.utils.data.DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
 
-
+    def extract_tar(self,file,folder):
+        dirname=file.split('/')[-1].split('.')[0]
+        os.makedirs(os.path.join(folder,dirname),exist_ok=True)
+        #do "tar --touch -xvf {} -C {}".format(file,os.path.join(folder,dirname)))
+        tarfile.open(file).extractall(os.path.join(folder,dirname))
+        
     def prepare_data(self) -> None:
         '''Download and prepare data'''
         # download dataset with pysmartDL
@@ -132,17 +138,13 @@ class ImagenetDataModule(LightningDataModule):
         #extract files
         os.system("tar --touch -xvf {} -C {}".format(os.path.join(data_path,"ILSVRC2012_img_train.tar"),os.path.join(data_path,"ImageNet-2012","train")))
         #for file in train/*.tar;do
-        for file in os.listdir(os.path.join(data_path,"ImageNet-2012","train")):
-            #extract
-            if file.endswith(".tar"):
-                #check if directory exists
-                if not os.path.exists(os.path.join(data_path,"ImageNet-2012","train",file.split('/')[-1].split('.')[0])):
-                    os.makedirs(os.path.join(data_path,"ImageNet-2012","train",file.split('/')[-1].split('.')[0]),exist_ok=True)
-                    #extract tar
-                    #make directory
-                    dirname = file.split('/')[-1].split('.')[0]
-                    os.makedirs(os.path.join(data_path,"ImageNet-2012","train",dirname),exist_ok=True)
-                    os.system("tar --touch -xvf {} -C {}".format(file,os.path.join(data_path,dirname)))
+        files= os.listdir(os.path.join(data_path,"ImageNet-2012","train"))
+
+        files=filter(lambda x: x.endswith(".tar"),files)
+        with Pool(16) as executor:
+            executor.map(self.extract_tar,files,[os.path.join(data_path,"ImageNet-2012","train")]*len(files))
+
+
         
                        
         '''
@@ -163,19 +165,17 @@ class ImagenetDataModule(LightningDataModule):
             
             os.makedirs(os.path.join(data_path,"ImageNet-2012","val"),exist_ok=True)
             os.system("tar --touch -xvf {} -C {}".format(os.path.join(data_path,"ILSVRC2012_img_val.tar"),os.path.join(data_path,"ImageNet-2012","val")))
-            
-            for file in os.listdir(os.path.join(data_path,"ImageNet-2012","val")):
-                if file.endswith(".tar"):
-                    dirname=file.split('/')[-1].split('.')[0]
-                    os.makedirs(os.path.join(data_path,"ImageNet-2012","val",dirname),exist_ok=True)
-                    os.system("tar --touch -xvf {} -C {}".format(file,os.path.join(data_path,dirname)))
-        #copy APCT-master/prepare/val_prepare.sh to ImageNet-2012/prepare
-
-
-        #if there arent files in the val directory, then we need to run the val_prepare.sh script
+             
+            #filter so that we only have tar files
+            files=filter(lambda x: x.endswith(".tar"),os.listdir(os.path.join(data_path,"ImageNet-2012","val")))
+            #extract in a multithreaded way
+            with Pool(16) as executor:
+                executor.map(self.extract_tar,files,[os.path.join(data_path,"ImageNet-2012","val")]*len(files))
+      
         if len(os.listdir(os.path.join(data_path,"ImageNet-2012","val"))) == 0:
-            os.system("cp {} {}".format(os.path.join("APCT","prepare","val_prepare.sh"),os.path.join(data_path,"ImageNet-2012","prepare")))
-            os.system("cd {} && bash val_prepare.sh {}".format(os.path.join(data_path,"ImageNet-2012","prepare"), os.path.join(data_path,"ImageNet-2012","val")))
+            os.makedirs(os.path.join(data_path,"ImageNet-2012"), exist_ok=True)
+            os.system("cp {} {}".format(os.path.join("APCT","prepare","val_prepare.sh"),os.path.join(data_path,"ImageNet-2012")))
+            os.system("cd {} && bash val_prepare.sh {}".format(os.path.join(data_path,"ImageNet-2012"), os.path.join(data_path,"ImageNet-2012","val")))
     
     def fast_resize(self,dir):
         '''resize all images in a directory to 224x224'''
