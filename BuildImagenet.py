@@ -157,7 +157,7 @@ class ImagenetDataModule(LightningDataModule):
             #os.system("tar --touch -xvf {} -C {}".format(os.path.join(data_path,"ILSVRC2012_img_val.tar"),os.path.join(data_path,"ImageNet-2012","val")))
             tarfile.open(os.path.join(data_path,"ILSVRC2012_img_val.tar")).extractall(os.path.join(data_path,"ImageNet-2012","val"))
             #filter so that we only have tar files
-            files=filter(lambda x: x.endswith(".tar"),os.listdir(os.path.join(data_path,"ImageNet-2012","val")))
+            files=list(filter(lambda x: x.endswith(".tar"),os.listdir(os.path.join(data_path,"ImageNet-2012","val"))))
             #extract in a multithreaded way
             with Pool(16) as executor:
                 executor.map(self.extract_tar,files,[os.path.join(data_path,"ImageNet-2012","val")]*len(files))
