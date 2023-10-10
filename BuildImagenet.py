@@ -87,7 +87,8 @@ class ImagenetDataModule(LightningDataModule):
     def val_dataloader(self) -> Any:
         return torch.utils.data.DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=True, num_workers=self.num_workers)
 
-    def extract_tar(self,file,folder):
+    def extract_tar(self,i):
+        file,folder=i
         dirname=file.split('/')[-1].split('.')[0]
         os.makedirs(os.path.join(folder,dirname),exist_ok=True)
         #do "tar --touch -xvf {} -C {}".format(file,os.path.join(folder,dirname)))
@@ -147,7 +148,7 @@ class ImagenetDataModule(LightningDataModule):
     
             files=list(filter(lambda x: x.endswith(".tar"),files))
             with Pool(16) as executor:
-                executor.map(self.extract_tar,files,[os.path.join(data_path,"ImageNet-2012","train")]*len(files))
+                executor.map(self.extract_tar,zip(files,[os.path.join(data_path,"ImageNet-2012","train")]*len(files)))
 
         #check if val directory exists
         os.makedirs(os.path.join(data_path,"ImageNet-2012","val"),exist_ok=True)
