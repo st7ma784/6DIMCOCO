@@ -1,3 +1,6 @@
 [submodule "APCT-master"]
 	path = APCT-master
-	url = git@github.com:st7ma784/APCT-master.git
+	url = https://github.com/st7ma784/APCT-master.git
+[submodule "APCT"]
+	path = APCT
+	url = https://github.com/OrangeBai/APCT.git
