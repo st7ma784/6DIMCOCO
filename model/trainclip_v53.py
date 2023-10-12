@@ -393,6 +393,7 @@ class LightningCLIPModule(LightningModule):
     def test_step(self,batch,*args):
         #do stock loss here
         image_features=self.encode_image(batch[0])
+        self.results.append({"imfeatures":image_features, "classes":batch[1]})
 
         return {"imfeatures":image_features, "classes":batch[1]}
 
