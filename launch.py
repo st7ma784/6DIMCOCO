@@ -101,7 +101,7 @@ def train(config={
             callbacks=callbacks,
             gradient_clip_val=0.25,# Not supported for manual optimization
             accumulate_grad_batches=16,
-            fast_dev_run=True,
+            fast_dev_run=False,
             precision=p
     )
     if config["batch_size"] !=1:
