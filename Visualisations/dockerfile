@@ -6,4 +6,4 @@ COPY . /app
 
 EXPOSE 5000/tcp
 
-ENTRYPOINT ["python", "app.py"]
+ENTRYPOINT ["bash", "gunicorn.sh"]
