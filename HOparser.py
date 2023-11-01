@@ -16,7 +16,7 @@ class parser(HyperOptArgumentParser):
         self.opt_list("--exactlabels",default=0,type=int,options=[1,0])
         self.opt_list("--meanloss",default=False,type=bool,options=[True,False])
         self.opt_list("--maskLosses",default=0,type=int,options=[0,1,2]) #1 and 2 often result in nan in labels?
-
+        
         self.opt_list("--logitsversion",default=4,type=int,options=[0,1,2,3,4,5,6,7,8]) #1 and 2 often result in nan in labels?
         self.opt_list("--precision", default=32, options=[16], tunable=False)
         self.opt_list("--codeversion", default=6, type=int, options=[6], tunable=False)

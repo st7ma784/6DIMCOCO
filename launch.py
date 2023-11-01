@@ -7,7 +7,7 @@ def wandbtrain(config=None,dir=None,devices=None,accelerator=None,Dataset=None,p
     import wandb
     if config is not None:
         config=config.__dict__
-        dir=config.get("dir",dir)
+        dir=config.get("log_path",dir)
         wandb.login(key='9cf7e97e2460c18a89429deed624ec1cbfb537bc')
 
         logtool= pytorch_lightning.loggers.WandbLogger( project=project,entity=entity, save_dir=dir)
@@ -62,6 +62,8 @@ def train(config={
         #Dataset=LaionDataModule(Cache_dir=dir,batch_size=config["batch_size"])
         Dataset=COCODataModule(Cache_dir=dir,batch_size=config["batch_size"])
         from BuildImagenet import ImagenetDataModule
+        from pytorch_lightning.strategies import DDPStrategy as DDP
+
         TestLoader=ImagenetDataModule(
             data_dir=dir, 
             meta_dir=dir,
@@ -96,7 +98,7 @@ def train(config={
             max_epochs=40,
             #profiler="advanced",
             logger=logger,
-            strategy="ddp",
+            strategy=DDP(find_unused_parameters=True),
             num_nodes=int(os.getenv("SLURM_NNODES",1)),
             callbacks=callbacks,
             gradient_clip_val=0.25,# Not supported for manual optimization

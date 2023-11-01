@@ -34,6 +34,13 @@ class COCODataset(CocoCaptions):
         #print('Error: root directory does not exist: {}'.format(root))
         if not os.path.exists(annFile):
             print('annFile does not exist {}'.format(annFile)) 
+            annFile=os.path.join(root,"annotations","{}".format(os.path.basename(annFile)))
+            instances=os.path.join(root,"annotations","{}".format(os.path.basename(instances)))
+            if not os.path.exists(annFile):
+                print('annFile does not exist {}'.format(annFile)) 
+                annFile=os.path.join(root,"..","annotations","{}".format(os.path.basename(annFile)))
+                instances=os.path.join(root,"..","annotations","{}".format(os.path.basename(instances)))
+
         #print('Error: annFile does not exist: {}'.format(annFile))
         super().__init__(root, annFile, *args, **kwargs)
         #print('Done')
@@ -86,10 +93,10 @@ class COCODataModule(pl.LightningDataModule):
     def __init__(self, Cache_dir='.', T=prep, batch_size=256):
         super().__init__()
         self.data_dir = Cache_dir
-        self.ann_dir=os.path.join(self.data_dir,"annotations")
+        self.ann_dir=os.path.join(Cache_dir,"annotations")
         self.batch_size = batch_size
         self.T=T
-        self.splits={"train":[],"val":[],"test":[]}
+        self.splits={"train":["train2014","train2017"],"val":["val2014","val2017"],"test":["test2015"]}
         self.tokenizer=CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32",cache_dir=self.data_dir)
         # try: 
         #     self.tokenizer=AutoTokenizer.from_pretrained("gpt2",cache_dir=self.data_dir)
@@ -101,7 +108,7 @@ class COCODataModule(pl.LightningDataModule):
         #     self.tokenizer=AutoTokenizer.from_pretrained("gpt2",cache_dir=self.data_dir)
         #self.tokenizer.vocab["</s>"] = self.tokenizer.vocab_size -1
         #self.tokenizer.pad_token = self.tokenizer.eos_token 
-        self.prepare_data()
+        #self.prepare_data()
     def train_dataloader(self, B=None):
         if B is None:
             B=self.batch_size 
@@ -118,6 +125,8 @@ class COCODataModule(pl.LightningDataModule):
 
         return torch.utils.data.DataLoader(self.test, batch_size=B, shuffle=True, num_workers=4, prefetch_factor=4, pin_memory=True,drop_last=True)
     def prepare_data(self):
+        pass
+    def download_data(self):
         '''called only once and on 1 GPU'''
         # # download data
         
