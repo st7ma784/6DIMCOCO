@@ -23,7 +23,7 @@ class ImagenetDataModule(LightningDataModule):
         meta_dir: Optional[str] = None,
         num_imgs_per_val_class: int = 50,
         image_size: int = 224,
-        num_workers: int = 0,
+        num_workers: int = 1,
         batch_size: int = 32,
         shuffle: bool = True,
         pin_memory: bool = True,
@@ -92,7 +92,8 @@ class ImagenetDataModule(LightningDataModule):
         dirname=file.split('/')[-1].split('.')[0]
         os.makedirs(os.path.join(folder,dirname),exist_ok=True)
         #do "tar --touch -xvf {} -C {}".format(file,os.path.join(folder,dirname)))
-        tarfile.open(file).extractall(os.path.join(folder,dirname))
+        with tarfile.open(file,"r") as f:
+            f.extractall(os.path.join(folder,dirname))
         
     def prepare_data(self) -> None:
         '''Download and prepare data'''
@@ -156,7 +157,7 @@ class ImagenetDataModule(LightningDataModule):
         files=os.listdir(os.path.join(data_path,"ImageNet-2012","val"))
         if len(files)==0:
             #os.system("tar --touch -xvf {} -C {}".format(os.path.join(data_path,"ILSVRC2012_img_val.tar"),os.path.join(data_path,"ImageNet-2012","val")))
-            tarfile.open(os.path.join(data_path,"ILSVRC2012_img_val.tar")).extractall(os.path.join(data_path,"ImageNet-2012","val"))
+            tarfile.open(os.path.join(data_path,"ILSVRC2012_img_val.tar"),"r").extractall(os.path.join(data_path,"ImageNet-2012","val"))
             #filter so that we only have tar files
             files=list(filter(lambda x: x.endswith(".tar"),os.listdir(os.path.join(data_path,"ImageNet-2012","val"))))
             #extract in a multithreaded way

@@ -32,19 +32,19 @@ class COCODataset(CocoCaptions):
         if not os.path.exists(root):
             print("root does not exist {}".format(root))
         #print('Error: root directory does not exist: {}'.format(root))
-        if not os.path.exists(annFile):
-            print('annFile does not exist {}'.format(annFile)) 
-            annFile=os.path.join(root,"annotations","{}".format(os.path.basename(annFile)))
-            instances=os.path.join(root,"annotations","{}".format(os.path.basename(instances)))
-            if not os.path.exists(annFile):
-                print('annFile does not exist {}'.format(annFile)) 
-                annFile=os.path.join(root,"..","annotations","{}".format(os.path.basename(annFile)))
-                instances=os.path.join(root,"..","annotations","{}".format(os.path.basename(instances)))
+        # if not os.path.exists(annFile):
+        #     print('annFile does not exist {}'.format(annFile)) 
+        #     annFile=os.path.join(root,"annotations","{}".format(os.path.basename(annFile)))
+        #     instances=os.path.join(root,"annotations","{}".format(os.path.basename(instances)))
+        #     if not os.path.exists(annFile):
+        #         print('annFile does not exist {}'.format(annFile)) 
+        #         annFile=os.path.join(root,"..","annotations","{}".format(os.path.basename(annFile)))
+        #         instances=os.path.join(root,"..","annotations","{}".format(os.path.basename(instances)))
 
         #print('Error: annFile does not exist: {}'.format(annFile))
         super().__init__(root, annFile, *args, **kwargs)
         #print('Done')
-        if instances is not None:
+        if instances is not None and os.path.exists(instances):
             from pycocotools.coco import COCO
             self.instances=COCO(instances)
         #print(self.ids)
@@ -90,10 +90,13 @@ os.environ["TOKENIZERS_PARALLELISM"]='true'
 
 class COCODataModule(pl.LightningDataModule):
 
-    def __init__(self, Cache_dir='.', T=prep, batch_size=256):
+    def __init__(self, Cache_dir='.',annotations=".", T=prep, batch_size=256):
         super().__init__()
         self.data_dir = Cache_dir
-        self.ann_dir=os.path.join(Cache_dir,"annotations")
+        if annotations is None:
+            annotations=os.path.join(Cache_dir,"annotations")
+        else:
+            self.ann_dir=annotations
         self.batch_size = batch_size
         self.T=T
         self.splits={"train":["train2014","train2017"],"val":["val2014","val2017"],"test":["test2015"]}
@@ -112,18 +115,18 @@ class COCODataModule(pl.LightningDataModule):
     def train_dataloader(self, B=None):
         if B is None:
             B=self.batch_size 
-        return torch.utils.data.DataLoader(self.train, batch_size=B, shuffle=True, num_workers=1, prefetch_factor=1, pin_memory=True,drop_last=True)
+        return torch.utils.data.DataLoader(self.train, batch_size=B, shuffle=True, num_workers=2, prefetch_factor=2, pin_memory=True,drop_last=True)
     def val_dataloader(self, B=None):
         if B is None:
             B=self.batch_size
        
-        return torch.utils.data.DataLoader(self.val, batch_size=B, shuffle=True, num_workers=1, prefetch_factor=1, pin_memory=True,drop_last=True)
+        return torch.utils.data.DataLoader(self.val, batch_size=B, shuffle=True, num_workers=2, prefetch_factor=2, pin_memory=True,drop_last=True)
     def test_dataloader(self,B=None):
         if B is None:
             B=self.batch_size
 
 
-        return torch.utils.data.DataLoader(self.test, batch_size=B, shuffle=True, num_workers=4, prefetch_factor=4, pin_memory=True,drop_last=True)
+        return torch.utils.data.DataLoader(self.test, batch_size=B, shuffle=True, num_workers=1, prefetch_factor=1, pin_memory=True,drop_last=True)
     def prepare_data(self):
         pass
     def download_data(self):
@@ -191,12 +194,26 @@ class COCODataModule(pl.LightningDataModule):
             TrainSets=[]
             for version in self.splits['train']:
                 
-                annfile=os.path.join(self.ann_dir,'{}_{}.json'.format('captions',version))
-                instancesfile=os.path.join(self.ann_dir,'{}_{}.json'.format('instances',version))
+                annfile=os.path.join(self.ann_dir,"{}_{}.json".format('captions',version))
+                instancesfile=os.path.join(self.ann_dir,"{}_{}.json".format('instances',version))
+                print("annfile:",annfile)
+                #shjould be ...azureml://subscriptions/8db6e466-5fa0-4e7f-b009-c5e20e1a7fe5/resourcegroups/sparc2023-workspace-xudyu-rg/workspaces/sparc2023-ws-xudyu/datastores/workspaceblobstore/paths/data/annotations/captions_train2014.json
+                # As a diagnostic, print all the files in the annotations directory
+                print("Annotations directory contents:")
+                for root, dirs, files in os.walk(self.ann_dir):
+                    for file in files:
+                        print(os.path.join(root, file))
+                
+                
                 dir=os.path.join(self.data_dir,version)
                 if not os.path.exists(annfile):
                     print("Missing annotation file",annfile)
-                
+                    # annfile=os.path.join(self.data_dir,"annotations","captions_{}.json".format(version))
+                    # instancesfile=os.path.join(self.data_dir,"annotations","instances_{}.json".format(version))
+                    # if not os.path.exists(annfile):
+                    #     print("Missing annotation file",annfile)
+                    #     annfile=os.path.join(self.data_dir,"data","annotations","captions_{}.json".format(version))
+                    #     instancesfile=os.path.join(self.data_dir,"data","annotations","instances_{}.json".format(version))
                 print("Loading train dataset",annfile)
                 #time.sleep(2)
                 dset=COCODataset(root=dir, annFile=annfile, tokenizer=self.tokenizer,instances=instancesfile, transform=self.T)

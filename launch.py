@@ -2,7 +2,7 @@
 import os,sys
 from pytorch_lightning import loggers as pl_loggers
 
-def wandbtrain(config=None,dir=None,devices=None,accelerator=None,Dataset=None,project="6DIMCLIPTOKSweepv4",entity="st7ma784"):
+def wandbtrain(config=None,dir=None,devices=None,accelerator=None,Dataset=None,project="6DIMCLIPTOKSweepvfinal",entity="st7ma784"):
     import pytorch_lightning
     import wandb
     if config is not None:
@@ -42,15 +42,13 @@ def train(config={
     version=int(config.get("codeversion",-1))
     
     from pytorch_lightning.callbacks import TQDMProgressBar,EarlyStopping
-    from model.LossCalculation import calculate_loss,calculate_loss2,calculate_loss3,calculate_loss4,calculate_loss5,calculate_lossStock
-    from model.PruneCalculation import PruneHook
     from model.trainclip_v53 import LightningCLIPModule
     # from pl_bolts.datamodules import ImagenetDataModule
     model=LightningCLIPModule( train_batch_size=config["batch_size"],
                                 **config)
     logger=[]
     if logtool:
-        logtool.watch(model, log_freq=1000,log_graph=False)
+        #logtool.watch(model, log_freq=1000,log_graph=False)
         logger.append(logtool)
     #else:
         #logger.append(pytorch_lightning.loggers.TensorBoardLogger(dir, name="CLIPv{}".format(version)))
@@ -60,7 +58,7 @@ def train(config={
         from BuildSpainDataSet import COCODataModule
         
         #Dataset=LaionDataModule(Cache_dir=dir,batch_size=config["batch_size"])
-        Dataset=COCODataModule(Cache_dir=dir,batch_size=config["batch_size"])
+        Dataset=COCODataModule(Cache_dir=dir,annotations=config.get("annotations",dir),batch_size=config["batch_size"])
         from BuildImagenet import ImagenetDataModule
         from pytorch_lightning.strategies import DDPStrategy as DDP
 
@@ -93,9 +91,9 @@ def train(config={
     print("Launching with precision",p)
     trainer=pytorch_lightning.Trainer(
             devices=devices,
-            #auto_select_gpus=True,
+            auto_select_gpus=True,
             accelerator=accelerator,
-            max_epochs=40,
+            max_epochs=6,
             #profiler="advanced",
             logger=logger,
             strategy=DDP(find_unused_parameters=True),
@@ -103,7 +101,7 @@ def train(config={
             callbacks=callbacks,
             gradient_clip_val=0.25,# Not supported for manual optimization
             accumulate_grad_batches=16,
-            fast_dev_run=False,
+            fast_dev_run=config["debug"],
             precision=p
     )
     if config["batch_size"] !=1:
@@ -211,8 +209,9 @@ if __name__ == '__main__':
     #OR To run with Default Args
     else: 
         trials=hyperparams.generate_trials(NumTrials)
-
+    
         for i,trial in enumerate(trials):             
+            print("Running trial: {}".format(trial))
             command=SlurmRun(trial)
             slurm_cmd_script_path = os.path.join(defaultConfig.get("dir","."),"slurm_cmdtrial{}.sh".format(i))
             with open(slurm_cmd_script_path, "w") as f:

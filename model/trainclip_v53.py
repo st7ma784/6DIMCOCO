@@ -63,7 +63,7 @@ class LightningCLIPModule(LightningModule):
                 width=transformer_width,
                 layers=transformer_layers,
                 heads=transformer_heads,
-                output_dim=embed_dim
+                output_dim=transformer_width
             )
         
         #self.linear.weight=torch.nn.Parameter(self.clip.token_embedding.weight.T)
@@ -74,7 +74,7 @@ class LightningCLIPModule(LightningModule):
         self.token_embedding = nn.Embedding(vocab_size, transformer_width)
         self.positional_embedding = nn.Parameter(torch.empty(self.context_length, transformer_width))
         self.ln_final = LayerNorm(transformer_width)
-        self.text_projection = nn.Parameter(torch.empty(transformer_width, embed_dim))
+        self.text_projection = nn.Parameter(torch.empty(transformer_width, transformer_width))
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
         self.transformer_width=transformer_width
         self.handles=[]
