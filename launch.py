@@ -7,11 +7,11 @@ def wandbtrain(config=None,dir=None,devices=None,accelerator=None,Dataset=None,p
     import wandb
     if config is not None:
         config=config.__dict__
-        dir=config.get("log_path",dir)
+        logdir=config.get("log_path",dir)
         wandb.login(key='9cf7e97e2460c18a89429deed624ec1cbfb537bc')
         if config.get("dims",6)==3:
             project+="3DIM"
-        logtool= pytorch_lightning.loggers.WandbLogger( project=project,entity=entity, save_dir=dir)
+        logtool= pytorch_lightning.loggers.WandbLogger( project=project,entity=entity, save_dir=logdir)
 
     else: 
         #We've got no config, so we'll just use the default, and hopefully a trainAgent has been passed
@@ -26,7 +26,7 @@ def wandbtrain(config=None,dir=None,devices=None,accelerator=None,Dataset=None,p
         config=run.config.as_dict()
         if config.get("dims",6)==3:
             project+="3DIM"
-        logtool= pytorch_lightning.loggers.WandbLogger( project=project,entity=entity,experiment=run, save_dir=dir)
+        logtool= pytorch_lightning.loggers.WandbLogger( project=project,entity=entity,experiment=run, save_dir=config.get("log_path",dir))
     
     train(config,dir,devices,accelerator,Dataset,logtool)
 def train(config={
