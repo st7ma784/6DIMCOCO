@@ -411,19 +411,19 @@ class LightningCLIPModule(LightningModule):
             print("im1",self.IMhsic_matrix1)
             print("r", r)
 
-            hsic_matrix = torch.div(self.IMhsic_matrix1.squeeze().t(), r)
+            hsic_matrix = torch.div(self.IMhsic_matrix1.squeeze(), r)
             print("hsic",hsic_matrix)
         else:
             print(self.CAPhsic_matrix0.shape,self.CAPhsic_matrix2.shape)
             # t=self.CAPhsic_matrix0.unsqueeze(1)*self.CAPhsic_matrix2.unsqueeze(0)
             #this often results in all 0s... oops!
-            t=self.IMhsic_matrix0.unsqueeze(0).to(self.IMhsic_matrix2.dtype)@self.IMhsic_matrix2.unsqueeze(0).T #46 x 110
+            t=self.IMhsic_matrix0.unsqueeze(0).to(self.IMhsic_matrix2.dtype).T@self.IMhsic_matrix2.unsqueeze(0) #46 x 110
 
             r=torch.sqrt(torch.abs(t))
             r[torch.abs(t)==-t]=-r[torch.abs(t)==-t]
             print("cap1", self.CAPhsic_matrix1.shape)
             print("r",r.shape)
-            hsic_matrix = torch.div(self.CAPhsic_matrix1.squeeze().t() , r)
+            hsic_matrix = torch.div(self.CAPhsic_matrix1.squeeze() , r)
         hsic_matrix=torch.nan_to_num(hsic_matrix,nan=0)
         im = ax.imshow(hsic_matrix.cpu(), origin='lower', cmap='magma')
         ax.set_xlabel(f"Layers {self.model2_info['Name']}", fontsize=15)
