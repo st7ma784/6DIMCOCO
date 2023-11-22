@@ -404,7 +404,7 @@ class LightningCLIPModule(LightningModule):
         if model_name=="IM":
             print(self.IMhsic_matrix0) #46 #Comes out inf on val step
             print(self.IMhsic_matrix2) # 110
-            t=self.IMhsic_matrix0.unsqueeze(0).T@self.IMhsic_matrix2.unsqueeze(0) #46 x 110
+            t=self.IMhsic_matrix0.unsqueeze(0).to(self.IMhsic_matrix2.dtype).T@self.IMhsic_matrix2.unsqueeze(0) #46 x 110
         #print(torch.sum(torch.abs(t)==t))
             r=torch.sqrt(torch.abs(t))
             r[torch.abs(t)==-t]=-r[torch.abs(t)==-t]
@@ -417,7 +417,7 @@ class LightningCLIPModule(LightningModule):
             print(self.CAPhsic_matrix0.shape,self.CAPhsic_matrix2.shape)
             # t=self.CAPhsic_matrix0.unsqueeze(1)*self.CAPhsic_matrix2.unsqueeze(0)
             #this often results in all 0s... oops!
-            t=self.IMhsic_matrix0.unsqueeze(0).T@self.IMhsic_matrix2.unsqueeze(0) #46 x 110
+            t=self.IMhsic_matrix0.unsqueeze(0).to(self.IMhsic_matrix2.dtype).T@self.IMhsic_matrix2.unsqueeze(0) #46 x 110
 
             r=torch.sqrt(torch.abs(t))
             r[torch.abs(t)==-t]=-r[torch.abs(t)==-t]
