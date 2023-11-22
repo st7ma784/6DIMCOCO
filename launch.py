@@ -9,7 +9,8 @@ def wandbtrain(config=None,dir=None,devices=None,accelerator=None,Dataset=None,p
         config=config.__dict__
         dir=config.get("log_path",dir)
         wandb.login(key='9cf7e97e2460c18a89429deed624ec1cbfb537bc')
-
+        if config.get("dims",6)==3:
+            project+="3DIM"
         logtool= pytorch_lightning.loggers.WandbLogger( project=project,entity=entity, save_dir=dir)
 
     else: 
@@ -22,8 +23,10 @@ def wandbtrain(config=None,dir=None,devices=None,accelerator=None,Dataset=None,p
         #logtool= pl.loggers.WandbLogger( project="SPARC-VisGenome",entity="st7ma784",name="VRE-Vis",experiment=run,save_dir=savepath,log_model=True)
 
         run=wandb.init(project=project,entity=entity,name=project,config=config)
-        logtool= pytorch_lightning.loggers.WandbLogger( project=project,entity=entity,experiment=run, save_dir=dir)
         config=run.config.as_dict()
+        if config.get("dims",6)==3:
+            project+="3DIM"
+        logtool= pytorch_lightning.loggers.WandbLogger( project=project,entity=entity,experiment=run, save_dir=dir)
     
     train(config,dir,devices,accelerator,Dataset,logtool)
 def train(config={
@@ -42,7 +45,10 @@ def train(config={
     version=int(config.get("codeversion",-1))
     
     from pytorch_lightning.callbacks import TQDMProgressBar,EarlyStopping
-    from model.trainclip_v53 import LightningCLIPModule
+    if config.get("dims",6)==3:
+        from model.trainclip_v533DIM import LightningCLIPModule
+    else:
+        from model.trainclip_v53 import LightningCLIPModule
     # from pl_bolts.datamodules import ImagenetDataModule
     model=LightningCLIPModule( train_batch_size=config["batch_size"],
                                 **config)

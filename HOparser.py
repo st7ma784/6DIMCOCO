@@ -29,7 +29,7 @@ class parser(HyperOptArgumentParser):
         self.opt_list("--accelerator", default='gpu', type=str, options=['gpu'], tunable=False)
         self.opt_list("--num_trials", default=0, type=int, tunable=False)
         #self.opt_range('--neurons', default=50, type=int, tunable=True, low=100, high=800, nb_samples=8, log_base=None)
-
+        self.opt_list("--dims", default=6, type=int, options=[6], tunable=False)
 
 
 # Testing to check param outputs
