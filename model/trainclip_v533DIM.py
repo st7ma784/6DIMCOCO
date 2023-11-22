@@ -411,7 +411,7 @@ class LightningCLIPModule(LightningModule):
             print("im1",self.IMhsic_matrix1)
             print("r", r)
 
-            hsic_matrix = torch.div(self.IMhsic_matrix1.squeeze(), r)
+            hsic_matrix = torch.div(self.IMhsic_matrix1.squeeze().T, r)
             print("hsic",hsic_matrix)
         else:
             print(self.CAPhsic_matrix0.shape,self.CAPhsic_matrix2.shape)
@@ -423,7 +423,7 @@ class LightningCLIPModule(LightningModule):
             r[torch.abs(t)==-t]=-r[torch.abs(t)==-t]
             print("cap1", self.CAPhsic_matrix1.shape)
             print("r",r.shape)
-            hsic_matrix = torch.div(self.CAPhsic_matrix1.squeeze() , r)
+            hsic_matrix = torch.div(self.CAPhsic_matrix1.squeeze().T , r)
         hsic_matrix=torch.nan_to_num(hsic_matrix,nan=0)
         im = ax.imshow(hsic_matrix.cpu(), origin='lower', cmap='magma')
         ax.set_xlabel(f"Layers {self.model2_info['Name']}", fontsize=15)
