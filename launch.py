@@ -47,6 +47,10 @@ def train(config={
     from pytorch_lightning.callbacks import TQDMProgressBar,EarlyStopping
     if config.get("dims",6)==3:
         from model.trainclip_v533DIM import LightningCLIPModule
+    elif config.get("dims",6)==3.5:
+        from model.trainclip_v5335DIM import LightningCLIPModule
+    elif config.get("dims",6)==4:
+        from model.trainclip_v534DIM import LightningCLIPModule
     else:
         from model.trainclip_v53 import LightningCLIPModule
     # from pl_bolts.datamodules import ImagenetDataModule
@@ -81,7 +85,7 @@ def train(config={
     if devices is None:
         devices=config.get("devices","auto")
     if accelerator is None:
-        accelerator=config.get("accelerator","auto")
+        accelerator=config.get("acceleartor","auto")
     # print("Training with config: {}".format(config))
     Dataset.batch_size=config["batch_size"]
     callbacks=[
@@ -97,7 +101,7 @@ def train(config={
     print("Launching with precision",p)
     trainer=pytorch_lightning.Trainer(
             devices=devices,
-            auto_select_gpus=True,
+            #auto_select_gpus=True,
             accelerator=accelerator,
             max_epochs=6,
             #profiler="advanced",
