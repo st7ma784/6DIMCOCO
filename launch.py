@@ -9,8 +9,7 @@ def wandbtrain(config=None,dir=None,devices=None,accelerator=None,Dataset=None,p
         config=config.__dict__
         logdir=config.get("log_path",dir)
         wandb.login(key='9cf7e97e2460c18a89429deed624ec1cbfb537bc')
-        if config.get("dims",6)==3:
-            project+="3DIM"
+        project+="{}DIM".format(config.get("dims",6)) 
         logtool= pytorch_lightning.loggers.WandbLogger( project=project,entity=entity, save_dir=logdir)
 
     else: 
@@ -24,8 +23,8 @@ def wandbtrain(config=None,dir=None,devices=None,accelerator=None,Dataset=None,p
 
         run=wandb.init(project=project,entity=entity,name=project,config=config)
         config=run.config.as_dict()
-        if config.get("dims",6)==3:
-            project+="3DIM"
+        
+        project+="{}DIM".format(config.get("dims",6))
         logtool= pytorch_lightning.loggers.WandbLogger( project=project,entity=entity,experiment=run, save_dir=config.get("log_path",dir))
     
     train(config,dir,devices,accelerator,Dataset,logtool)
@@ -51,6 +50,8 @@ def train(config={
         from model.trainclip_v5335DIM import LightningCLIPModule
     elif config.get("dims",6)==4:
         from model.trainclip_v534DIM import LightningCLIPModule
+    elif config.get("dims",6)==-1:
+        from model.trainclip_cka_base import LightningCLIPModule
     else:
         from model.trainclip_v53 import LightningCLIPModule
     # from pl_bolts.datamodules import ImagenetDataModule
