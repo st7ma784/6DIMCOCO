@@ -100,7 +100,7 @@ class LightningCLIPModule(LightningModule):
                 #convert this to probabilities in range [0,1]
                 self.label=torch.nn.functional.softmax(self.label)
                 self.label=torch.nan_to_num(self.label, nan=1.0)
-            print("using labels: ", self.label[:2,:2,:2,:2,:2,:2])
+            print("using labels: ", self.label[:2,:2,:2])
         #elif add in the case where using -inf or -1 instead of zeros as below....
         else:
             self.label=torch.diag_embed(torch.diag_embed(torch.ones(self.hparams.batch_size,dtype=torch.float,device=self.device)))            #self.label=(self.label*2)-1 This makes loss negative! 
@@ -357,8 +357,8 @@ class LightningCLIPModule(LightningModule):
             self.__store(out.permute(1,0,*torch.arange(len(out.shape)-2)+2),name,model,layer)
 
     def __store(self,out,name, model,layer):
-        X = out.flatten(1)
-        X= torch.nan_to_num((X @ X.t()).fill_diagonal_(0))
+        X = out.flatten(1) # [batch_size, f]    What if I transpose this?   (think bout it? )
+        X= torch.nan_to_num((X @ X.t()).fill_diagonal_(0)) # [batch_size, batch_size]
         if (torch.isnan(X).any() or torch.isinf(X).any()):
             self.naninfcount+=1
         if model == "model1":

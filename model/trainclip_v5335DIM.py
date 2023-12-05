@@ -14,8 +14,7 @@ import matplotlib.pyplot as plt
 from CKA_test import add_colorbar 
 from sklearn.linear_model import LogisticRegression
 from functools import reduce
-from transformers import AutoModelForMaskedLM, AutoTokenizer, AutoConfig, AutoModelForSequenceClassification, AutoModelForPreTraining, AutoModelForCausalLM, AutoModelForMultipleChoice, AutoModelForQuestionAnswering, AutoModelForTokenClassification, AutoModelForTableQuestionAnswering, AutoModelForSeq2SeqLM, AutoModelForImageClassification, AutoModelForImageSegmentation, AutoModelForVideoClassification, AutoModelForVideoSegmentation, AutoModelForAudioClassification, AutoModelForFeatureExtraction, AutoModelForJointIntentClassificationSlotFilling, AutoModelForNextSentencePrediction, AutoModelForPreTraining, AutoModelForSentenceClassification, AutoModelForTokenClassification, AutoModelWithLMHead, AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoModelForSequenceClassification, AutoModelForMultipleChoice, AutoModelForMaskedLM, AutoModelForNextSentencePrediction, AutoModelForQuestionAnswering, AutoModelForTableQuestionAnswering
-
+from transformers import AutoModelForMaskedLM,BertConfig
 class LightningCLIPModule(LightningModule):
     def __init__(self,
                 
@@ -55,7 +54,15 @@ class LightningCLIPModule(LightningModule):
         
         #on top of this transformer, we're going to have a full translation model to 
         #translate the language to
-        self.translationModel=AutoModelForMaskedLM.from_pretrained("bert-base-uncased")
+        conf=BertConfig(
+        vocab_size=50257,
+        hidden_size=transformer_width,
+        num_attention_heads=transformer_heads,
+        num_hidden_layers=transformer_layers,
+        intermediate_size=transformer_width*4,
+        hidden_act="gelu",
+        layer_norm_eps=1e-12)
+        self.translationModel=AutoModelForMaskedLM.from_config(conf)
         #we need to first make some modifications to make this compatible with the CLIP tokenizers 
 
 
@@ -88,8 +95,8 @@ class LightningCLIPModule(LightningModule):
         self.prune=prune
         if self.prune:
             from model.PruneCalculation import PruneHook
-            self.pruneHooks=[PruneHook(self.clip.encode_image,[-1,0,1], 0.1, method="Hard", prune_eta=4, amount=4,fc_pru_bound=-1),
-                             PruneHook(self.encoder,[-1,0,1], 0.1, method="Hard", prune_eta=4, amount=4,fc_pru_bound=-1)]
+            self.pruneHooks=[PruneHook(self.clip.visual,[-1,0,1], 0.1, method="Hard", prune_eta=4, amount=4,fc_pru_bound=-1),
+                             PruneHook(self.clip.transformer,[-1,0,1], 0.1, method="Hard", prune_eta=4, amount=4,fc_pru_bound=-1)]
         else:
             self.pruneHooks=[]
         # self.loss=get_loss_calc(reduction='sum',ver=0,mask=torch.ones([1]))
@@ -103,7 +110,7 @@ class LightningCLIPModule(LightningModule):
                 #convert this to probabilities in range [0,1]
                 self.label=torch.nn.functional.softmax(self.label)
                 self.label=torch.nan_to_num(self.label, nan=1.0)
-            print("using labels: ", self.label[:2,:2,:2,:2,:2,:2])
+            print("using labels: ", self.label[:2,:2,:2])
         #elif add in the case where using -inf or -1 instead of zeros as below....
         else:
             self.label=torch.diag_embed(torch.diag_embed(torch.ones(self.hparams.batch_size,dtype=torch.float,device=self.device)))            #self.label=(self.label*2)-1 This makes loss negative! 
@@ -283,8 +290,8 @@ class LightningCLIPModule(LightningModule):
         logitsI,logitsT=self.calculate_lossStock(image_features, captions) 
         self.log("mean validation stock logits ", logitsI.mean())
         
-        lossim = self.loss(logitsI*(self.logit_scale.exp()), labels,alpha=self.alpha)
-        loss1 = self.loss(logitsT*(self.logit_scale.exp()), labels,alpha=self.alpha)
+        lossim = self.loss(logitsI*(self.logit_scale.exp()), labels.float(),alpha=self.alpha)
+        loss1 = self.loss(logitsT*(self.logit_scale.exp()), labels.float(),alpha=self.alpha)
         loss = lossim+loss1
         loss=loss/2
         loss = loss.mean()
@@ -362,7 +369,7 @@ class LightningCLIPModule(LightningModule):
         # if layer weight is has self.hparams.train_batch_size in shape or layer.weight is None])
         self.handles.extend([layer.register_forward_hook(partial(self._log_layer, "model1", name)) for name, layer in self.clip.visual.named_modules() ]) 
 
-        self.handles.extend([layer.register_forward_hook(partial(self._log_layer, "model1", name)) for name, layer in self.encoder.named_modules() ]) 
+        self.handles.extend([layer.register_forward_hook(partial(self._log_layer, "model1", name)) for name, layer in self.clip.transformer.named_modules() ]) 
         self.handles.extend([layer.register_forward_hook(partial(self._log_layer, "model2", name)) for name, layer in self.model2.visual.named_modules()]) 
         self.handles.extend([layer.register_forward_hook(partial(self._log_layer, "model2", name)) for name, layer in self.model2.transformer.named_modules()])
         
@@ -437,6 +444,7 @@ class LightningCLIPModule(LightningModule):
         
 def batch_HSIC2(K):
     #K is Layers x B x B
+    print("K SHAPE ",K.shape)
     a=torch.sum(K,dim=-1)
     #print(" K SHAPE ",K.shape)# 0,2,3, are all problem values..
     b=torch.sum(K,dim=-2)
@@ -446,6 +454,8 @@ def batch_HSIC2(K):
     return torch.div(output,(K.shape[-2]*(K.shape[-2] - 3)))
     #check for why pos infs... 
 def batch_HSIC3(K,L):
+    print("K SHAPE ",K.shape)
+    print("L SHAPE ",L.shape)
     K=K.unsqueeze(1) # 46,1,B,B
     L=L.unsqueeze(0) # 1,46, B,B
     a=torch.sum(L,dim=-1) #1,46,10

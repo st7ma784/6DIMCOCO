@@ -260,6 +260,8 @@ class LightningCLIPModule(LightningModule):
         return torch.div(output,(K.shape[-2]*(K.shape[-2] - 3)))
         #check for why pos infs... 
     def batch_HSIC3(self,K,L):
+        print("K SHAPE ",K.shape)
+        print("L SHAPE ",L.shape)
         K=K.unsqueeze(1) # 46,1,B,B
         L=L.unsqueeze(0) # 1,46, B,B
         a=torch.sum(L,dim=-1) #1,46,10
