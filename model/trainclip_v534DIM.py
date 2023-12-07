@@ -17,7 +17,9 @@ class LightningCLIPModule(base):
         EOT_indexes=torch.argmax(text,dim=-1) 
         output = self.translationModel(text,return_dict=True,output_hidden_states=True)
         #take the output probabilities as a vector, 
-        hiddenstates=output.encoder_hidden_states
+        print(output.keys())
+        hiddenstates=output.hidden_states
+        #check shape is [batch_size, n_ctx, d_model]
         #we want to select the index in n_ctx that corresponds to the EOT tokens... 
         #so we need to find the index of the EOT token in the text, and then select that index from the hidden states
         encoder_output=torch.gather(hiddenstates,1,EOT_indexes)
