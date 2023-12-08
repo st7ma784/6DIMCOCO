@@ -251,22 +251,40 @@ class LightningCLIPModule(LightningModule):
 
     def batch_HSIC2(self,K):
         #K is Layers x B x B
+        K=torch.nan_to_num(K,nan=0.0,posinf=1.0,neginf=-1.0)
+        # print("K",K)
         a=torch.sum(K,dim=-1)
         #print(" K SHAPE ",K.shape)# 0,2,3, are all problem values..
         b=torch.sum(K,dim=-2)
-        c=torch.sub(torch.pow(torch.sum(a,dim=-1),2)/(K.shape[-2] - 1),torch.sum(a*b,dim=1),alpha=2)
+        a=torch.nan_to_num(a,nan=0.0,posinf=1.0,neginf=-1.0)
+        b=torch.nan_to_num(b,nan=0.0,posinf=1.0,neginf=-1.0)
+        c=torch.sub(torch.div(torch.pow(torch.sum(a,dim=-1),2),(K.shape[-2] - 1)),torch.sum(torch.mul(a,b),dim=1),alpha=2)
         #print(torch.sum(torch.sum(K*K.permute(0,2,1),dim=-1),dim=-1))
-        output=torch.add(torch.sum(torch.sum(K*K.permute(0,2,1),dim=-1),dim=-1),torch.div(c,(K.shape[-2] - 2)))
-        return torch.div(output,(K.shape[-2]*(K.shape[-2] - 3)))
+        c=torch.nan_to_num(c,nan=0.0,posinf=1.0,neginf=-1.0)
+        # print("c",c)
+        output=torch.add(torch.sum(torch.sum(torch.mul(K,K.permute(0,2,1)),dim=-1),dim=-1),torch.div(c,(K.shape[-2] - 2)))
+        #print(output)# all nans 
+        output=torch.nan_to_num(output,nan=0.0,posinf=1.0,neginf=-1.0)
+        return output
         #check for why pos infs... 
     def batch_HSIC3(self,K,L):
-        print("K SHAPE ",K.shape)
-        print("L SHAPE ",L.shape)
+        
         K=K.unsqueeze(1) # 46,1,B,B
+        #convert nan to 0 and inf to 1 
+        K=torch.nan_to_num(K,nan=0.0,posinf=1.0,neginf=-1.0)
+        
         L=L.unsqueeze(0) # 1,46, B,B
-        a=torch.sum(L,dim=-1) #1,46,10
-        b=torch.sum(K,dim=-2) #46,1,10
+        L=torch.nan_to_num(L,nan=0.0,posinf=1.0,neginf=-1.0)
+        a=torch.sum(L/L.shape[-1],dim=-1) #1,46,10
+        b=torch.sum(K/K.shape[-2],dim=-2) #46,1,10
+        a=torch.nan_to_num(a,nan=0.0,posinf=1.0,neginf=-1.0)
+        b=torch.nan_to_num(b,nan=0.0,posinf=1.0,neginf=-1.0)
+       
         c=torch.sub(torch.mul(torch.sum(b,dim=-1),torch.sum(a,dim=-1)).div((K.shape[-2] - 1)),torch.sum(torch.mul(b,a),dim=-1),alpha=2) #[46,46]- [46,46] =[46,46]
         #print(c.shape) # expect LayerK, LayerL, 
-        return torch.div(torch.add(torch.sum(torch.sum(K*L,dim=-1),dim=-1),torch.div(c,(K.shape[-2] - 2))),(K.shape[-2]*(K.shape[-2] - 3)))
+        # print("cHSIC3",c)
+        c=torch.nan_to_num(c,nan=0.0,posinf=1.0,neginf=-1.0)
+        output= torch.div(torch.add(torch.sum(torch.sum(K*L,dim=-1),dim=-1),torch.div(c,(K.shape[-2] - 2))),(K.shape[-2]*(K.shape[-2] - 3)))
         #returns many pos infs 
+        output=torch.nan_to_num(output,nan=0.0,posinf=1.0,neginf=-1.0)
+        return output

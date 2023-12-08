@@ -32,9 +32,9 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True):
     device=torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
     model1 = resnet18.to(device,non_blocking=True).eval()  # Or any neural network of your choice
     model2 = resnet34.to(device,non_blocking=True).eval()  # Or any neural network of your choice
-    # model,_=clip.load("ViT-B/32",device=device)
+    model,_=clip.load("ViT-B/32",device=device)
     # altmodel,_=clip.load("ViT-B/16",device=device)
-    # model2=model.visual.to(device,non_blocking=True).eval()
+    model2=model.visual.to(device,non_blocking=True).eval()
     # model=altmodel.visual.to(device,non_blocking=True).eval()
     dataloader = DataLoader(Dataset,
                             batch_size=50, # according to your device memory
@@ -51,7 +51,7 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True):
 
     N = len(cka.model1_layers) if cka.model1_layers is not None else len(list(cka.model1.modules()))
     M = len(cka.model2_layers) if cka.model2_layers is not None else len(list(cka.model2.modules()))
-    #M=99
+    M=99
     cka.m1_matrix=torch.zeros((N,M),device=device)
     cka.m2_matrix=torch.zeros((M),device=device)
     cka.hsic_matrix=torch.zeros((N),device=device)
@@ -65,8 +65,8 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True):
                 cka.model1_features = {}
 
                 model1(i)
-                model2(i)
-                #model2(i.half())
+                # model2(i)
+                model2(i.half())
                 features,features2=[],[]
                 for _, feat1 in cka.model1_features.items():
                     #shuffle based on feat[1]
@@ -83,7 +83,7 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True):
                         #check that feat=feat[:,indices[orig]] 
                     
                     # feat1=feat1[0]
-                    print(feat1.shape)
+                    # print(feat1.shape)
                     if feat1.shape[0]==50:
                         X = feat1.flatten(1)
                                     
@@ -94,7 +94,7 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True):
                     #print(feat2)
                     #if clip ... we need to do something different.
                     
-                    #feat2=feat2[0]
+                    feat2=feat2[0]
                     #print(feat2.shape)
                     if feat2.shape[0]==50:
                         Y = feat2.flatten(1)

@@ -570,7 +570,7 @@ def get_loss_calc(reduction='sum',ver=0,mask=None):
     if ver==0:
 
         def loss(x,y,alpha):
-            return torch.nn.functional.cross_entropy(x,y,reduction=reduction)
+            return torch.nn.functional.cross_entropy(x,y.to(dtype=torch.float),reduction=reduction)
 
     elif ver==1:
         #onehot encode mask and multiply by alpha
@@ -586,7 +586,7 @@ def get_loss_calc(reduction='sum',ver=0,mask=None):
             Lossmasks=torch.sum(torch.nn.functional.softmax(alpha/torch.norm(alpha,keepdim=True))*st.to(alpha.device),dim=-1)
             #print("losmasks:",Lossmasks.shape)
             #Lossmasks=Lossmasks.view(*mask.shape)
-            return torch.nn.functional.cross_entropy(x*Lossmasks,y*Lossmasks,reduction=reduction,)
+            return torch.nn.functional.cross_entropy((x*Lossmasks).to(dtype=torch.float),(y*Lossmasks).to(dtype=torch.float),reduction=reduction,)
     elif ver==2:
         Lossmasks=reduce(torch.logical_or,[mask==masks[i] for i in range(-2,2)])
 
@@ -602,7 +602,7 @@ def get_loss_calc(reduction='sum',ver=0,mask=None):
             #print("function loss: {} \n vs \n {} \n vs \n {}".format(l,l1,l2))
             #mask=mask.to(x.device,non_blocking=True)
 
-            return torch.nn.functional.cross_entropy(x*mask.to(x.device),y*mask.to(y.device))#*mask.shape[0]/mask.sum()
+            return torch.nn.functional.cross_entropy(x*mask.to(x.device),y*mask.to(y.device,dtype=torch.float))#*mask.shape[0]/mask.sum()
          #negative because when mask is used, the loss is actually the negative of the loss
     
     return loss

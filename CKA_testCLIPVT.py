@@ -50,31 +50,28 @@ class myCKA(CKA):
         # Model 1
         for name, layer in self.model1.named_modules():
             #we need to only include layers that end with mlp or include "ln"
-            if "mlp" in name:
-                # print(name)
-                if self.model1_layers is not None:
-                    if name in self.model1_layers:
-                        self.model1_info['Layers'] += [name]
-                        layer.register_forward_hook(partial(self._log_layer, "model1", name))
-                else:
-                    
+        # print(name)
+            if self.model1_layers is not None:
+                if name in self.model1_layers:
                     self.model1_info['Layers'] += [name]
                     layer.register_forward_hook(partial(self._log_layer, "model1", name))
+            else:
+                
+                self.model1_info['Layers'] += [name]
+                layer.register_forward_hook(partial(self._log_layer, "model1", name))
 
         # Model 2
         for name, layer in self.model2.named_modules():
-            if "mlp" in name:
-                print(name)
 
-                if self.model2_layers is not None:
-                    if name in self.model2_layers:
-                        self.model2_info['Layers'] += [name]
-                        layer.register_forward_hook(partial(self._log_layer, "model2", name))
-                else:
-
-                        
+            if self.model2_layers is not None:
+                if name in self.model2_layers:
                     self.model2_info['Layers'] += [name]
                     layer.register_forward_hook(partial(self._log_layer, "model2", name))
+            else:
+
+                    
+                self.model2_info['Layers'] += [name]
+                layer.register_forward_hook(partial(self._log_layer, "model2", name))
 
 
 
@@ -101,9 +98,9 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
     # model1 = resnet18.to(device,non_blocking=True).eval()  # Or any neural network of your choice
     # model2 = resnet34.to(device,non_blocking=True).eval()  # Or any neural network of your choice
     model,_=clip.load("ViT-L/14",device=device)
-    altmodel,_=clip.load("ViT-B/16",device=device)
+ 
     model2=model.visual.eval()
-    model1=altmodel.visual.eval()
+    model1=model.transformer.eval()
     
     cka=myCKA(model1,model2,model1_name="ResNet18",model2_name="CLIP",device=device)
     cka.model1_info['Dataset'] = dataloader.dataset.__repr__().split('\n')[0]
@@ -111,8 +108,8 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
 
     N = len(cka.model1_layers) if cka.model1_layers is not None else len(list(cka.model1.modules()))
     M = len(cka.model2_layers) if cka.model2_layers is not None else len(list(cka.model2.modules()))
-    N=48
-    M=96
+    N=86
+    M=170
     cka.m1_matrix=torch.zeros((N,M),device=device)
     cka.m2_matrix=torch.zeros((M),device=device)
     cka.hsic_matrix=torch.zeros((N),device=device)
@@ -123,13 +120,17 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
         
 
             i=x1[0].to(device,non_blocking=True,dtype=torch.half)
-            text=x1[1]
+            text=x1[1].to(device,non_blocking=True)[:,0]
+            
             cka.model2_features = {}
             cka.model1_features = {}
+            print(text.shape)
+             #shape is B x  77 
 
-            model1(i)
-            #model2(i)
+            EOT_index=text.argmax(dim=1) #shape is B
             model2(i)
+            #model2(i)
+            model.encode_text(text)
             features,features2=[],[]
             for _, feat1 in cka.model1_features.items():
                 #shuffle based on feat[1]
@@ -140,6 +141,12 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
                 feat1=feat1[0]
                 # print(feat1)
                 if feat1.shape[0]==10:
+                    if len(feat1.shape)==3: #B,seq,hidden
+                        if feat1.shape[1]==77:
+                            feat1=feat1[torch.arange(feat1.shape[0]),EOT_index]
+                        elif feat1.shape[2]==77:
+                            feat1=feat1[torch.arange(feat1.shape[0]),:,EOT_index]
+                        X = feat1.flatten(1)
                     X = feat1.flatten(1)
                                 
                     features.append((X @ X.t()).fill_diagonal_(0))
@@ -148,9 +155,7 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
             for _,feat2 in cka.model2_features.items():
                 #print(feat2)
                 #if clip ... we need to do something different.
-                
                 feat2=feat2[0]
-                #print(feat2.shape)
                 if feat2.shape[0]==10:
                     Y = feat2.flatten(1)
 
@@ -184,11 +189,11 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
     # total_CPU_time= float(total_CPU_time[:-2]) if total_CPU_time[-2:]=="ms" else float(total_CPU_time[:-1])*1000
     # total_CUDA_time= float(total_CUDA_time[:-2]) if total_CUDA_time[-2:]=="ms" else float(total_CUDA_time[:-1])*1000
     # total_time=total_CPU_time+total_CUDA_time
+    #plot the results with plt magma colormap
     import matplotlib.pyplot as plt
     import numpy as np
     plt.imshow(RESULTS.cpu().numpy(),cmap="magma") 
-    plt.savefig('resultsCOCOclipL14B16Test.png') 
-
+    plt.savefig("results_CLIPVTselEOT.png")
 
 
 if __name__ == "__main__":
