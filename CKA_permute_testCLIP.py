@@ -10,9 +10,9 @@ import clip
 import timeit
 from torch_cka import CKA
 
-Dataset=torch.utils.data.TensorDataset(torch.rand(150,3,227,227))
+Dataset=torch.utils.data.TensorDataset(torch.rand(125,3,227,227))
 dataloader = DataLoader(Dataset,
-                            batch_size=50, # according to your device memory
+                            batch_size=25, # according to your device memory
                             shuffle=False,
                             pin_memory=True,
 
@@ -112,74 +112,72 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
     cka.m2_matrix=torch.zeros((M),device=device)
     cka.hsic_matrix=torch.zeros((N),device=device)
 
-    with torch.no_grad():
-        with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],record_shapes=True,profile_memory=True) as prof:
 
-            for x1 in tqdm(dataloader):
+    for x1 in tqdm(dataloader):
+    
+
+        i=x1[0].to(device,non_blocking=True)
+        text=x1[1]
+        cka.model2_features = {}
+        cka.model1_features = {}
+
+        model1(i.half())
+        #model2(i)
+        model2(i.half())
+        features,features2=[],[]
+        for _, feat1 in cka.model1_features.items():
+            #shuffle based on feat[1]
+            #1 find shape
+            #2 make a set of random indices
+            #3 permute based on those indices
+            #4 continue as normal
+            feat1=feat1[0]
+            print(feat1)
+            if feat1.shape[0]==25:
+                X = feat1.flatten(1)
+                            
+                features.append((X @ X.t()).fill_diagonal_(0))
+        cka.model1_features = {}
+
+        for _,feat2 in cka.model2_features.items():
+            #print(feat2)
+            #if clip ... we need to do something different.
             
+            feat2=feat2[0]
+            #print(feat2.shape)
+            if feat2.shape[0]==25:
+                Y = feat2.flatten(1)
 
-                i=x1[0].to(device,non_blocking=True)
-                text=x1[1]
-                cka.model2_features = {}
-                cka.model1_features = {}
-
-                model1(i.half())
-                #model2(i)
-                model2(i.half())
-                features,features2=[],[]
-                for _, feat1 in cka.model1_features.items():
-                    #shuffle based on feat[1]
-                    #1 find shape
-                    #2 make a set of random indices
-                    #3 permute based on those indices
-                    #4 continue as normal
-                    feat1=feat1[0]
-                    print(feat1)
-                    if feat1.shape[0]==50:
-                        X = feat1.flatten(1)
-                                    
-                        features.append((X @ X.t()).fill_diagonal_(0))
-                cka.model1_features = {}
-
-                for _,feat2 in cka.model2_features.items():
-                    #print(feat2)
-                    #if clip ... we need to do something different.
-                    
-                    feat2=feat2[0]
-                    #print(feat2.shape)
-                    if feat2.shape[0]==50:
-                        Y = feat2.flatten(1)
-
-                        features2.append((Y @ Y.t()).fill_diagonal_(0).float())
-                cka.model2_features = {}
-                
-                cka.m2_matrix=torch.add(cka.m2_matrix, methodC(torch.stack(features2),torch.stack(features2)))#//(50 * (50 - 3))
-                
-                cka.hsic_matrix=torch.add(cka.hsic_matrix, methodC(torch.stack(features),torch.stack(features)))#/(50 * (50 - 3))
-                
-                cka.m1_matrix =torch.add(cka.m1_matrix, _methodA(torch.stack(features),torch.stack(features2)))#/(50 * (50 - 3))
+                features2.append((Y @ Y.t()).fill_diagonal_(0).float())
+        cka.model2_features = {}
         
-        #end of profiling
+        cka.m2_matrix=torch.add(cka.m2_matrix, methodC(torch.stack(features2),torch.stack(features2)))#//(25 * (25 - 3))
+        
+        cka.hsic_matrix=torch.add(cka.hsic_matrix, methodC(torch.stack(features),torch.stack(features)))#/(25 * (25 - 3))
+        
+        cka.m1_matrix =torch.add(cka.m1_matrix, _methodA(torch.stack(features),torch.stack(features2)))#/(25 * (25 - 3))
 
-        print(cka.m1_matrix.shape)
-        print(cka.m2_matrix.shape)
-        print(cka.hsic_matrix.shape)
+#end of profiling
 
-        RESULTS=torch.div(cka.m1_matrix, torch.mul(torch.sqrt(cka.hsic_matrix).unsqueeze(1),torch.sqrt(cka.m2_matrix).unsqueeze(0)))
-        # print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=10))
-        # print(prof.key_averages().table(sort_by="self_cude_memory_usage", row_limit=10))
-        #print(prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=-1))
-        #scrape from the table the time totals at the end of the table
-        total_CPU_time=prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=-1).split('\n')[-3]
-        print(total_CPU_time)
-        total_CPU_time=total_CPU_time.split(' ')[-1]
-        total_CUDA_time=prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=-1).split('\n')[-2].split(' ')[-1]
-        total_CPU_time= float(total_CPU_time[:-2]) if total_CPU_time[-2:]=="ms" else float(total_CPU_time[:-1])*1000
-        total_CUDA_time= float(total_CUDA_time[:-2]) if total_CUDA_time[-2:]=="ms" else float(total_CUDA_time[:-1])*1000
-        total_time=total_CPU_time+total_CUDA_time
-        import torchvision.transforms.functional as TF
-        img = TF.to_pil_image(RESULTS)
-        img.save('resultsCOCOclipTest.png') 
+    print(cka.m1_matrix.shape)
+    print(cka.m2_matrix.shape)
+    print(cka.hsic_matrix.shape)
+
+    RESULTS=torch.div(cka.m1_matrix, torch.mul(torch.sqrt(cka.hsic_matrix).unsqueeze(1),torch.sqrt(cka.m2_matrix).unsqueeze(0)))
+    # print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=10))
+    # print(prof.key_averages().table(sort_by="self_cude_memory_usage", row_limit=10))
+    #print(prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=-1))
+    #scrape from the table the time totals at the end of the table
+    # total_CPU_time=prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=-1).split('\n')[-3]
+    # print(total_CPU_time)
+    # total_CPU_time=total_CPU_time.split(' ')[-1]
+    # total_CUDA_time=prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=-1).split('\n')[-2].split(' ')[-1]
+    # total_CPU_time= float(total_CPU_time[:-2]) if total_CPU_time[-2:]=="ms" else float(total_CPU_time[:-1])*1000
+    # total_CUDA_time= float(total_CUDA_time[:-2]) if total_CUDA_time[-2:]=="ms" else float(total_CUDA_time[:-1])*1000
+    # total_time=total_CPU_time+total_CUDA_time
+    import torchvision.transforms.functional as TF
+    img = TF.to_pil_image(RESULTS)
+    img.save('resultsCOCOclipTest.png') 
 
 
 
@@ -197,7 +195,7 @@ if __name__ == "__main__":
         dir=sys.argv[1]
     else:
         dir="."
-    data=COCODataModule(Cache_dir=dir,annotations=os.path.join(dir,"annotations"),batch_size=50)
+    data=COCODataModule(Cache_dir=dir,annotations=os.path.join(dir,"annotations"),batch_size=25)
     data.setup()
     dataloader=data.val_dataloader()
 
