@@ -52,26 +52,24 @@ class myCKA(CKA):
             if self.model1_layers is not None:
                 if name in self.model1_layers:
                     #we need to only include layers that end with mlp or include "ln"
-                    if name.endswith("mlp") or "ln" in name:
-                        self.model1_info['Layers'] += [name]
-                        layer.register_forward_hook(partial(self._log_layer, "model1", name))
-            else:
-                if name.endswith("mlp") or "ln" in name:
                     self.model1_info['Layers'] += [name]
                     layer.register_forward_hook(partial(self._log_layer, "model1", name))
+            else:
+                
+                self.model1_info['Layers'] += [name]
+                layer.register_forward_hook(partial(self._log_layer, "model1", name))
 
         # Model 2
         for name, layer in self.model2.named_modules():
             if self.model2_layers is not None:
                 if name in self.model2_layers:
-                    if name.endswith("mlp") or "ln" in name:
-                        self.model2_info['Layers'] += [name]
-                        layer.register_forward_hook(partial(self._log_layer, "model2", name))
-            else:
-                if name.endswith("mlp") or "ln" in name:
-                        
                     self.model2_info['Layers'] += [name]
                     layer.register_forward_hook(partial(self._log_layer, "model2", name))
+            else:
+
+                    
+                self.model2_info['Layers'] += [name]
+                layer.register_forward_hook(partial(self._log_layer, "model2", name))
 
 
 
@@ -98,9 +96,9 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
     # model1 = resnet18.to(device,non_blocking=True).eval()  # Or any neural network of your choice
     # model2 = resnet34.to(device,non_blocking=True).eval()  # Or any neural network of your choice
     model,_=clip.load("ViT-B/32",device=device)
-    altmodel,_=clip.load("ViT-B/16",device=device)
-    model2=model.visual.to(device,non_blocking=True).eval()
-    model1=altmodel.visual.to(device,non_blocking=True).eval()
+    altmodel,_=clip.load("ViT-B/32",device=device)
+    model2=model.visual
+    model1=altmodel.visual
     
     cka=myCKA(model1,model2,model1_name="ResNet18",model2_name="CLIP",device=device)
     cka.model1_info['Dataset'] = dataloader.dataset.__repr__().split('\n')[0]
@@ -108,8 +106,8 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
 
     N = len(cka.model1_layers) if cka.model1_layers is not None else len(list(cka.model1.modules()))
     M = len(cka.model2_layers) if cka.model2_layers is not None else len(list(cka.model2.modules()))
-    N=36
-    M=37
+    N=99
+    M=99
     cka.m1_matrix=torch.zeros((N,M),device=device)
     cka.m2_matrix=torch.zeros((M),device=device)
     cka.hsic_matrix=torch.zeros((N),device=device)
@@ -118,7 +116,10 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
         with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],record_shapes=True,profile_memory=True) as prof:
 
             for x1 in tqdm(dataloader):
+            
+
                 i=x1[0].to(device,non_blocking=True)
+                text=x1[1]
                 cka.model2_features = {}
                 cka.model1_features = {}
 
@@ -133,7 +134,7 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
                     #3 permute based on those indices
                     #4 continue as normal
                     feat1=feat1[0]
-
+                    print(feat1)
                     if feat1.shape[0]==50:
                         X = feat1.flatten(1)
                                     

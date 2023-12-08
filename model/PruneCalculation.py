@@ -59,8 +59,8 @@ class PruneHook(EntropyHook):
     def set_up(self):
         self.remove()
         self.features=defaultdict(lambda: torch.zeros((1,self.Gamma.shape[0]+1), dtype=torch.float32, device=self.device))
-        self.handles.extend( [module.register_forward_hook(partial(self.hook, layer_name=module_name)) for module_name, module in self.model.named_modules() if type(module) in self.activations])
-
+        self.handles.extend( [module.register_forward_hook(partial(self.hook, layer_name=module_name)) for module_name, module in self.named_modules() if type(module) in self.activations])
+# line 62, function has no attribute named modules fix: self.model.named... -> self.named...
     def hook(self, layer, input_var, output_var, layer_name):
         #if random()>self.ratio:# here because adds random noise to the data
         input=output_var.view(output_var.shape[-1],-1)
