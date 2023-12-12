@@ -108,7 +108,7 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
 
     N = len(cka.model1_layers) if cka.model1_layers is not None else len(list(cka.model1.modules()))
     M = len(cka.model2_layers) if cka.model2_layers is not None else len(list(cka.model2.modules()))
-    N=86
+    N=98
     M=170
     cka.m1_matrix=torch.zeros((N,M),device=device)
     cka.m2_matrix=torch.zeros((M),device=device)
@@ -124,7 +124,7 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
             
             cka.model2_features = {}
             cka.model1_features = {}
-            print(text.shape)
+            #print(text.shape)
              #shape is B x  77 
 
             EOT_index=text.argmax(dim=1) #shape is B
@@ -139,14 +139,14 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
                 #3 permute based on those indices
                 #4 continue as normal
                 feat1=feat1[0]
-                # print(feat1)
+                
+                if feat1.shape[0]==77:
+                    feat1=feat1[EOT_index,torch.arange(feat1.shape[1])]
+                    #print(feat1.shape)
+                    #feat 1 is shape 10 x hidden
+                    #we're going to do an @text_projection
+                    feat1=feat1 @ model.text_projection
                 if feat1.shape[0]==10:
-                    if len(feat1.shape)==3: #B,seq,hidden
-                        if feat1.shape[1]==77:
-                            feat1=feat1[torch.arange(feat1.shape[0]),EOT_index]
-                        elif feat1.shape[2]==77:
-                            feat1=feat1[torch.arange(feat1.shape[0]),:,EOT_index]
-                        X = feat1.flatten(1)
                     X = feat1.flatten(1)
                                 
                     features.append((X @ X.t()).fill_diagonal_(0))

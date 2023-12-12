@@ -84,8 +84,7 @@ class LightningCLIPModule(LightningModule):
         self.prune=prune
         if self.prune:
             from model.PruneCalculation import PruneHook
-            self.pruneHooks=[PruneHook(self.clip.encode_image,[-1,0,1], 0.1, method="Hard", prune_eta=4, amount=4,fc_pru_bound=-1),
-                             PruneHook(self.encoder,[-1,0,1], 0.1, method="Hard", prune_eta=4, amount=4,fc_pru_bound=-1)]
+            self.pruneHooks=[PruneHook(self.encoder,[-1,0,1], 0.1, method="Hard", prune_eta=4, amount=4,fc_pru_bound=-1)]
         else:
             self.pruneHooks=[]
         self.initialize_parameters()

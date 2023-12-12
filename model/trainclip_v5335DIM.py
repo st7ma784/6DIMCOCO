@@ -95,8 +95,7 @@ class LightningCLIPModule(LightningModule):
         self.prune=prune
         if self.prune:
             from model.PruneCalculation import PruneHook
-            self.pruneHooks=[PruneHook(self.clip.visual,[-1,0,1], 0.1, method="Hard", prune_eta=4, amount=4,fc_pru_bound=-1),
-                             PruneHook(self.clip.transformer,[-1,0,1], 0.1, method="Hard", prune_eta=4, amount=4,fc_pru_bound=-1)]
+            self.pruneHooks=[PruneHook(self.translationModel,[-1,0,1], 0.1, method="Hard", prune_eta=4, amount=4,fc_pru_bound=-1)]
         else:
             self.pruneHooks=[]
         # self.loss=get_loss_calc(reduction='sum',ver=0,mask=torch.ones([1]))

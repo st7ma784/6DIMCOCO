@@ -360,7 +360,8 @@ def get_loss_calc(reduction='sum',ver=0,mask=None):
     if ver==0:
 
         def loss(x,y,alpha):
-            return torch.nn.functional.cross_entropy(x,y,reduction=reduction)
+            
+            return torch.nn.functional.cross_entropy(x,y.to(dytpe=torch.int64),reduction=reduction)
 
     elif ver==1:
         #onehot encode mask and multiply by alpha
