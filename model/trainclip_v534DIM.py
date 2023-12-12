@@ -1,4 +1,6 @@
 from re import T
+
+from regex import E
 from model.trainclip_v5335DIM import LightningCLIPModule as base 
 import torch
 from transformers import AutoModelForMaskedLM
@@ -20,7 +22,8 @@ class LightningCLIPModule(base):
         #take the output probabilities as a vector, 
         #print(output.keys())
         hiddenstates=output.hidden_states
-        print(hiddenstates[0].shape)
+        #print(hiddenstates[0].shape) #torch.Size([10, 77, 512])
+        print(EOT_indexes.shape)
         #check shape is [batch_size, n_ctx, d_model]
         #we want to select the index in n_ctx that corresponds to the EOT tokens... 
         #so we need to find the index of the EOT token in the text, and then select that index from the hidden states
