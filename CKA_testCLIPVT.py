@@ -193,7 +193,7 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
     import matplotlib.pyplot as plt
     import numpy as np
     plt.imshow(RESULTS.cpu().numpy(),cmap="magma") 
-    plt.savefig("results_CLIPVTselEOT.png")
+    plt.savefig("CKAResults/results_CLIPVTselEOT.png")
 
 
 if __name__ == "__main__":

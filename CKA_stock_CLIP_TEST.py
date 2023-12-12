@@ -48,4 +48,4 @@ cka=CKA(model1,model2,model1_name="ResNet18",model2_name="CLIP",device=device)
 cka.model1_info['Dataset'] = dataloader.dataset.__repr__().split('\n')[0]
 cka.model2_info['Dataset'] = dataloader.dataset.__repr__().split('\n')[0]
 cka.compare(dataloader,dataloader)
-cka.plot_results("CKAResCLIPStock.png","Comparison of 2 stock clip models using base implementation")
+cka.plot_results("CKAResults/CKAResCLIPStock.png","Comparison of 2 stock clip models using base implementation")

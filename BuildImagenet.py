@@ -167,7 +167,11 @@ class ImagenetDataModule(LightningDataModule):
         if len(os.listdir(os.path.join(data_path,"ImageNet-2012","val"))) == 0:
             os.system("cp {} {}".format(os.path.join("APCT","prepare","val_prepare.sh"),os.path.join(data_path,"ImageNet-2012","val")))
             os.system("cd {} && bash val_prepare.sh {}".format(os.path.join(data_path,"ImageNet-2012","val"), os.path.join(data_path,"ImageNet-2012","val")))
-    
+        #do same for train 
+        if len(os.listdir(os.path.join(data_path,"ImageNet-2012","train"))) == 0:
+            os.system("cp {} {}".format(os.path.join("APCT","prepare","train_prepare.sh"),os.path.join(data_path,"ImageNet-2012","train")))
+            os.system("cd {} && bash train_prepare.sh {}".format(os.path.join(data_path,"ImageNet-2012","train"), os.path.join(data_path,"ImageNet-2012","train")))
+        #check if test directory exists
     def fast_resize(self,dir):
         '''resize all images in a directory to 224x224'''
         #we will use PIL to resize images to 224x224 and save them in a new directory

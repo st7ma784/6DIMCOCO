@@ -128,9 +128,10 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True):
         total_CPU_time= float(total_CPU_time[:-2]) if total_CPU_time[-2:]=="ms" else float(total_CPU_time[:-1])*1000
         total_CUDA_time= float(total_CUDA_time[:-2]) if total_CUDA_time[-2:]=="ms" else float(total_CUDA_time[:-1])*1000
         total_time=total_CPU_time+total_CUDA_time
-        import torchvision.transforms.functional as TF
-        img = TF.to_pil_image(RESULTS)
-        img.save('resultsclip2P{}{}-{}took{}.png'.format(permute,methodA.__name__,methodB.__name__,total_time))
+        import matplotlib.pyplot as plt
+        import numpy as np
+        plt.imshow(RESULTS.cpu().numpy(),cmap="magma") 
+        plt.savefig('CKAResults/resultsclip2P{}{}-{}took{}.png'.format(permute,methodA.__name__,methodB.__name__,total_time))
 
 
 
