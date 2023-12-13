@@ -361,7 +361,7 @@ def get_loss_calc(reduction='sum',ver=0,mask=None):
 
         def loss(x,y,alpha):
 
-            return torch.nn.functional.cross_entropy(x,y.to(torch.int64,non_blocking=True),reduction=reduction)
+            return torch.nn.functional.cross_entropy(x,y.to(torch.float32,non_blocking=True),reduction=reduction)
 
     elif ver==1:
         #onehot encode mask and multiply by alpha
