@@ -87,10 +87,11 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
 
                 if permute:
                     shape=feat2.shape
-                    indices=torch.randperm(shape[1])
-                    sort,orig=torch.sort(indices)
-                    #check that feat=feat[:,indices[orig]] 
-                    feat2=feat2[:,indices]
+                    if len(shape)>1:
+                        indices=torch.randperm(shape[1])
+                        sort,orig=torch.sort(indices)
+                        #check that feat=feat[:,indices[orig]] 
+                        feat2=feat2[:,indices]
                     #check that feat=feat[:,indices[orig]] 
                 
                 #print(feat2.shape)
@@ -125,10 +126,7 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
         # total_CPU_time= float(total_CPU_time[:-2]) if total_CPU_time[-2:]=="ms" else float(total_CPU_time[:-1])*1000
         # total_CUDA_time= float(total_CUDA_time[:-2]) if total_CUDA_time[-2:]=="ms" else float(total_CUDA_time[:-1])*1000
         # total_time=total_CPU_time+total_CUDA_time
-        import matplotlib.pyplot as plt
-        import numpy as np
-        plt.imshow(RESULTS.cpu().numpy(),cmap="magma") 
-        plt.savefig('resultsclip2P{}{}-{}.png'.format(permute,methodA.__name__,methodB.__name__))
+        'resultsclip2P{}{}-{}.png'.format(permute,methodA.__name__,methodB.__name__))
 
 
 
