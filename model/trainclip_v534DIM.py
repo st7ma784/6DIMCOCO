@@ -17,13 +17,16 @@ class LightningCLIPModule(base):
         #  we're going to use the same trick as CLIP does
         #  for summarizing based on the EOT token.
         #assume text is [batch_size, n_ctx]
+        print("text shape",text.shape)
+
         EOT_indexes=torch.argmax(text,dim=-1) 
+        print("EOT_indexes",EOT_indexes.shape)
         output = self.translationModel(text,return_dict=True,output_hidden_states=True)
         #take the output probabilities as a vector, 
         #print(output.keys())
         hiddenstates=output.hidden_states
         #print(hiddenstates[0].shape) #torch.Size([10, 77, 512])
-        print(EOT_indexes.shape)
+        print("hiddenstates",hiddenstates[-1].shape)
         #check shape is [batch_size, n_ctx, d_model]
         #we want to select the index in n_ctx that corresponds to the EOT tokens... 
         #so we need to find the index of the EOT token in the text, and then select that index from the hidden states

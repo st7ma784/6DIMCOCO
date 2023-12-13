@@ -9,9 +9,7 @@ import clip
 import timeit
 from torch_cka import CKA
 
-Dataset=torch.utils.data.TensorDataset(torch.rand(150,3,227,227))
-
-def batch_test_method(methodA,methodB=None,convertOO=False,permute=True):
+def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataloader=None):
 
     #same as below but we assume methodA and methodB take a batch of inputs
     print("Testing method",methodA.__name__)
@@ -36,14 +34,6 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True):
     # altmodel,_=clip.load("ViT-B/16",device=device)
     model2=model.visual.to(device,non_blocking=True).eval()
     # model=altmodel.visual.to(device,non_blocking=True).eval()
-    dataloader = DataLoader(Dataset,
-                            batch_size=50, # according to your device memory
-                            shuffle=False,
-                            pin_memory=True,
-
-                            drop_last=True
-                            )  # Don't forget to seed your dataloader
-    
 
     cka=CKA(model1,model2,model1_name="ResNet18",model2_name="CLIP",device=device)
     cka.model1_info['Dataset'] = dataloader.dataset.__repr__().split('\n')[0]
@@ -51,66 +41,72 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True):
 
     N = len(cka.model1_layers) if cka.model1_layers is not None else len(list(cka.model1.modules()))
     M = len(cka.model2_layers) if cka.model2_layers is not None else len(list(cka.model2.modules()))
-    M=99
+    M=86
+    N=68
     cka.m1_matrix=torch.zeros((N,M),device=device)
     cka.m2_matrix=torch.zeros((M),device=device)
     cka.hsic_matrix=torch.zeros((N),device=device)
 
     with torch.no_grad():
-        with profile(activities=[ProfilerActivity.CPU, ProfilerActivity.CUDA],record_shapes=True,profile_memory=True) as prof:
 
-            for x1 in tqdm(dataloader):
-                i=x1[0].to(device,non_blocking=True)
-                cka.model2_features = {}
-                cka.model1_features = {}
+        for x1 in tqdm(dataloader):
+            i=x1[0].to(device,non_blocking=True)
+            cka.model2_features = {}
+            cka.model1_features = {}
 
-                model1(i)
-                # model2(i)
-                model2(i.half())
-                features,features2=[],[]
-                for _, feat1 in cka.model1_features.items():
-                    #shuffle based on feat[1]
-                    #1 find shape
-                    #2 make a set of random indices
-                    #3 permute based on those indices
-                    #4 continue as normal
-                    if permute:
-                        shape=feat1.shape
-                        indices=torch.randperm(shape[1])
-                        sort,orig=torch.sort(indices)
-                        #check that feat=feat[:,indices[orig]] 
-                        feat1=feat1[:,indices]
-                        #check that feat=feat[:,indices[orig]] 
-                    
-                    # feat1=feat1[0]
-                    # print(feat1.shape)
-                    if feat1.shape[0]==50:
-                        X = feat1.flatten(1)
-                                    
-                        features.append((X @ X.t()).fill_diagonal_(0))
-                cka.model1_features = {}
-
-                for _,feat2 in cka.model2_features.items():
-                    #print(feat2)
-                    #if clip ... we need to do something different.
-                    
-                    feat2=feat2[0]
-                    #print(feat2.shape)
-                    if feat2.shape[0]==50:
-                        Y = feat2.flatten(1)
-
-                        features2.append((Y @ Y.t()).fill_diagonal_(0).float())
-                cka.model2_features = {}
+            model1(i)
+            # model2(i)
+            model2(i.half())
+            features,features2=[],[]
+            for _, feat1 in cka.model1_features.items():
+                #shuffle based on feat[1]
+                #1 find shape
+                #2 make a set of random indices
+                #3 permute based on those indices
+                #4 continue as normal
+                if permute:
+                    shape=feat1.shape
+                    indices=torch.randperm(shape[1])
+                    sort,orig=torch.sort(indices)
+                    #check that feat=feat[:,indices[orig]] 
+                    feat1=feat1[:,indices]
+                    #check that feat=feat[:,indices[orig]] 
                 
-                print(cka.m2_matrix.shape)
-                print(methodC(torch.stack(features2),torch.stack(features2)).shape)
-                cka.m2_matrix=torch.add(cka.m2_matrix, methodC(torch.stack(features2),torch.stack(features2)))#//(50 * (50 - 3))
+                # feat1=feat1[0]
+                # print(feat1.shape)
+                if feat1.shape[0]==10:
+                    X = feat1.flatten(1)
+                                
+                    features.append((X @ X.t()).fill_diagonal_(0))
+            cka.model1_features = {}
+
+            for _,feat2 in cka.model2_features.items():
+                #print(feat2)
+                #if clip ... we need to do something different.
+                if permute:
+                    shape=feat2.shape
+                    indices=torch.randperm(shape[1])
+                    sort,orig=torch.sort(indices)
+                    #check that feat=feat[:,indices[orig]] 
+                    feat2=feat2[:,indices]
+                    #check that feat=feat[:,indices[orig]] 
                 
-                cka.hsic_matrix=torch.add(cka.hsic_matrix, methodC(torch.stack(features),torch.stack(features)))#/(50 * (50 - 3))
-                
-                cka.m1_matrix =torch.add(cka.m1_matrix, _methodA(torch.stack(features),torch.stack(features2)))#/(50 * (50 - 3))
-        
-        #end of profiling
+                feat2=feat2[0]
+                #print(feat2.shape)
+                if feat2.shape[0]==10:
+                    Y = feat2.flatten(1)
+
+                    features2.append((Y @ Y.t()).fill_diagonal_(0).float())
+            cka.model2_features = {}
+            
+            print(cka.m2_matrix.shape)
+            print(methodC(torch.stack(features2),torch.stack(features2)).shape)
+            cka.m2_matrix=torch.add(cka.m2_matrix, methodC(torch.stack(features2),torch.stack(features2)))#//(50 * (50 - 3))
+            
+            cka.hsic_matrix=torch.add(cka.hsic_matrix, methodC(torch.stack(features),torch.stack(features)))#/(50 * (50 - 3))
+            
+            cka.m1_matrix =torch.add(cka.m1_matrix, _methodA(torch.stack(features),torch.stack(features2)))#/(50 * (50 - 3))
+    
 
         print(cka.m1_matrix.shape)
         print(cka.m2_matrix.shape)
@@ -121,17 +117,17 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True):
         # print(prof.key_averages().table(sort_by="self_cude_memory_usage", row_limit=10))
         #print(prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=-1))
         #scrape from the table the time totals at the end of the table
-        total_CPU_time=prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=-1).split('\n')[-3]
-        print(total_CPU_time)
-        total_CPU_time=total_CPU_time.split(' ')[-1]
-        total_CUDA_time=prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=-1).split('\n')[-2].split(' ')[-1]
-        total_CPU_time= float(total_CPU_time[:-2]) if total_CPU_time[-2:]=="ms" else float(total_CPU_time[:-1])*1000
-        total_CUDA_time= float(total_CUDA_time[:-2]) if total_CUDA_time[-2:]=="ms" else float(total_CUDA_time[:-1])*1000
-        total_time=total_CPU_time+total_CUDA_time
+        # total_CPU_time=prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=-1).split('\n')[-3]
+        # print(total_CPU_time)
+        # total_CPU_time=total_CPU_time.split(' ')[-1]
+        # total_CUDA_time=prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=-1).split('\n')[-2].split(' ')[-1]
+        # total_CPU_time= float(total_CPU_time[:-2]) if total_CPU_time[-2:]=="ms" else float(total_CPU_time[:-1])*1000
+        # total_CUDA_time= float(total_CUDA_time[:-2]) if total_CUDA_time[-2:]=="ms" else float(total_CUDA_time[:-1])*1000
+        # total_time=total_CPU_time+total_CUDA_time
         import matplotlib.pyplot as plt
         import numpy as np
         plt.imshow(RESULTS.cpu().numpy(),cmap="magma") 
-        plt.savefig('CKAResults/resultsclip2P{}{}-{}took{}.png'.format(permute,methodA.__name__,methodB.__name__,total_time))
+        plt.savefig('resultsclip2P{}{}-{}.png'.format(permute,methodA.__name__,methodB.__name__))
 
 
 
@@ -141,17 +137,26 @@ if __name__ == "__main__":
 
     # In the clip model, we get a input of shape L,B,B where L is the number of layers, B is the batch size
     # this is the same as doing the BMM of LBF and LBF.permute(0,2,1)  to get LBB
-
+    from BuildSpainDataSet import COCODataModule
+    import sys,os
+    #find optional dir as first arg
+    if len(sys.argv)>1:
+        dir=sys.argv[1]
+    else:
+        dir="."
+    data=COCODataModule(Cache_dir=dir,annotations=os.path.join(dir,"annotations"),batch_size=10)
+    data.setup()
+    dataloader=data.val_dataloader()
     methoda=LightningCLIPModule.batch_HSIC3
     methodb=LightningCLIPModule.batch_HSIC2
     #time the new method
     print("Timing new batched method")
     starttimer=timeit.default_timer()
-    batch_test_method(methoda,methodb,convertOO=True,permute=False)
+    batch_test_method(methoda,methodb,convertOO=True,permute=False,dataloader=dataloader)
     print("New batched method took",timeit.default_timer()-starttimer)
 
     print("Timing new batched method")
     starttimer=timeit.default_timer()
-    batch_test_method(methoda,methodb,convertOO=True,permute=True)
+    batch_test_method(methoda,methodb,convertOO=True,permute=True,dataloader=dataloader)
     print("New batched method took",timeit.default_timer()-starttimer)
     # edit this to also check the CKA methods in the torch_cka.py file and the model.trainclip_cka_base.py file
