@@ -30,7 +30,7 @@ class LightningCLIPModule(base):
         #check shape is [batch_size, n_ctx, d_model]
         #we want to select the index in n_ctx that corresponds to the EOT tokens... 
         #so we need to find the index of the EOT token in the text, and then select that index from the hidden states
-        encoder_output=torch.gather(hiddenstates[0],1,EOT_indexes)
+        encoder_output=hiddenstates[-1][torch.arange(hiddenstates[-1].shape[0]),EOT_indexes,:]
         #shape should be [batch_size, 1, d_model]
 
         output=torch.nn.functional.gumbel_softmax(output.logits,hard=True,dim=-1)

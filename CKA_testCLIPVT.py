@@ -101,21 +101,22 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
  
     model2=model.visual.eval()
     model1=model.transformer.eval()
-    
+    model2=model.transformer.eval()
+
     cka=myCKA(model1,model2,model1_name="ResNet18",model2_name="CLIP",device=device)
     cka.model1_info['Dataset'] = dataloader.dataset.__repr__().split('\n')[0]
     cka.model2_info['Dataset'] = dataloader.dataset.__repr__().split('\n')[0]
 
     N = len(cka.model1_layers) if cka.model1_layers is not None else len(list(cka.model1.modules()))
     M = len(cka.model2_layers) if cka.model2_layers is not None else len(list(cka.model2.modules()))
-    N=98
+    N=86
     M=170
+    M=86
     cka.m1_matrix=torch.zeros((N,M),device=device)
     cka.m2_matrix=torch.zeros((M),device=device)
     cka.hsic_matrix=torch.zeros((N),device=device)
 
     with torch.no_grad():
-        #only do first 10 batches
         for x1 in tqdm(dataloader):
         
 
@@ -128,28 +129,21 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
              #shape is B x  77 
 
             EOT_index=text.argmax(dim=1) #shape is B
-            model2(i)
+            # model2(i)
             #model2(i)
             model.encode_text(text)
             features,features2=[],[]
             for _, feat1 in cka.model1_features.items():
-                #shuffle based on feat[1]
-                #1 find shape
-                #2 make a set of random indices
-                #3 permute based on those indices
-                #4 continue as normal
+               
                 feat1=feat1[0]
-                
                 if feat1.shape[0]==77:
                     feat1=feat1[EOT_index,torch.arange(feat1.shape[1])]
-                    #print(feat1.shape)
-                    #feat 1 is shape 10 x hidden
-                    #we're going to do an @text_projection
                     feat1=feat1 @ model.text_projection
+
                 if feat1.shape[0]==10:
                     X = feat1.flatten(1)
-                                
                     features.append((X @ X.t()).fill_diagonal_(0))
+
             cka.model1_features = {}
 
             for _,feat2 in cka.model2_features.items():
@@ -163,37 +157,15 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
             cka.model2_features = {}
             
             cka.m2_matrix=torch.add(cka.m2_matrix, methodC(torch.stack(features2),torch.stack(features2)))#//(10 * (10 - 3))
-            
             cka.hsic_matrix=torch.add(cka.hsic_matrix, methodC(torch.stack(features),torch.stack(features)))#/(10 * (10 - 3))
-            
             cka.m1_matrix =torch.add(cka.m1_matrix, _methodA(torch.stack(features),torch.stack(features2)))#/(10 * (10 - 3))
 
-#end of profiling
-
-    print(cka.m1_matrix.shape)
-    print(cka.m2_matrix.shape)
-    print(cka.hsic_matrix.shape)
-
-    # print(cka.hsic_matrix)
-    # print(cka.m1_matrix)
-    # print(cka.m2_matrix)
     RESULTS=torch.div(cka.m1_matrix, torch.mul(torch.sqrt(cka.hsic_matrix).unsqueeze(1),torch.sqrt(cka.m2_matrix).unsqueeze(0)))
-    # print(prof.key_averages().table(sort_by="cuda_time_total", row_limit=10))
-    # print(prof.key_averages().table(sort_by="self_cude_memory_usage", row_limit=10))
-    #print(prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=-1))
-    #scrape from the table the time totals at the end of the table
-    # total_CPU_time=prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=-1).split('\n')[-3]
-    # print(total_CPU_time)
-    # total_CPU_time=total_CPU_time.split(' ')[-1]
-    # total_CUDA_time=prof.key_averages().table(sort_by="self_cuda_time_total", row_limit=-1).split('\n')[-2].split(' ')[-1]
-    # total_CPU_time= float(total_CPU_time[:-2]) if total_CPU_time[-2:]=="ms" else float(total_CPU_time[:-1])*1000
-    # total_CUDA_time= float(total_CUDA_time[:-2]) if total_CUDA_time[-2:]=="ms" else float(total_CUDA_time[:-1])*1000
-    # total_time=total_CPU_time+total_CUDA_time
-    #plot the results with plt magma colormap
+   
     import matplotlib.pyplot as plt
     import numpy as np
     plt.imshow(RESULTS.cpu().numpy(),cmap="magma") 
-    plt.savefig("CKAResults/results_CLIPVTselEOT.png")
+    plt.savefig("results_CLIPTExtEncoderswEOT.png")
 
 
 if __name__ == "__main__":
@@ -209,7 +181,7 @@ if __name__ == "__main__":
     if len(sys.argv)>1:
         dir=sys.argv[1]
     else:
-        dir="."
+        dir="/data"
     data=COCODataModule(Cache_dir=dir,annotations=os.path.join(dir,"annotations"),batch_size=10)
     data.setup()
     dataloader=data.val_dataloader()
