@@ -240,7 +240,8 @@ class LightningCLIPModule(LightningModule):
         self.CAPhsic_matrix0=torch.zeros([],device=self.device)
         self.CAPhsic_matrix1=torch.zeros([],device=self.device)
         self.CAPhsic_matrix2=torch.zeros([],device=self.device)
-        
+        self.val_res=[]
+
         self.eval()
 
     def validation_step(self,batch,*args):
@@ -294,9 +295,11 @@ class LightningCLIPModule(LightningModule):
         loss = lossim+loss1
         loss=loss/2
         loss = loss.mean()
+        self.val_res.append({"loss": loss, "imfeatures":image_features, "tfeatures":captions,"classes":batch[2]})
         return {"loss": loss, "imfeatures":image_features, "tfeatures":captions,"classes":batch[2]}
 
-    def validation_epoch_end(self,acc_val):
+    def on_validation_epoch_end(self):
+        acc_val=self.val_res
         imfeatures=torch.nan_to_num(torch.cat([val["imfeatures"] for val in acc_val],dim=0)).cpu().numpy()
         tfeatures=torch.nan_to_num(torch.cat([val["tfeatures"] for val in acc_val],dim=0)).cpu().numpy()
         # self.logger.log_table("Embeddings",columns=["image Embeddings","Text Embeddings"],data=[imfeatures,tfeatures])
@@ -336,7 +339,7 @@ class LightningCLIPModule(LightningModule):
                     #     for (param_to_prune, im_score) in imscoredict.items():
                     #         prune_module(param_to_prune, im_score, self.args)
                     #then purun accordingly 
-        
+        self.val_res=[]
     def _log_layer(self, model: str, name: str, layer: nn.Module,inp: torch.Tensor, out: torch.Tensor):
         if isinstance(out, tuple):
             out=out[0]       
