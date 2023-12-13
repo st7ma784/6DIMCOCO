@@ -109,7 +109,7 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
 
     N = len(cka.model1_layers) if cka.model1_layers is not None else len(list(cka.model1.modules()))
     M = len(cka.model2_layers) if cka.model2_layers is not None else len(list(cka.model2.modules()))
-    N=86
+    N=98
     M=170
     M=86
     cka.m1_matrix=torch.zeros((N,M),device=device)
