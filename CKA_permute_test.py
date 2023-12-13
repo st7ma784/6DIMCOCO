@@ -83,6 +83,8 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
             for _,feat2 in cka.model2_features.items():
                 #print(feat2)
                 #if clip ... we need to do something different.
+                feat2=feat2[0]
+
                 if permute:
                     shape=feat2.shape
                     indices=torch.randperm(shape[1])
@@ -91,7 +93,6 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
                     feat2=feat2[:,indices]
                     #check that feat=feat[:,indices[orig]] 
                 
-                feat2=feat2[0]
                 #print(feat2.shape)
                 if feat2.shape[0]==10:
                     Y = feat2.flatten(1)

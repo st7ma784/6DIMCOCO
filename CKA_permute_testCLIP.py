@@ -187,7 +187,7 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
     import matplotlib.pyplot as plt
     import numpy as np
     plt.imshow(RESULTS.cpu().numpy(),cmap="magma") 
-    plt.savefig('CKAResults/resultsCOCOclipL14B16Test.png') 
+    plt.savefig('resultsCOCOclipL14B16Test.png') 
 
 
 
