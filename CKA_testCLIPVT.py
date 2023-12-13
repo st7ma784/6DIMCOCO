@@ -109,7 +109,7 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
 
     N = len(cka.model1_layers) if cka.model1_layers is not None else len(list(cka.model1.modules()))
     M = len(cka.model2_layers) if cka.model2_layers is not None else len(list(cka.model2.modules()))
-    N=98
+    N=86 #98
     M=170
     M=86
     cka.m1_matrix=torch.zeros((N,M),device=device)
@@ -136,9 +136,9 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
             for _, feat1 in cka.model1_features.items():
                
                 feat1=feat1[0]
-                if feat1.shape[0]==77:
-                    feat1=feat1[EOT_index,torch.arange(feat1.shape[1])]
-                    feat1=feat1 @ model.text_projection
+                # if feat1.shape[0]==77:
+                #     feat1=feat1[EOT_index,torch.arange(feat1.shape[1])]
+                #     feat1=feat1 @ model.text_projection
 
                 if feat1.shape[0]==10:
                     X = feat1.flatten(1)
@@ -165,7 +165,7 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
     import matplotlib.pyplot as plt
     import numpy as np
     plt.imshow(RESULTS.cpu().numpy(),cmap="magma") 
-    plt.savefig("results_CLIPTExtEncoderswEOT.png")
+    plt.savefig("results_CLIPTExtEncoders.png")
 
 
 if __name__ == "__main__":
