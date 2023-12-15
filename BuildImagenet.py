@@ -168,10 +168,32 @@ class ImagenetDataModule(LightningDataModule):
             os.system("cp {} {}".format(os.path.join("APCT","prepare","val_prepare.sh"),os.path.join(data_path,"ImageNet-2012","val")))
             os.system("cd {} && bash val_prepare.sh {}".format(os.path.join(data_path,"ImageNet-2012","val"), os.path.join(data_path,"ImageNet-2012","val")))
         #do same for train 
-        if len(os.listdir(os.path.join(data_path,"ImageNet-2012","train"))) == 0:
-            os.system("cp {} {}".format(os.path.join("APCT","prepare","train_prepare.sh"),os.path.join(data_path,"ImageNet-2012","train")))
-            os.system("cd {} && bash train_prepare.sh {}".format(os.path.join(data_path,"ImageNet-2012","train"), os.path.join(data_path,"ImageNet-2012","train")))
-        #check if test directory exists
+        #extract files into folders like this
+        '''
+            for file in folder that ends with tar
+                filename=$(basename $file .tar)
+                if [ ! -d $filename ];then
+                    mkdir -pv $filename
+                else
+                    rm -rf $filename
+                fi
+                tar --touch -xvf $file -C $filename
+                rm $file
+                
+        '''
+        for file in os.listdir(os.path.join(data_path,"ImageNet-2012","train")):
+            if file.endswith(".tar"):
+                filename=file[:-4]
+                if not os.path.exists(filename):
+                    os.makedirs(filename)
+                else:
+                    #do os.system("rm -rf {}".format(filename)) with shutil.rmtree
+                    os.remove(filename)
+                #do the following with tarfile
+                #os.system("tar --touch -xvf {} -C {}".format(file,filename))
+                #os.system("rm {}".format(file))
+                tarfile.open(file,"r").extractall(filename)
+                os.remove(file)
     def fast_resize(self,dir):
         '''resize all images in a directory to 224x224'''
         #we will use PIL to resize images to 224x224 and save them in a new directory
