@@ -111,7 +111,7 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
     M = len(cka.model2_layers) if cka.model2_layers is not None else len(list(cka.model2.modules()))
     N=86 #98
     M=170
-    M=86
+    M=98
     cka.m1_matrix=torch.zeros((N,M),device=device)
     cka.m2_matrix=torch.zeros((M),device=device)
     cka.hsic_matrix=torch.zeros((N),device=device)
@@ -128,7 +128,7 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
             #print(text.shape)
              #shape is B x  77 
 
-            EOT_index=text.argmax(dim=1) #shape is B
+            EOT_index=text.argmax(dim=-1) #shape is B
             # model2(i)
             #model2(i)
             model.encode_text(text)
@@ -136,10 +136,12 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
             for _, feat1 in cka.model1_features.items():
                
                 feat1=feat1[0]
+                if (feat1.shape[-1]) == (model.text_projection.shape[0]):
+                    feat1=feat1 @ model.text_projection
                 # if feat1.shape[0]==77:
-                #     feat1=feat1[EOT_index,torch.arange(feat1.shape[1])]
-                #     feat1=feat1 @ model.text_projection
-
+                #     #print("feat2",feat2.shape)
+                #     feat1=feat1[EOT_index,torch.arange(10)]
+                    #print("feat2new",feat2.shape)
                 if feat1.shape[0]==10:
                     X = feat1.flatten(1)
                     features.append((X @ X.t()).fill_diagonal_(0))
@@ -150,6 +152,12 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
                 #print(feat2)
                 #if clip ... we need to do something different.
                 feat2=feat2[0]
+                if feat2.shape[0]==77:
+                    #print("feat2",feat2.shape)
+                    feat2=feat2[EOT_index,torch.arange(10)]
+                    #print("feat2new",feat2.shape)
+                    # feat2=feat2 @ model.text_projection
+
                 if feat2.shape[0]==10:
                     Y = feat2.flatten(1)
 
@@ -165,7 +173,7 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
     import matplotlib.pyplot as plt
     import numpy as np
     plt.imshow(RESULTS.cpu().numpy(),cmap="magma") 
-    plt.savefig("results_CLIPTExtEncoders.png")
+    plt.savefig("results_CLIPTExtEncoderEOTatProj.png")
 
 
 if __name__ == "__main__":
