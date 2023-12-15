@@ -269,7 +269,8 @@ class LightningCLIPModule(LightningModule):
         captions=self.encode_text(c) #run through main mode
         if isinstance(captions,tuple):
             print("captions is tuple")
-            print(captions)
+            print("fixing")
+            captions=captions[0]
         # c=captions.detach().clone().cpu()
         #run through main mode
         
