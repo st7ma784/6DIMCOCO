@@ -299,7 +299,7 @@ class LightningCLIPModule(LightningModule):
         logitsI,logitsT=self.calculate_lossStock(image_features, captions) 
         self.log("mean validation stock logits ", logitsI.mean())
         
-        lossim = self.loss(logitsI*(self.logit_scale.exp()), labels,alpha=self.alpha)
+        lossim = self.loss(logitsI*(self.logit_scale.exp()), labels,alpha=self.alpha) # gets not implemented for float er
         loss1 = self.loss(logitsT*(self.logit_scale.exp()), labels,alpha=self.alpha)
         loss = lossim+loss1
         loss=loss/2
