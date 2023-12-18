@@ -71,8 +71,8 @@ class LightningCLIPModule(base):
         labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,non_blocking=True) 
 
         logits=self(im,captions[:,0],captions[:,1],captions[:,2],captions[:,3],captions[:,4])*self.logit_scale.exp()
-        self.log("first logit",logits[0,0,0],enable_graph=False)
-        self.log("BAD logit",logits[0,1,2],enable_graph=False)
+        self.log("first logit",logits[0,0,0,0],enable_graph=False)
+        self.log("BAD logit",logits[0,1,2,3],enable_graph=False)
         self.log("logit scale",self.logit_scale.exp())
 
         # The idea is that good logits are 1s,   bad should be -1s... so if logits are coming back as ~6000....
