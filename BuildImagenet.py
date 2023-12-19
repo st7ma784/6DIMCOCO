@@ -185,10 +185,10 @@ class ImagenetDataModule(LightningDataModule):
             if file.endswith(".tar"):
                 filename=file[:-4]
                 if not os.path.exists(filename):
-                    os.makedirs(filename)
-                else:
-                    #do os.system("rm -rf {}".format(filename)) with shutil.rmtree
-                    os.remove(filename)
+                    os.makedirs(filename,exist_ok=True)
+                # else:
+                #     #do os.system("rm -rf {}".format(filename)) with shutil.rmtree
+                #     os.remove(filename)
                 #do the following with tarfile
                 #os.system("tar --touch -xvf {} -C {}".format(file,filename))
                 #os.system("rm {}".format(file))
