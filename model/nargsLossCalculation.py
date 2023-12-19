@@ -383,7 +383,7 @@ def get_loss_calc(reduction='sum',ver=0,mask=None):
 
         def loss(x,y,alpha):
             
-            return torch.nn.functional.cross_entropy(x*Lossmasks.to(y.device),y*Lossmasks.to(y.device,dtype=torch.float),reduction=reduction)
+            return torch.nn.functional.cross_entropy(x*Lossmasks.to(y.device),y*Lossmasks.to(y.device),reduction=reduction)
             
     else:
         def loss(x,y,alpha):
