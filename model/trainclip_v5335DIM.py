@@ -192,7 +192,7 @@ class LightningCLIPModule(LightningModule):
     def training_step(self, batch, batch_idx,optimizer_idx=0):
 
         im,captions= batch[0],batch[1]
-        labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,non_blocking=True) 
+        labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,dtype=torch.float,,non_blocking=True) 
 
         logits=self(im,captions[:,0],captions[:,1],captions[:,2],captions[:,3],captions[:,4])*self.logit_scale.exp()
         self.log("first logit",logits[0,0,0],enable_graph=False)
@@ -292,9 +292,9 @@ class LightningCLIPModule(LightningModule):
         # print("self.logit scale is 14 right? ",self.logit_scale.exp())
         logitsI,logitsT=self.calculate_lossStock(image_features, captions) 
         self.log("mean validation stock logits ", logitsI.mean())
-        
-        lossim = self.loss(logitsI*(self.logit_scale.exp()), labels.float(),alpha=self.alpha)
-        loss1 = self.loss(logitsT*(self.logit_scale.exp()), labels.float(),alpha=self.alpha)
+        #doing stock loss here! so we should assume that labels is of type long 
+        lossim = self.loss(logitsI*(self.logit_scale.exp()), labels,alpha=self.alpha)
+        loss1 = self.loss(logitsT*(self.logit_scale.exp()), labels,alpha=self.alpha)
         loss = lossim+loss1
         loss=loss/2
         loss = loss.mean()
