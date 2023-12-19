@@ -246,7 +246,7 @@ class LightningCLIPModule(LightningModule):
 
     def validation_step(self,batch,*args):
         #do stock loss here
-        labels=torch.arange(batch[0].shape[0],dtype=torch.long,device=self.device)
+        labels=torch.diag_embed(torch.ones(self.hparams.batch_size,dtype=torch.float,device=self.device))
         self.model1_features = {}  #reset list of forward hooks
         self.model2_features = {}  #reset list of forward hooks
         image_features=self.clip.encode_image(batch[0])
