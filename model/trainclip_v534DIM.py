@@ -12,7 +12,7 @@ class LightningCLIPModule(base):
         if kwargs["exactlabels"]==1:
             with torch.no_grad():
                 testBatch=torch.rand(self.hparams.batch_size,self.transformer_width,device=self.device)
-                if not normlogits:
+                if not kwargs["normlogits"]:
                     testBatch=testBatch/torch.norm(testBatch,dim=-1,keepdim=True)
                     self.label=self.calculate_loss(testBatch,testBatch,testBatch,testBatch).to(self.device,non_blocking=True)
                     #convert this to probabilities in range [0,1]
