@@ -18,7 +18,7 @@ class LightningCLIPModule(base):
                     #convert this to probabilities in range [0,1]
                     self.label=torch.nn.functional.softmax(self.label)
                     self.label=torch.nan_to_num(self.label, nan=1.0)
-                    print("using labels: ", self.label[:2,:2,:2])
+                    print("using labels: ", self.label[:2,:2,:2,:2])
         #elif add in the case where using -inf or -1 instead of zeros as below....
         else:
             self.label=torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.ones(self.hparams.batch_size,dtype=torch.float,device=self.device))) )           #self.label=(self.label*2)-1 This makes loss negative! 
