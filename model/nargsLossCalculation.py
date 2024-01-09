@@ -410,3 +410,5 @@ if __name__ == "__main__":
         if torch.any(torch.tensor(results)):
             print("method {} failed".format(i))
             print(results)
+
+#fpor improved JSE implementation have a look at notes in the the other losscalculation file. 
