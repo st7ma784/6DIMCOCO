@@ -606,3 +606,10 @@ def get_loss_calc(reduction='sum',ver=0,mask=None):
          #negative because when mask is used, the loss is actually the negative of the loss
     
     return loss
+
+
+
+# during the write up, it cabame apparent tht th e use of JSE as shrinkage largely only appies to estimations of the mean in the process of ML.
+#Therefore, it seems unfair to apply this to all the logit's values, but rather to jsut the calculation of the mean. 
+#We're going to write 2 function calls, one: the stock mean calculation of *vectors. 
+#the second is going to apply a shrinkage factor in line with the JSE mentaility, as this mean is to apply to the supposed optimum location. 
