@@ -52,8 +52,13 @@ def train(config={
         from model.trainclip_v534DIM import LightningCLIPModule
     elif config.get("dims",6)==-1:
         from model.trainclip_cka_base import LightningCLIPModule
-    else:
+    elif config.get("dims",6)==6:
         from model.trainclip_v53 import LightningCLIPModule
+    elif config.get("dims",6)==0:
+
+        from model.trainclip_v53_baseline import BaselineLightningCLIPModule as LightningCLIPModule
+    else:
+        raise ValueError("Invalid number of dims")
     # from pl_bolts.datamodules import ImagenetDataModule
     model=LightningCLIPModule( train_batch_size=config["batch_size"],
                                 **config)

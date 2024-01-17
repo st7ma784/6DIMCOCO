@@ -1,5 +1,6 @@
 
 
+from telnetlib import BM
 import torch
 from functools import reduce
 '''
@@ -398,6 +399,39 @@ def get_loss_calc(reduction='sum',ver=0,mask=None):
     
     return loss#
 
+#fpor improved JSE implementation have a look at notes in the the other losscalculation file. 
+
+
+def calc_mean(*vecs):
+    return reduce(torch.add,vecs)/len(vecs)
+
+def JSE_mean(*vecs):
+   
+   
+    sum_of_squares=reduce(torch.add,[torch.pow(vec,2) for vec in vecs])
+    JSEFactor=1-(4/sum_of_squares)
+    return torch.mul(calc_mean(*vecs),JSEFactor)
+
+
+def Fast_loss_Hdim(*vecs):
+    #step 1, stack all vectors into a single tensor, N,B,F
+    #matrix multiply by transpose of itself to get shape N,N,B,B
+    #rearrange to B,B,N,N
+    #do CE loss along diagonal of B,B and sum
+    #return loss
+
+    #step 1
+    stacked=torch.stack(vecs,dim=0)
+    #step 2
+    #print(stacked.shape)
+    logits=torch.matmul(stacked.unsqueeze(0),stacked.transpose(-1,-2).unsqueeze(1))
+    #print(logits.shape) # N,N,B,B
+    #step 3
+    logits=logits.permute(2,3,0,1)
+    
+    return logits.flatten(2,3)
+
+
 
 #run each method on the same data and compare the results
 if __name__ == "__main__":
@@ -410,5 +444,37 @@ if __name__ == "__main__":
         if torch.any(torch.tensor(results)):
             print("method {} failed".format(i))
             print(results)
+    loss=torch.nn.CrossEntropyLoss(reduction="mean")
 
-#fpor improved JSE implementation have a look at notes in the the other losscalculation file. 
+    #next we're going to test Fast_loss_Hdim
+    #we need to create a bunch of vectors of shape BxF
+    vectors=torch.rand([10,512],dtype=torch.float32) *2 -1
+    vectors2=torch.rand([10,512],dtype=torch.float32)   *2 -1
+    vectors3=torch.rand([10,512],dtype=torch.float32)  *2 -1
+    vectors4=torch.rand([10,512],dtype=torch.float32) *2 -1
+    vectors5=torch.rand([10,512],dtype=torch.float32) *2 -1
+    vectors6=torch.rand([10,512],dtype=torch.float32) *2 -1
+    #try them all the same 
+    vectors2=vectors
+    vectors3=vectors
+    vectors4=vectors
+    vectors5=vectors
+    vectors6=vectors
+
+    #norm them
+    vectors=vectors/vectors.norm(dim=-1,keepdim=True)
+    vectors2=vectors2/vectors2.norm(dim=-1,keepdim=True)
+    vectors3=vectors3/vectors3.norm(dim=-1,keepdim=True)
+    vectors4=vectors4/vectors4.norm(dim=-1,keepdim=True)
+    vectors5=vectors5/vectors5.norm(dim=-1,keepdim=True)
+    vectors6=vectors6/vectors6.norm(dim=-1,keepdim=True)
+
+    Logits=Fast_loss_Hdim(vectors,vectors2,vectors3,vectors4,vectors5,vectors6)
+    print(Logits[0,0])
+    print(Logits[1,1])
+    labels=torch.arange(Logits.shape[0],dtype=torch.long).unsqueeze(1).repeat(1,Logits.shape[-1])
+    print(Logits[0,1])
+    CELoss=loss(Logits,labels)
+    print(CELoss)
+    loss2=torch.nn.functional.cross_entropy(Logits,labels)
+    print(loss2)
