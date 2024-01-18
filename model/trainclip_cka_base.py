@@ -31,7 +31,7 @@ class LightningCLIPModule(LightningModule):
         self.model2_info={'Name': "Stock CLIP",}
         self.naninfcount=0
         # self.loss=get_loss_calc(reduction='sum',ver=0,mask=torch.ones([1]))
-        self.encoder_image=self.clip.encode_image
+
         self.label=torch.diag_embed(torch.diag_embed(torch.diag_embed
                 (torch.diag_embed(torch.diag_embed(torch.ones(
                     self.hparams.batch_size,dtype=torch.float,device=self.device
@@ -42,7 +42,7 @@ class LightningCLIPModule(LightningModule):
         self.calculate_loss=get_loss_fn(logitsversion=2)#        from model.LossCalculation import calculate_lossStock as sl???
         self.tfeatures=None
         self.projection=get_proj_fn("none")
-        self.encode_image=self.clip.encode_image
+        self.encode_image=self.clip.visual
         self.encoder=self.clip.transformer
         self.token_embedding=self.clip.token_embedding
         self.positional_embedding=self.clip.positional_embedding
