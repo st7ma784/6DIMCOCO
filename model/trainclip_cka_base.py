@@ -65,16 +65,23 @@ class LightningCLIPModule(LightningModule):
                 nn.init.normal_(block.mlp.c_fc.weight, std=fc_std)
                 nn.init.normal_(block.mlp.c_proj.weight, std=proj_std)
         if hasattr(self, "encode_image"):
-            
-            for _,layer in self.encode_image.named_modules():
-                if isinstance(layer, nn.ModuleList):
-                    for block in layer:
+            if hasattr(self.encode_image, "visual"):
+                for block in self.encode_image.visual.blocks:
+                    nn.init.normal_(block.attn.in_proj_weight, std=attn_std)
+                    nn.init.normal_(block.attn.out_proj.weight, std=proj_std)
+                    nn.init.normal_(block.mlp.c_fc.weight, std=fc_std)
+                    nn.init.normal_(block.mlp.c_proj.weight, std=proj_std)
+            #check if ender has named modules
+            if hasattr(self.encode_image, "named_modules"):
+                for _,layer in self.encode_image.named_modules():
+                    if isinstance(layer, nn.ModuleList):
+                        for block in layer:
 
-                        nn.init.normal_(block.weight, std=1)
-                        nn.init.zeros_(block.bias)
-                elif isinstance(layer, nn.Linear):
-                    nn.init.normal_(layer.weight, std=1)
-                    nn.init.zeros_(layer.bias)
+                            nn.init.normal_(block.weight, std=1)
+                            nn.init.zeros_(block.bias)
+                    elif isinstance(layer, nn.Linear):
+                        nn.init.normal_(layer.weight, std=1)
+                        nn.init.zeros_(layer.bias)
             for _,layer in self.encoder.named_modules():
                 if isinstance(layer, nn.ModuleList):
                     for block in layer:
