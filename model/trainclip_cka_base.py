@@ -43,7 +43,7 @@ class LightningCLIPModule(LightningModule):
         self.tfeatures=None
         self.projection=get_proj_fn("none")
         self.encode_image=self.clip.encode_image
-        self.encoder=self.clip.encoder
+        self.encoder=self.clip.transformer
         self.token_embedding=self.clip.token_embedding
         self.positional_embedding=self.clip.positional_embedding
         self.ln_final=self.clip.ln_final
