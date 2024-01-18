@@ -211,7 +211,7 @@ class LightningCLIPModule(LightningModule):
         joint_HSIC=torch.nan_to_num(self.batch_HSIC3(a,torch.nan_to_num(torch.stack(list(self.model1_features.values())))))
         self.CAPhsic_matrix1=torch.add(self.CAPhsic_matrix1,joint_HSIC) 
 
-        [image_features], [captions] = self.projection_fn(self.text_projection,im=[image_features],text=[captions])
+        image_features, captions = self.projection_fn(self.text_projection,im=[image_features],text=[captions])
         # print("self.logit scale is 14 right? ",self.logit_scale.exp())
         logitsI,logitsT=self.stock_loss([*image_features, *captions]) 
         self.log("mean validation stock logits ", logitsI.mean())
