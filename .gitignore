@@ -153,3 +153,4 @@ tb_logs/*
 .scale_batch_size*
 /models--openai--clip-vit-base-patch32
 artifacts/*/Im Embeddings.table.json
+results/*
