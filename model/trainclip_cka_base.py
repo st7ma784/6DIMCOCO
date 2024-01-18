@@ -3,14 +3,15 @@ import torch.nn as nn
 import torch
 import numpy as np
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from functools import partial,reduce
+from functools import partial
 import clip
-
 import matplotlib.pyplot as plt
 from CKA_test import add_colorbar 
 from sklearn.linear_model import LogisticRegression
 from model.LossCalculation import get_loss_fn 
 from model.Projection import get_proj_fn
+import seaborn as sns
+from model.LossCalculation import get_loss_calc
 
 class LightningCLIPModule(LightningModule):
     def __init__(self,
@@ -19,31 +20,86 @@ class LightningCLIPModule(LightningModule):
 
         super().__init__()
         self.save_hyperparameters()
+        #problem for using this as a inheritance...
         self.clip,_=clip.load("ViT-B/32", device=self.device)
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
-
+        self.context_length = self.clip.context_length
         #self.linear.weight=torch.nn.Parameter(self.clip.token_embedding.weight.T)
-        from model.LossCalculation import get_loss_calc
         self.valloss=torch.nn.CrossEntropyLoss(reduction='mean')
         self.handles=[]
         self.model1_info={'Name':"SelfCLIP",}
         self.model2_info={'Name': "Stock CLIP",}
         self.naninfcount=0
         # self.loss=get_loss_calc(reduction='sum',ver=0,mask=torch.ones([1]))
-
-        self.label=torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.ones(self.hparams.batch_size,dtype=torch.float,device=self.device))))))
+        self.encoder_image=self.clip.encode_image
+        self.label=torch.diag_embed(torch.diag_embed(torch.diag_embed
+                (torch.diag_embed(torch.diag_embed(torch.ones(
+                    self.hparams.batch_size,dtype=torch.float,device=self.device
+                    ))))))
         #self.label=(self.label*2)-1 This makes loss negative! 
         print("using labelsv2: ", self.label[:2,:2,:2,:2,:2,:2])
         self.label=torch.nan_to_num(self.label)
-        self.calculate_loss=get_loss_fn(logitsversion=2)
-
-        B,N=self.hparams.batch_size,6
+        self.calculate_loss=get_loss_fn(logitsversion=2)#        from model.LossCalculation import calculate_lossStock as sl???
+        self.tfeatures=None
         self.projection=get_proj_fn("none")
+        self.encode_image=self.clip.encode_image
+        self.encoder=self.clip.encoder
+        self.token_embedding=self.clip.token_embedding
+        self.positional_embedding=self.clip.positional_embedding
+        self.ln_final=self.clip.ln_final
+ 
+ 
+    def initialize_parameters(self):
+        if self.token_embedding:
+            nn.init.normal_(self.token_embedding.weight, std=0.02)
+        if hasattr(self, "positional_embedding"):    
+
+            nn.init.normal_(self.positional_embedding, std=0.01)
+        if hasattr(self, "encoder"):
+            proj_std = (self.encoder.width ** -0.5) * ((2 * self.encoder.layers) ** -0.5)
+            attn_std = self.encoder.width ** -0.5
+            fc_std = (2 * self.encoder.width) ** -0.5
+            for block in self.encoder.resblocks:
+                nn.init.normal_(block.attn.in_proj_weight, std=attn_std)
+                nn.init.normal_(block.attn.out_proj.weight, std=proj_std)
+                nn.init.normal_(block.mlp.c_fc.weight, std=fc_std)
+                nn.init.normal_(block.mlp.c_proj.weight, std=proj_std)
+        if hasattr(self, "encode_image"):
+            
+            for _,layer in self.encode_image.named_modules():
+                if isinstance(layer, nn.ModuleList):
+                    for block in layer:
+
+                        nn.init.normal_(block.weight, std=1)
+                        nn.init.zeros_(block.bias)
+                elif isinstance(layer, nn.Linear):
+                    nn.init.normal_(layer.weight, std=1)
+                    nn.init.zeros_(layer.bias)
+            for _,layer in self.encoder.named_modules():
+                if isinstance(layer, nn.ModuleList):
+                    for block in layer:
+                        nn.init.normal_(block.weight, std=1)
+                        nn.init.zeros_(block.bias)
+                elif isinstance(layer, nn.Linear):
+                    nn.init.normal_(layer.weight, std=fc_std)
+                    nn.init.zeros_(layer.bias)
+        if hasattr(self, "text_projection"):
+            nn.init.normal_(self.text_projection, std=self.encoder.width ** -0.5)
 
 
+
+    def encode_text(self, text):
+        x = self.token_embedding(text).type(self.dtype)  # [batch_size, n_ctx, d_model]
+        x = x + self.positional_embedding.type(self.dtype)
+        x = x.permute(1, 0, 2)  # NLD -> LND
+        x = self.encoder(x)
+        x = x.permute(1, 0, 2)  # LND -> NLD
+        x = self.ln_final(x).type(self.dtype)
+        x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)] 
+        return x
     # @torch.jit.script
     def forward(self, im, captions1, captions2, captions3, captions4, captions5):
-        image_features=self.clip.encode_image(im)
+        image_features=self.encode_image(im)
         caption_features1=self.clip.encode_text(captions1)
 
         i,t=self.projection(self.text_projection,im=[image_features],text=[caption_features1,caption_features2,caption_features3,caption_features4,caption_features5])
@@ -54,11 +110,37 @@ class LightningCLIPModule(LightningModule):
 
         pass
 
-            
+    
+    def on_train_epoch_start(self) -> None:
+        if self.prune:
+            for hook in self.pruneHooks:
+                hook.set_up()
+        #self.Lossmasks=self.Lossmasks#.to(self.device)
+        # if hasattr(self,"alpha"):
+        #     self.logger.log_text("mask weights",columns=[str(i) for i in self.masks.tolist()],data=[self.alpha.tolist()])
+        #     self.logger.log_text("effective weights", columns=[str(i) for i in self.masks.tolist()],data=[torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True)).tolist()])
+        
+    
+    def on_train_epoch_end(self) -> None:
+        if self.prune:
+            for hook in self.pruneHooks:
+                hook.remove()
+        if hasattr(self,"alpha"):
+            self.logger.log_text("mask weights",columns=self.masks.tolist(),data=[self.alpha.tolist()])
+            self.logger.log_text("effective weights", columns=self.masks.tolist(),data=[torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True)).tolist()])
+        
+    def build_attention_mask(self):
+        # lazily create causal attention mask, with full attention between the vision tokens
+        # pytorch uses additive attention mask; fill with -inf
+        mask = torch.empty(self.context_length, self.context_length)
+        mask.fill_(float("-inf"))
+        mask.triu_(1)  # zero out the lower diagonal
+        return mask
+             
     def configure_optimizers(self):
         
         optimizer = torch.optim.AdamW(
-            [p for p in self.parameters()]+[p for p in self.encode_image.parameters()]+[p for p in self.encoder.parameters()], lr=self.hparams.learning_rate, eps=10e-7,
+            self.parameters(), lr=self.hparams.learning_rate, eps=10e-8,
             #weight_decay=0.1,
             #betas=(0.9, 0.95),
             )
@@ -80,7 +162,10 @@ class LightningCLIPModule(LightningModule):
         self.CAPhsic_matrix2=torch.zeros([],device=self.device)
         self.eval()
         self.results=[]
-
+        if isinstance(self.projection,str):
+            self.projection_fn=get_proj_fn(self.projection)
+        else:
+            self.projection_fn=self.projection
     def validation_step(self,batch,*args):
         #do stock loss here
        
@@ -104,7 +189,11 @@ class LightningCLIPModule(LightningModule):
         c=batch[1][:,choice]
         c=c.squeeze()
 
-        captions=self.clip.encode_text(c) #run through main mode
+        captions=self.encode_text(c) #run through main mode
+        if isinstance(captions,tuple):
+            print("captions is tuple")
+            print("fixing")
+            captions=captions[0]
         self.model2.encode_text(c)# to compare supervision model
         a=torch.nan_to_num(torch.stack(list(self.model1_features.values())))
         self.CAPhsic_matrix0=torch.add(self.CAPhsic_matrix0,self.batch_HSIC2(a)) 
@@ -112,8 +201,8 @@ class LightningCLIPModule(LightningModule):
         self.CAPhsic_matrix2=torch.add(self.CAPhsic_matrix2,self.batch_HSIC2(a))
         joint_HSIC=torch.nan_to_num(self.batch_HSIC3(a,torch.nan_to_num(torch.stack(list(self.model1_features.values())))))
         self.CAPhsic_matrix1=torch.add(self.CAPhsic_matrix1,joint_HSIC) 
-        
-        [image_features], [captions] = self.projection(self.text_projection,im=[image_features],text=[captions])
+
+        [image_features], [captions] = self.projection_fn(self.text_projection,im=[image_features],text=[captions])
         # print("self.logit scale is 14 right? ",self.logit_scale.exp())
         logitsI,logitsT=self.calculate_loss(image_features, captions) 
         self.log("mean validation stock logits ", logitsI.mean())
@@ -130,7 +219,35 @@ class LightningCLIPModule(LightningModule):
         return {"loss": loss}
 
     def on_validation_epoch_end(self):
-      
+        imfeatures=torch.nan_to_num(torch.cat([val["imfeatures"] for val in self.results],dim=0)).cpu().numpy()
+        tfeatures=torch.nan_to_num(torch.cat([val["tfeatures"] for val in self.results],dim=0)).cpu().numpy()
+        # self.logger.log_table("Embeddings",columns=["image Embeddings","Text Embeddings"],data=[imfeatures,tfeatures])
+        #store features in a dict
+        
+        #I want to make a comparison between this epoch's features and last: 
+        #step 1, find the difference between the two
+        if self.tfeatures is None:
+            self.tfeatures=np.expand_dims(tfeatures,0)
+        else:
+            self.tfeatures=np.concatenate([self.tfeatures,tfeatures],axis=0)
+        
+        #step 3, repeat for each previous epoch (as a cum sum?))
+        #step 4, take the first 5 tfeatures. compare their cartesian distance and mean cosine similarity. 
+        #step 5, take every 5th tfeature. compare their cartesian distance and mean cosine similarity.
+
+
+        labels=torch.cat([val["classes"] for val in self.results],dim=0).cpu().numpy()
+        if not hasattr(self,"Iclassifier"):
+            self.Iclassifier = LogisticRegression(random_state=0, C=0.316, max_iter=1000, verbose=1, n_jobs=-1)
+        if not hasattr(self,"Tclassifier"):
+            self.Tclassifier = LogisticRegression(random_state=0, C=0.316, max_iter=1000, verbose=1, n_jobs=-1)
+        
+        self.Iclassifier.fit(imfeatures, labels)
+        self.log( "ImProbe",self.Iclassifier.score(imfeatures, labels))
+        self.Tclassifier.fit(tfeatures, labels)
+        self.log( "TProbe",self.Tclassifier.score(tfeatures, labels))
+
+        self.log('val_loss-stock', torch.stack([val["loss"] for val in self.results],dim=0).mean(), prog_bar=True,enable_graph=False, rank_zero_only=True)
         self.unfreeze()
         self.train()
         self.plot_results("IM","IMHSIC{}.jpg".format(self.current_epoch))
@@ -142,17 +259,115 @@ class LightningCLIPModule(LightningModule):
             handle.remove()
         #print(self.naninfcount)
         del self.model2
-      
-      
+        if self.prune:
+            for hook in self.pruneHooks:
+                global_entropy = hook.retrieve()
+                hook.remove()        
+        self.test_token_embeddings()
+                # im_scores =map(lambda name, block: prune_Residual_Attention_block(block, global_entropy[name], self.args["prune_eta"]), filter(lambda name,block: isinstance(block, ResidualAttentionBlock) and name in global_entropy.keys(), self.encode_image.named_modules()[:-1]))
+                # for imscoredict in im_scores:
+                #     for (param_to_prune, im_score) in imscoredict.items():
+                #         prune_module(param_to_prune, im_score, self.args)
+                #then purun accordingly 
+        #log the tokenembeddings for the text encoder, 
+        del self.results
+    
+    def test_token_embeddings(self):
+        pass
     def test_step(self,batch,*args):
         #do stock loss here
-        image_features=self.clip.encode_image(batch[0])
+        image_features=self.encode_image(batch[0])
         self.results.append({"imfeatures":image_features, "classes":batch[1]})
 
         return {"imfeatures":image_features, "classes":batch[1]}
 
     def on_test_epoch_start(self):
         self.results=[]
+        #were going to generate the plots here for movement in out validation features.
+        #first plot will be the distribution of each entry...
+        if not self.tfeatures is None:
+            plot=plt.figure()
+            for i in range(self.tfeatures.shape[0]):
+                sns.distplot(self.tfeatures[i][1],label="Epoch {}".format(i))
+            plt.legend()
+            plt.title("Distribution of Validation Features for sample1")
+            plt.savefig("distribution_of_validation_features.jpg")
+            plt.close()
+            plot=plt.figure()
+            for i in range(self.tfeatures.shape[0]):
+                sns.distplot(self.tfeatures[i],label="Epoch {}".format(i))
+            plt.legend()
+            plt.title("mean Distribution of Validation Features")
+            plt.savefig("mean_distribution_of_validation_features.jpg")
+            plt.close()
+            deltas=np.diff(self.tfeatures,axis=0)
+            plot=plt.figure()
+            for i in range(deltas.shape[0]):
+                sns.distplot(deltas[i][1],label="Epoch {}".format(i))
+            plt.legend()
+            plt.title("Distribution of Validation Feature Deltas for sample1")
+            plt.savefig("distribution_of_validation_feature_deltas.jpg")
+            plt.close()
+            plot=plt.figure()
+            for i in range(deltas.shape[0]):
+                sns.distplot(deltas[i],label="Epoch {}".format(i))
+            plt.legend()
+            plt.title("mean Distribution of Validation Feature Deltas")
+            plt.savefig("mean_distribution_of_validation_feature_deltas.jpg")
+
+            #we're going to repeat the same process, taking the first 5 features, and every 5th feature.
+            #step 1, plot the 5 vectors as 
+            first_five=self.tfeatures[:,0:5] # is shape epochs x 5 x 512
+            similarity_matrix=np.zeros((first_five.shape[0],first_five.shape[1],first_five.shape[1])) 
+            #norm of each vector
+            norms=np.linalg.norm(first_five,axis=2) # epochs x 5
+            normed_first_five=np.divide(first_five,norms[:,:,None])
+            similarity_matrix=np.matmul(normed_first_five,normed_first_five.transpose(0,2,1))# shape epochs x 5 x 5
+            # block out the diagonal
+            similarity_matrix[:,:,np.arange(similarity_matrix.shape[1]),np.arange(similarity_matrix.shape[1])]=0
+            #sum last 2 dimensions and divide by 20
+            similarity_matrix=np.sum(similarity_matrix,axis=(1,2))/20
+            plot=plt.figure()
+            #do plot of similarity matrix with epoch on x axis and similarity on y axis
+            plt.plot(np.arange(similarity_matrix.shape[0]),similarity_matrix)
+            plt.title("Mean Similarity of first 5 features across validation epochs")
+            plt.savefig("mean_similarity_of_first_5_features_across_validation_epochs.jpg")
+            plt.close()
+            #now do the same for every 5th feature
+            every_five=self.tfeatures[:,np.arange(0,self.tfeatures.shape[1],5)]
+            similarity_matrix=np.zeros((every_five.shape[0],every_five.shape[1],every_five.shape[1]))
+            norms=np.linalg.norm(every_five,axis=2)
+            normed_every_five=np.divide(every_five,norms[:,:,None])
+            similarity_matrix=np.matmul(normed_every_five,normed_every_five.transpose(0,2,1))
+            similarity_matrix[:,:,np.arange(similarity_matrix.shape[1]),np.arange(similarity_matrix.shape[1])]=0
+            similarity_matrix=np.sum(similarity_matrix,axis=(1,2))/ ((every_five.shape[1]*every_five.shape[1]) - every_five.shape[1])
+            plot=plt.figure()
+            plt.plot(np.arange(similarity_matrix.shape[0]),similarity_matrix)
+            plt.title("Mean Similarity between each sample across validation epochs")
+            plt.savefig("mean_similarity_between_each_sample_across_validation_epochs.jpg")
+            plt.close()
+
+            #log all these plots
+            if self.logger is not None:
+                self.logger.log_image(key=[
+                    "distribution_of_validation_features.jpg",
+                    "mean_distribution_of_validation_features.jpg",
+                    "distribution_of_validation_feature_deltas.jpg",
+                    "mean_distribution_of_validation_feature_deltas.jpg",
+                    "mean_similarity_of_first_5_features_across_validation_epochs.jpg",
+                    "mean_similarity_between_each_sample_across_validation_epochs.jpg",
+                    ], images=[
+                    "distribution_of_validation_features.jpg",
+                    "mean_distribution_of_validation_features.jpg",
+                    "distribution_of_validation_feature_deltas.jpg",
+                    "mean_distribution_of_validation_feature_deltas.jpg",
+                    "mean_similarity_of_first_5_features_across_validation_epochs.jpg",
+                    "mean_similarity_between_each_sample_across_validation_epochs.jpg",
+                    ])
+                #remove the tfeatures
+                
+            self.tfeatures=None
+
     def on_test_epoch_end(self):
         imfeatures=torch.nan_to_num(torch.cat([val["imfeatures"] for val in self.results],dim=0)).cpu().numpy()
         labels=torch.cat([val["classes"] for val in self.results],dim=0).cpu().numpy()
@@ -192,11 +407,12 @@ class LightningCLIPModule(LightningModule):
     def _insert_hooks(self):
         self.handles=[]
         # if layer weight is has self.hparams.train_batch_size in shape or layer.weight is None])
-        self.handles.extend([layer.register_forward_hook(partial(self._log_layer, "model1", name)) for name, layer in self.clip.encode_image.named_modules()]) 
-        self.handles.extend([layer.register_forward_hook(partial(self._log_layer, "model1", name)) for name, layer in self.clip.encoder.named_modules() ]) 
+        self.handles.extend([layer.register_forward_hook(partial(self._log_layer, "model1", name)) for name, layer in self.encode_image.named_modules()]) 
+        self.handles.extend([layer.register_forward_hook(partial(self._log_layer, "model1", name)) for name, layer in self.encoder.named_modules() ]) 
         self.handles.extend([layer.register_forward_hook(partial(self._log_layer, "model2", name)) for name, layer in self.model2.visual.named_modules()]) 
         self.handles.extend([layer.register_forward_hook(partial(self._log_layer, "model2", name)) for name, layer in self.model2.transformer.named_modules()])
         
+  
   
     def export(self):
       
@@ -268,6 +484,7 @@ class LightningCLIPModule(LightningModule):
         return output
         #check for why pos infs... 
     def batch_HSIC3(self,K,L):
+
         
         K=K.unsqueeze(1) # 46,1,B,B
         #convert nan to 0 and inf to 1 
@@ -288,3 +505,25 @@ class LightningCLIPModule(LightningModule):
         #returns many pos infs 
         output=torch.nan_to_num(output,nan=0.0,posinf=1.0,neginf=-1.0)
         return output
+    
+    
+def batch_HSIC2(K):
+    #K is Layers x B x B
+    a=torch.sum(K,dim=-1)
+    #print(" K SHAPE ",K.shape)# 0,2,3, are all problem values..
+    b=torch.sum(K,dim=-2)
+    c=torch.sub(torch.pow(torch.sum(a,dim=-1),2)/(K.shape[-2] - 1),torch.sum(a*b,dim=1),alpha=2)
+    #print(torch.sum(torch.sum(K*K.permute(0,2,1),dim=-1),dim=-1))
+    output=torch.add(torch.sum(torch.sum(K*K.permute(0,2,1),dim=-1),dim=-1),torch.div(c,(K.shape[-2] - 2)))
+    return torch.div(output,(K.shape[-2]*(K.shape[-2] - 3)))
+    #check for why pos infs... 
+def batch_HSIC3(K,L):
+    K=K.unsqueeze(1) # 46,1,B,B
+    L=L.unsqueeze(0) # 1,46, B,B
+    a=torch.sum(L,dim=-1) #1,46,10
+    b=torch.sum(K,dim=-2) #46,1,10
+    #print(a.shape,b.shape)
+    c=torch.sub(torch.mul(torch.sum(b,dim=-1),torch.sum(a,dim=-1)).div((K.shape[-2] - 1)),torch.sum(torch.mul(b,a),dim=-1),alpha=2) #[46,46]- [46,46] =[46,46]
+    #print(c.shape) # expect LayerK, LayerL, 
+    return torch.div(torch.add(torch.sum(torch.sum(K*L,dim=-1),dim=-1),torch.div(c,(K.shape[-2] - 2))),(K.shape[-2]*(K.shape[-2] - 3)))
+    #returns many pos infs 
