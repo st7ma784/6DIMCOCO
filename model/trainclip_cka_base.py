@@ -232,13 +232,11 @@ class LightningCLIPModule(LightningModule):
     def on_validation_epoch_end(self):
         imfeatures=torch.nan_to_num(torch.cat([val["imfeatures"] for val in self.results],dim=0)).cpu().numpy()
         tfeatures=torch.nan_to_num(torch.cat([val["tfeatures"] for val in self.results],dim=0)).cpu().numpy()
-        # self.logger.log_table("Embeddings",columns=["image Embeddings","Text Embeddings"],data=[imfeatures,tfeatures])
-        #store features in a dict
-        
-        #I want to make a comparison between this epoch's features and last: 
-        #step 1, find the difference between the two
+
+        print("imfeatures",imfeatures.shape)
+        print("tfeatures",tfeatures.shape)
         if self.tfeatures is None:
-            self.tfeatures=np.expand_dims(tfeatures,0)
+            self.tfeatures=np.expand_dims(tfeatures,0) #1 ,5,B,512
         else:
             self.tfeatures=np.concatenate([self.tfeatures,tfeatures],axis=0)
         
