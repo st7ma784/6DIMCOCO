@@ -40,6 +40,8 @@ class LightningCLIPModule(LightningModule):
         print("using labelsv2: ", self.label[:2,:2,:2,:2,:2,:2])
         self.label=torch.nan_to_num(self.label)
         self.calculate_loss=get_loss_fn(logitsversion=2)#        from model.LossCalculation import calculate_lossStock as sl???
+        from model.nargsLossCalculation import calculate_lossStock
+        self.stock_loss=calculate_lossStock
         self.tfeatures=None
         self.projection=get_proj_fn("none")
         self.encode_image=self.clip.visual
@@ -211,7 +213,7 @@ class LightningCLIPModule(LightningModule):
 
         [image_features], [captions] = self.projection_fn(self.text_projection,im=[image_features],text=[captions])
         # print("self.logit scale is 14 right? ",self.logit_scale.exp())
-        logitsI,logitsT=self.calculate_loss(image_features, captions) 
+        logitsI,logitsT=self.stock_loss([*image_features, *captions]) 
         self.log("mean validation stock logits ", logitsI.mean())
         labels=torch.arange(batch[0].shape[0],dtype=torch.long,device=self.device)
 
