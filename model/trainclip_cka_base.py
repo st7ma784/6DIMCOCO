@@ -225,7 +225,7 @@ class LightningCLIPModule(LightningModule):
         loss=loss/2
         loss = loss.mean()
         self.log('val_loss-stock', loss, prog_bar=True,enable_graph=False, rank_zero_only=True)
-        self.results.append({"imfeatures":image_features, "tfeatures":captions,"classes":batch[2],"loss": loss})
+        self.results.append({"imfeatures":image_features[0], "tfeatures":captions,"classes":batch[2],"loss": loss})
 
         return {"loss": loss}
 
