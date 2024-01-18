@@ -216,16 +216,17 @@ class LightningCLIPModule(LightningModule):
         logitsI,logitsT=self.stock_loss([*image_features, *captions]) 
         self.log("mean validation stock logits ", logitsI.mean())
         labels=torch.arange(batch[0].shape[0],dtype=torch.long,device=self.device)
-        print("logitsI",logitsI.shape)
-        print("logitsT",logitsT.shape)
-        print("labels",labels.shape)
+        # print("logitsI",logitsI.shape)
+        # print("logitsT",logitsT.shape)
+        # print("labels",labels.shape)
         lossim = self.valloss(logitsI*self.logit_scale.exp(), labels)
         loss1 = self.valloss(logitsT*self.logit_scale.exp(), labels)
         loss = lossim+loss1
         loss=loss/2
         loss = loss.mean()
         self.log('val_loss-stock', loss, prog_bar=True,enable_graph=False, rank_zero_only=True)
-        self.results.append({"imfeatures":image_features[0], "tfeatures":torch.stack(captions),"classes":batch[2],"loss": loss})
+        print("captions",captions.shape)
+        self.results.append({"imfeatures":image_features, "tfeatures":torch.stack(captions),"classes":batch[2],"loss": loss})
 
         return {"loss": loss}
 
@@ -234,7 +235,7 @@ class LightningCLIPModule(LightningModule):
         tfeatures=torch.nan_to_num(torch.cat([val["tfeatures"] for val in self.results],dim=0)).cpu().numpy()
 
         print("imfeatures",imfeatures.shape)
-        print("tfeatures",tfeatures.shape)
+        print("tfeatures",tfeatures.shape)#2,10,512
         if self.tfeatures is None:
             self.tfeatures=np.expand_dims(tfeatures,0) #1 ,5,B,512
         else:
