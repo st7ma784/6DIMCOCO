@@ -178,7 +178,7 @@ class LightningCLIPModule(LightningModule):
        
         self.model1_features = {}  #reset list of forward hooks
         self.model2_features = {}  #reset list of forward hooks
-        image_features=self.clip.encode_image(batch[0])
+        image_features=self.encode_image(batch[0])
         #if rank 0
         self.model2.encode_image(batch[0])# to compare supervision model
         a=torch.nan_to_num(torch.stack(list(self.model1_features.values())))
