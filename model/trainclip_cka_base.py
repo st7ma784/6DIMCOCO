@@ -225,7 +225,6 @@ class LightningCLIPModule(LightningModule):
         loss=loss/2
         loss = loss.mean()
         self.log('val_loss-stock', loss, prog_bar=True,enable_graph=False, rank_zero_only=True)
-        print("captions",captions.shape)
         self.results.append({"imfeatures":image_features, "tfeatures":torch.cat(captions),"classes":batch[2],"loss": loss})
 
         return {"loss": loss}
