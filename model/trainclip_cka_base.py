@@ -238,7 +238,7 @@ class LightningCLIPModule(LightningModule):
         if self.tfeatures is None:
             self.tfeatures=np.expand_dims(tfeatures,0) #1 ,5,B,512
         else:
-            self.tfeatures=np.concatenate([self.tfeatures,tfeatures],axis=0)
+            self.tfeatures=np.concatenate([self.tfeatures,np.expand_dims(tfeatures,0)],axis=0)
         
         #step 3, repeat for each previous epoch (as a cum sum?))
         #step 4, take the first 5 tfeatures. compare their cartesian distance and mean cosine similarity. 
