@@ -37,8 +37,8 @@ class LightningCLIPModule(base):
                 ):
 
         super().__init__()
-        if hasattr(self,"clip"):
-            del self.clip
+        # if hasattr(self,"clip"):
+        #     del self.clip
         self.save_hyperparameters()
         print("learning_rate",learning_rate)
         transformer_width=512

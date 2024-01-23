@@ -1,5 +1,4 @@
-from pyexpat import model
-import token
+
 from torchvision import transforms
 from PIL import Image
 import torch     
@@ -9,10 +8,21 @@ import tarfile
 import json as js
 from pySmartDL import SmartDL
 import pytorch_lightning as pl
-from tokenizers import Tokenizer as TokenizerFast
 from torch.utils.data import ConcatDataset
 from torchvision.datasets import CocoCaptions
 from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
+import time
+from pathlib import Path
+from transformers import (
+  BertTokenizerFast,
+  AutoModel,
+)
+os.environ["TOKENIZERS_PARALLELISM"]='true'
+
+# tokenizer = BertTokenizerFast.from_pretrained('bert-base-chinese')
+# model = AutoModel.from_pretrained('ckiplab/gpt2-base-chinese')
+
+
 prep=Compose([
         Resize(224, interpolation=Image.NEAREST),
         CenterCrop(224),
@@ -21,9 +31,10 @@ prep=Compose([
         Normalize((0.48145466, 0.4578275, 0.40821073), (0.26862954, 0.26130258, 0.27577711)),
         ])
 T= transforms.Compose([transforms.Resize((224,224),interpolation=Image.NEAREST),transforms.ToTensor()])
-from transformers import AutoTokenizer,GPT2Tokenizer, CLIPTokenizer, AutoConfig
-import time
-from pathlib import Path
+
+
+
+
 class COCODataset(CocoCaptions):
     def __init__(self, root, annFile, tokenizer, instances=None,*args, **kwargs):
         #print('Loading COCO dataset')
@@ -36,25 +47,15 @@ class COCODataset(CocoCaptions):
 
         if not os.path.exists(root):
             print("root does not exist {}".format(root))
-        #print('Error: root directory does not exist: {}'.format(root))
-        # if not os.path.exists(annFile):
-        #     print('annFile does not exist {}'.format(annFile)) 
-        #     annFile=os.path.join(root,"annotations","{}".format(os.path.basename(annFile)))
-        #     instances=os.path.join(root,"annotations","{}".format(os.path.basename(instances)))
-        #     if not os.path.exists(annFile):
-        #         print('annFile does not exist {}'.format(annFile)) 
-        #         annFile=os.path.join(root,"..","annotations","{}".format(os.path.basename(annFile)))
-        #         instances=os.path.join(root,"..","annotations","{}".format(os.path.basename(instances)))
-
-        #print('Error: annFile does not exist: {}'.format(annFile))
+      
         super().__init__(root, annFile, *args, **kwargs)
-        #print('Done')
         if instances is not None and os.path.exists(instances):
             from pycocotools.coco import COCO
             self.instances=COCO(instances)
-        #print(self.ids)
+
     def __len__(self):
         return len(self.ids)
+    
     def __getitem__(self, idx: int):
         try:
             img, target= super().__getitem__(idx)
@@ -66,7 +67,6 @@ class COCODataset(CocoCaptions):
         ids=self.instances.getAnnIds(imgIds=id)
 
         instance= self.instances.loadAnns(ids)
-        # print(target)
         try:
             i=instance[0].get("category_id",-100)
         except:
@@ -85,25 +85,20 @@ class COCODataset(CocoCaptions):
                     return_attention_mask = False,   # Construct attn. masks.
                     return_tensors = 'pt',     # Return pytorch tensors.
         )['input_ids'] for sent in target[:5]],dim=0)
-        
+        #find last non-zero token
+        #index of first 0 is findable with argmin
+        indexes=torch.argmin(target,dim=1)
+        EOT=indexes-1
+        target[:,EOT]=self.tokenizer._tokenizer.vocab_size
+        target[:,0]=self.tokenizer._tokenizer.vocab_size-1
         #We're going to do a manual fix and replace the 102 and 101 tokens with the actual tokens 
-        target=target.masked_fill(target==102,21127)
-        target=target.masked_fill(target==101,21126)
+        #target=target.masked_fill(target==102,self.tokenizer._tokenizer.vocab_size)
+        #target=target.masked_fill(target[:,0],self.tokenizer._tokenizer.vocab_siz-1)
         return img,target,i
 
 
 
 
-
-# Dataset
-os.environ["TOKENIZERS_PARALLELISM"]='true'
-from transformers import (
-  BertTokenizerFast,
-  AutoModel,
-)
-
-# tokenizer = BertTokenizerFast.from_pretrained('bert-base-chinese')
-# model = AutoModel.from_pretrained('ckiplab/gpt2-base-chinese')
 
 class COCOCNDataModule(pl.LightningDataModule):
 
@@ -118,12 +113,7 @@ class COCOCNDataModule(pl.LightningDataModule):
         self.T=T
         self.splits={"train":["train2014","train2017"],"val":["val2014","val2017"],"test":["test2015"]}
 
-        #get the tokenizer config
-        #config = AutoConfig.from_pretrained("bert-base-chinese")
-        #print("config",config)
         self.tokenizer = BertTokenizerFast.from_pretrained('bert-base-chinese',cache_dir=self.data_dir)
-        #get vocab file 
-        #save to file 
         path=self.tokenizer.save_pretrained(os.path.join(self.data_dir,"bert-base-chinese"))
         print("path",path)
         import json
@@ -153,7 +143,6 @@ class COCOCNDataModule(pl.LightningDataModule):
         print(self.tokenizer.backend_tokenizer.__dir__())
         print("tokenizer EOT/SEP token", self.tokenizer._tokenizer.token_to_id("[SEP]"))
         print("tokenizer EOT/SEP token", self.tokenizer._tokenizer.token_to_id("[CLS]"))
-        #check SOT and EOT tokens
         print("tokenizer EOT/SEP token", self.tokenizer._tokenizer.token_to_id("[EOT]"))
         print("tokenizer EOT/SEP token", self.tokenizer._tokenizer.token_to_id("[SOT]"))
         print("tokenizer EOT/SEP token", self.tokenizer._tokenizer.id_to_token(21126))
