@@ -232,12 +232,12 @@ class LightningCLIPModule(LightningModule):
     def on_validation_epoch_end(self):
         imfeatures=torch.nan_to_num(torch.cat([val["imfeatures"] for val in self.results],dim=0)).cpu().numpy()
         tfeatures=torch.nan_to_num(torch.cat([val["tfeatures"] for val in self.results],dim=0)).cpu().numpy()
-
+        #check that B is not 2 and self.epoch is >0
         print("imfeatures",imfeatures.shape)
-        print("tfeatures",tfeatures.shape)#2,10,512
-        if self.tfeatures is None:
+        print("tfeatures",tfeatures.shape)#20,512
+        if self.tfeatures is None and self.current_epoch>0:
             self.tfeatures=np.expand_dims(tfeatures,0) #1 ,5,B,512
-        else:
+        elif self.current_epoch>0 and self.tfeatures is not None:
             self.tfeatures=np.concatenate([self.tfeatures,np.expand_dims(tfeatures,0)],axis=0)
         
         #step 3, repeat for each previous epoch (as a cum sum?))
