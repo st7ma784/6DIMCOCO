@@ -21,6 +21,8 @@ class LightningCLIPModule(base):
         else:
             self.label=torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.ones(self.hparams.batch_size,dtype=torch.float,device=self.device))) )           #self.label=(self.label*2)-1 This makes loss negative! 
             print("using labelsv2: ", self.label[:2,:2,:2,:2])
+        self.pruneLabels=  len(self.label.shape)>=4
+
         self.label=torch.nan_to_num(self.label)
     def encode_text(self, text):
         
@@ -80,8 +82,12 @@ class LightningCLIPModule(base):
     def training_step(self, batch, batch_idx):
 
         im,captions= batch[0],batch[1]
-        labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,non_blocking=True) 
-
+        assert len(self.label.shape)>=4
+        if self.pruneLabels:
+            labels=self.label[:(im.shape[0]),:(captions.shape[0]),:(captions.shape[0]),:(captions.shape[0])].to(self.device,non_blocking=True)
+        #labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,non_blocking=True) 
+        else:
+            labels=self.label.to(self.device,non_blocking=True)
         logits=self(im,captions[:,0],captions[:,1],captions[:,2],captions[:,3],captions[:,4])*self.logit_scale.exp()
         self.log("first logit",logits[0,0,0,0],enable_graph=False)
         self.log("BAD logit",logits[0,1,2,3],enable_graph=False)
