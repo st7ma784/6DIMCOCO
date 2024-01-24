@@ -226,6 +226,9 @@ class LightningCLIPModule(base):
 
 
         # print("self.logit scale is 14 right? ",self.logit_scale.exp())
+        #check captions isnt tuple
+        if isinstance(captions,tuple):
+            captions=captions[0]
         logitsI,logitsT=self.calculate_lossStock(image_features, captions) 
         self.log("mean validation stock logits ", logitsI.mean())
         #doing stock loss here! so we should assume that labels is of type long 
