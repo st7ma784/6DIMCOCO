@@ -129,7 +129,8 @@ class COCODataModule(pl.LightningDataModule):
 
         return torch.utils.data.DataLoader(self.test, batch_size=B, shuffle=True, num_workers=1, prefetch_factor=1, pin_memory=True,drop_last=True)
     def prepare_data(self):
-        self.download_data()
+        # self.download_data()
+        pass
     def download_data(self):
         '''called only once and on 1 GPU'''
         # # download data
