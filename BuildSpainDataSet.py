@@ -1,3 +1,4 @@
+from calendar import c
 from torchvision import transforms
 from PIL import Image
 import torch     
@@ -128,7 +129,7 @@ class COCODataModule(pl.LightningDataModule):
 
         return torch.utils.data.DataLoader(self.test, batch_size=B, shuffle=True, num_workers=1, prefetch_factor=1, pin_memory=True,drop_last=True)
     def prepare_data(self):
-        pass
+        self.download_data()
     def download_data(self):
         '''called only once and on 1 GPU'''
         # # download data
@@ -253,3 +254,12 @@ class COCODataModule(pl.LightningDataModule):
 
 
     
+if __name__ == '__main__':
+    import argparse
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--data_dir', type=str, default='.', help='path to data directory')
+    parser.add_argument('--annotations', type=str, default='.', help='path to annotations directory')
+    data=COCODataModule(Cache_dir=parser.parse_args().data_dir,annotations=parser.parse_args().annotations)
+    data.download_data()
+    data.setup()
+    print("Train:",len(data.train))
