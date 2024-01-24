@@ -22,6 +22,7 @@ class LightningCLIPModule(LightningModule):
         self.save_hyperparameters()
         #problem for using this as a inheritance...
         self.clip,_=clip.load("ViT-B/32", device=self.device)
+        self.clip.eval()
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
         self.context_length = self.clip.context_length
         #self.linear.weight=torch.nn.Parameter(self.clip.token_embedding.weight.T)
@@ -115,7 +116,7 @@ class LightningCLIPModule(LightningModule):
         
         return self.calculate_loss(*[*i,*t]).mul(torch.exp(self.logit_scale))
 
-    def training_step(self, batch, batch_idx,optimizer_idx=0):
+    def training_step(self, batch, batch_idx):
 
         pass
 

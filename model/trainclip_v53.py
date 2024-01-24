@@ -155,7 +155,7 @@ class LightningCLIPModule(CKA_base):
         
         return self.calculate_loss(i,c1,c2,c3,c4,c5).mul(torch.exp(self.logit_scale))
 
-    def training_step(self, batch, batch_idx,optimizer_idx=0):
+    def training_step(self, batch, batch_idx):
 
         im,captions= batch[0],batch[1]
         labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0]),:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,non_blocking=True) 

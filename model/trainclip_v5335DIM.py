@@ -162,7 +162,7 @@ class LightningCLIPModule(base):
         return self.calculate_loss(image_features, caption_features1,caption_features2)
         #return self.calculate_lossStock(image_features, caption_features1)[0]*self.logit_scale.exp()
 
-    def training_step(self, batch, batch_idx,optimizer_idx=0):
+    def training_step(self, batch, batch_idx):
 
         im,captions= batch[0],batch[1]
         labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,dtype=torch.float,non_blocking=True) 
