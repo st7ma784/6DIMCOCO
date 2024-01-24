@@ -4,10 +4,11 @@ import torch
 import numpy as np
 from typing import Optional
 from clip.model import LayerNorm
-import clip
 from functools import reduce
 from transformers import AutoModelForMaskedLM,BertConfig
 from model.trainclip_cka_base import LightningCLIPModule as base
+from model.trainclip_cka_base import batch_HSIC2,batch_HSIC3
+
 class LightningCLIPModule(base):
     def __init__(self,
                 

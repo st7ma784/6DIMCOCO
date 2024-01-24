@@ -1,6 +1,4 @@
-from re import T
 
-from regex import E
 from model.trainclip_v5335DIM import LightningCLIPModule as base 
 import torch
 from transformers import AutoModelForMaskedLM

@@ -11,7 +11,6 @@ from sklearn.linear_model import LogisticRegression
 from model.LossCalculation import get_loss_fn 
 from model.Projection import get_proj_fn
 import seaborn as sns
-from model.LossCalculation import get_loss_calc
 
 class LightningCLIPModule(LightningModule):
     def __init__(self,

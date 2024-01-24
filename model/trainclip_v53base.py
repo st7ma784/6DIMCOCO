@@ -1,20 +1,11 @@
-
-from cProfile import label
-import pytorch_lightning
-from pytorch_lightning import LightningModule
 import torch.nn as nn
 import torch
 import numpy as np
-from torch.optim.lr_scheduler import ReduceLROnPlateau
 from typing import Optional
 from clip.model import Transformer,LayerNorm,VisionTransformer
 from functools import partial
-import clip
-from warnings import warn
-import matplotlib.pyplot as plt
-from zmq import has
-from CKA_test import add_colorbar 
-from sklearn.linear_model import LogisticRegression
+from model.trainclip_cka_base import batch_HSIC2,batch_HSIC3
+
 from model.trainclip_cka_base import LightningCLIPModule as base
 class LightningCLIPModule(base):
     def __init__(self,

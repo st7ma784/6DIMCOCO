@@ -1,19 +1,5 @@
 from model.nargsLossCalculation import Fast_loss_Hdim
-import pytorch_lightning
-from pytorch_lightning import LightningModule
-import torch.nn as nn
 import torch
-import numpy as np
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-from typing import Optional
-from clip.model import Transformer,LayerNorm,VisionTransformer
-from functools import partial,reduce
-import clip
-from warnings import warn
-import matplotlib.pyplot as plt
-from CKA_test import add_colorbar 
-from sklearn.linear_model import LogisticRegression
-from sklearn.cluster import KMeans
 from model.trainclip_v53 import LightningCLIPModule
 
 
