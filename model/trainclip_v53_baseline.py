@@ -8,16 +8,12 @@ torch.autograd.set_detect_anomaly(True)
 class BaselineLightningCLIPModule(LightningCLIPModule):
    
 
-    def forward(self, im, captions1, captions2, captions3, captions4, captions5):
+    def forward(self, im, *captions):
         image_features=self.encode_image(im)
-        caption_features1=self.encode_text(captions1)
-        caption_features2=self.encode_text(captions2)
-        caption_features3=self.encode_text(captions3)
-        caption_features4=self.encode_text(captions4)
-        caption_features5=self.encode_text(captions5)
+        caption_features=[self.encode_text(c) for c in captions]
 
-        [i],[c1,c2,c3,c4,c5]=self.projection(self.text_projection,im=[image_features],text=[caption_features1,caption_features2,caption_features3,caption_features4,caption_features5])
-        logits=Fast_loss_Hdim(i,c1,c2,c3,c4,c5)
+        [i],captions=self.projection(self.text_projection,im=[image_features],text=caption_features)
+        logits=Fast_loss_Hdim(i,*captions)
         return logits
 
     def on_train_epoch_start(self) -> None:
@@ -41,7 +37,7 @@ class BaselineLightningCLIPModule(LightningCLIPModule):
 
         im,captions= batch[0],batch[1]
 
-        logits=self(im,captions[:,0],captions[:,1],captions[:,2],captions[:,3],captions[:,4])
+        logits=self(im,*[captions[:,i] for i in range(captions.shape[1])])*self.logit_scale.exp()
         labels=torch.arange(logits.shape[0],dtype=torch.long,device=self.device).unsqueeze(1).repeat(1,logits.shape[-1])
 
         self.log("first logit",logits[0,0].mean(),enable_graph=False)

@@ -143,24 +143,19 @@ class LightningCLIPModule(CKA_base):
 
 
     # @torch.jit.script
-    def forward(self, im, captions1, captions2, captions3, captions4, captions5):
+    def forward(self, im, *captions):
         image_features=self.encode_image(im)
-        caption_features1=self.encode_text(captions1)
-        caption_features2=self.encode_text(captions2)
-        caption_features3=self.encode_text(captions3)
-        caption_features4=self.encode_text(captions4)
-        caption_features5=self.encode_text(captions5)
-
-        [i],[c1,c2,c3,c4,c5]=self.projection(self.text_projection,im=[image_features],text=[caption_features1,caption_features2,caption_features3,caption_features4,caption_features5])
+        caption_features=[self.encode_text(c) for c in captions]
+        [i],captions=self.projection(self.text_projection,im=[image_features],text=caption_features)
         
-        return self.calculate_loss(i,c1,c2,c3,c4,c5).mul(torch.exp(self.logit_scale))
+        return self.calculate_loss(i,*captions).mul(torch.exp(self.logit_scale))
 
     def training_step(self, batch, batch_idx):
 
         im,captions= batch[0],batch[1]
         labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0]),:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,non_blocking=True) 
 
-        logits=self(im,captions[:,0],captions[:,1],captions[:,2],captions[:,3],captions[:,4])
+        logits=self(im,*[captions[:,i] for i in range(captions.shape[1])])
         self.log("first logit",logits[0,0,0,0,0,0],enable_graph=False)
         self.log("BAD logit",logits[1,2,3,4,5,0],enable_graph=False)
         # The idea is that good logits are 1s,   bad should be -1s... so if logits are coming back as ~6000....
@@ -179,15 +174,20 @@ class LightningCLIPModule(CKA_base):
             #self.log("absdeltamaskVal={}".format(mask),torch.sub(loss,loss[self.Lossmasks==mask]),enable_graph=False, rank_zero_only=True)
         
       
-        lossim = self.loss(logits, labels,alpha=self.alpha)
-            
         
-        loss1 = self.loss(logits.permute(1,2,3,4,5,0), labels,alpha=self.alpha)
-        loss2 = self.loss(logits.permute(2,3,4,5,0,1), labels,alpha=self.alpha)
-        loss3 = self.loss(logits.permute(3,4,5,0,1,2), labels,alpha=self.alpha)
-        loss4 = self.loss(logits.permute(4,5,0,1,2,3), labels,alpha=self.alpha)
-        loss5 = self.loss(logits.permute(5,0,1,2,3,4), labels,alpha=self.alpha)
-        loss=self.meanloss(I=[lossim],T=[loss1,loss2,loss3,loss4,loss5]).mean()
+        n_dims=captions.shape[1]+1
+        dims=np.arange(n_dims).repeat(n_dims).reshape(n_dims,n_dims)
+        dims_=np.arange(n_dims)
+        dims_=np.expand_dims(dims_,axis=0)
+        permutes=dims+dims_
+        permutes=permutes%n_dims
+        #create a list of [0,1,2,3,4,5] and rotated versions of it.
+
+
+        
+        losses = [self.loss(logits.permute(*i), labels,alpha=self.alpha) for i in permutes]
+        
+        loss=self.meanloss(I=[losses[0]],T=losses[1:]).mean()
       
         self.log('train_loss', loss, prog_bar=True,enable_graph=False, rank_zero_only=True)
         

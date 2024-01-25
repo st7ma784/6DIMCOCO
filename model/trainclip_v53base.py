@@ -103,26 +103,19 @@ class LightningCLIPModule(base):
   
 
     # @torch.jit.script
-    def forward(self, im, captions1, captions2, captions3, captions4, captions5):
+    def forward(self, im, *captions):
         image_features=self.encode_image(im)
-        caption_features1=self.encode_text(captions1)
-        caption_features2=self.encode_text(captions2)#
-        caption_features3=self.encode_text(captions3)#
-        caption_features4=self.encode_text(captions4)#
-        caption_features5=self.encode_text(captions5)#
-
+        caption_features=[self.encode_text(c) for c in captions]
+       
         if self.projection=="inv":
             image_features=image_features@ self.text_projection
         elif self.projection=="iinv":
             image_features=image_features@torch.inverse(self.text_projection)
         elif self.projection=="None":
-            caption_features1=caption_features1@self.text_projection
-            caption_features2=caption_features2@self.text_projection#
-            caption_features3=caption_features3@self.text_projection# 
-            caption_features4=caption_features4@self.text_projection#
-            caption_features5=caption_features5@self.text_projection#       
+            caption_features_p=[c @ self.text_projection for c in caption_features]
+            
         
-        return self.calculate_lossStock2(image_features, caption_features1,caption_features2,caption_features3,caption_features4,caption_features5)
+        return self.calculate_lossStock2(image_features, *caption_features_p)
         #return self.calculate_lossStock(image_features, caption_features1)[0]*self.logit_scale.exp()
         
     def training_step(self, batch, batch_idx):
@@ -130,7 +123,7 @@ class LightningCLIPModule(base):
         labels=torch.arange(batch[0].shape[0],device=self.device)
         im,captions= batch[0],batch[1]
         
-        logitsI,logits=self(im,captions[:,0],captions[:,1],captions[:,2],captions[:,3],captions[:,4])
+        logitsI,logits=self(im,*[captions[:,i] for i in range(captions.shape[1])])
         self.log("first logit",logits[0,0],enable_graph=False)
         self.log("BAD logit",logits[0,1],enable_graph=False)
         self.log("logit scale",self.logit_scale.exp())

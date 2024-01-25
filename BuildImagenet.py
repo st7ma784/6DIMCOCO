@@ -1,7 +1,7 @@
 import os
 from argparse import ArgumentParser
 from typing import Any, Callable, Optional
-
+import asyncio
 from pytorch_lightning import LightningDataModule
 from multiprocessing import Pool
 from pySmartDL import SmartDL
@@ -181,6 +181,8 @@ class ImagenetDataModule(LightningDataModule):
                 rm $file
                 
         '''
+        asyncio.run(self.extract_files(os.path.join(data_path,"ImageNet-2012","train")))
+       
         for file in os.listdir(os.path.join(data_path,"ImageNet-2012","train")):
             if file.endswith(".tar"):
                 filename=file[:-4]
@@ -192,8 +194,26 @@ class ImagenetDataModule(LightningDataModule):
                 #do the following with tarfile
                 #os.system("tar --touch -xvf {} -C {}".format(file,filename))
                 #os.system("rm {}".format(file))
-                tarfile.open(file,"r").extractall(filename)
-                os.remove(file)
+                with tarfile.open(os.path.join(data_path,"ImageNet-2012","train",file)) as t:
+                    t.extractall(os.path.join(data_path,"ImageNet-2012","train",filename))
+                try:
+                    os.remove(os.path.join(data_path,"ImageNet-2012","train",file))
+                except:
+                    pass
+    async def extract_files(self,dir):
+        file_list = os.listdir(dir)
+        #filter list by .tar
+        file_list=list(filter(lambda x: x.endswith(".tar"),file_list))
+        for file in file_list:
+            await self.extract_tar(os.path.join(dir,file))
+
+    async def extract_tar(self,file):
+        filename=file[:-4]
+        if not os.path.exists(filename):
+            os.makedirs(filename,exist_ok=True)
+        tarfile.open(file).extractall(filename)
+        os.remove(file)
+
     def fast_resize(self,dir):
         '''resize all images in a directory to 224x224'''
         #we will use PIL to resize images to 224x224 and save them in a new directory
@@ -205,12 +225,7 @@ class ImagenetDataModule(LightningDataModule):
 
         loop.run_until_complete(self.run(dir,new_dir,size=224))
         loop.close()
-    async def run(self,dir,new_dir,size=224):
-        queue = asyncio.Queue()
-        consumer = asyncio.ensure_future(self.consume(queue, new_dir, size))
-        await self.produce(queue, dir)
-        await queue.join()
-        consumer.cancel()
+   
 
     async def produce(self,queue, dir):
         #nested directory to produce images from,

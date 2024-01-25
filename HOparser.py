@@ -30,6 +30,7 @@ class parser(HyperOptArgumentParser):
         self.opt_list("--num_trials", default=0, type=int, tunable=False)
         #self.opt_range('--neurons', default=50, type=int, tunable=True, low=100, high=800, nb_samples=8, log_base=None)
         self.opt_list("--dims",default=3, type=float, options=[3.0,4.0,3.5,6.0,0], tunable=True)
+        self.opt_list("--cn",default=False,type=bool,options=[True,False], tunable=True)
 
 
 # Testing to check param outputs

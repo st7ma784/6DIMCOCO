@@ -128,7 +128,10 @@ class LightningCLIPModule(base):
 
 
     # @torch.jit.script
-    def forward(self, im, captions1, captions2, captions3, captions4, captions5):
+    def forward(self, im, *captions):
+        captions1=captions[0]
+        captions2=captions[1]
+
         image_features=self.clip.encode_image(im)
         caption_features1=self.clip.encode_text(captions1)
         caption_features2=self.encode_text(captions2)#
@@ -151,7 +154,7 @@ class LightningCLIPModule(base):
         im,captions= batch[0],batch[1]
         labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,non_blocking=True) 
 
-        logits=self(im,captions[:,0],captions[:,1],captions[:,2],captions[:,3],captions[:,4])*self.logit_scale.exp()
+        logits=self(im,*[captions[:,i] for i in range(captions.shape[1])])*self.logit_scale.exp()
         self.log("first logit",logits[0,0,0],enable_graph=False)
         self.log("BAD logit",logits[0,1,2],enable_graph=False)
         self.log("logit scale",self.logit_scale.exp())
@@ -160,14 +163,23 @@ class LightningCLIPModule(base):
         #  Option 1: divide down.
         #  Option 2: 1- output...
         # option 3: logarithmic functions? 
-        lossim = self.loss(logits, labels,alpha=self.alpha)
-            
         
-        loss1 = self.loss(logits.permute(1,2,0), labels,alpha=self.alpha)
-        loss2 = self.loss(logits.permute(2,0,1), labels,alpha=self.alpha)
-        loss=self.meanloss(I=[lossim],T=[loss1,loss2]).mean()
+        n_dims=len(logits.shape)
+        dims=np.arange(n_dims).repeat(n_dims).reshape(n_dims,n_dims)
+        dims_=np.arange(n_dims)
+        dims_=np.expand_dims(dims_,axis=0)
+        permutes=dims+dims_
+        permutes=permutes%n_dims
+        #create a list of [0,1,2,3,4,5] and rotated versions of it.
+
+
+        
+        losses = [self.loss(logits.permute(*i), labels,alpha=self.alpha) for i in permutes]
+        
+        loss=self.meanloss(I=[losses[0]],T=losses[1:]).mean()
       
         self.log('train_loss', loss, prog_bar=True,enable_graph=False, rank_zero_only=True)
+       
         
         return {"loss": loss}
 

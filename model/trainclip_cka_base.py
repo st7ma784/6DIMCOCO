@@ -107,11 +107,11 @@ class LightningCLIPModule(LightningModule):
         x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)] 
         return x
     # @torch.jit.script
-    def forward(self, im, captions1, captions2, captions3, captions4, captions5):
+    def forward(self, im, *captions):
         image_features=self.encode_image(im)
-        caption_features1=self.clip.encode_text(captions1)
+        caption_features=[self.clip.encode_text(c) for c in captions]
 
-        i,t=self.projection(self.text_projection,im=[image_features],text=[caption_features1,caption_features2,caption_features3,caption_features4,caption_features5])
+        i,t=self.projection(self.text_projection,im=[image_features],text=caption_features)
         
         return self.calculate_loss(*[*i,*t]).mul(torch.exp(self.logit_scale))
 
