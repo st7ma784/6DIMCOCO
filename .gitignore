@@ -154,3 +154,4 @@ tb_logs/*
 /models--openai--clip-vit-base-patch32
 artifacts/*/Im Embeddings.table.json
 results/*
+maskStack*.stl

@@ -175,6 +175,10 @@ class LightningCLIPModule(LightningModule):
             self.projection_fn=get_proj_fn(self.projection)
         else:
             self.projection_fn=self.projection
+
+        if hasattr(self,"alpha"):
+            self.logger.log_text("mask weights",columns=self.masks.tolist(),data=[self.alpha.tolist()])
+            self.logger.log_text("effective weights", columns=self.masks.tolist(),data=[torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True)).tolist()])
     def validation_step(self,batch,*args):
         #do stock loss here
        

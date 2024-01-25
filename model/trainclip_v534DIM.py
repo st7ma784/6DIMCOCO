@@ -27,7 +27,7 @@ class LightningCLIPModule(base):
             self.label=torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.ones(self.hparams.batch_size,dtype=torch.float,device=self.device))) )           #self.label=(self.label*2)-1 This makes loss negative! 
             print("using labelsv2: ", self.label[:2,:2,:2,:2])
         self.pruneLabels=  len(self.label.shape)>=4
-
+        
         self.label=torch.nan_to_num(self.label)
     def encode_text(self, text):
         
@@ -93,7 +93,7 @@ class LightningCLIPModule(base):
         #labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,non_blocking=True) 
         else:
             labels=self.label.to(self.device,non_blocking=True)
-        logits=self(im,*[captions[:,i] for i in captions.shape[1]])*self.logit_scale.exp()
+        logits=self(im,*[captions[:,i] for i in range(captions.shape[1])])*self.logit_scale.exp()
         self.log("first logit",logits[0,0,0,0],enable_graph=False)
         self.log("BAD logit",logits[0,1,2,3],enable_graph=False)
         self.log("logit scale",self.logit_scale.exp())

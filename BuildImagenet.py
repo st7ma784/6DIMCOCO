@@ -150,7 +150,8 @@ class ImagenetDataModule(LightningDataModule):
             files=list(filter(lambda x: x.endswith(".tar"),files))
             with Pool(16) as executor:
                 executor.map(self.extract_tar,zip(files,[os.path.join(data_path,"ImageNet-2012","train")]*len(files)))
-
+            for file in files:
+                os.remove(os.path.join(data_path,"ImageNet-2012","train",file))
         #check if val directory exists
         os.makedirs(os.path.join(data_path,"ImageNet-2012","val"),exist_ok=True)
 
@@ -163,8 +164,8 @@ class ImagenetDataModule(LightningDataModule):
             #extract in a multithreaded way
             with Pool(16) as executor:
                 executor.map(self.extract_tar,files,[os.path.join(data_path,"ImageNet-2012","val")]*len(files))
-      
-        if len(os.listdir(os.path.join(data_path,"ImageNet-2012","val"))) == 0:
+            for file in files:
+                os.remove(os.path.join(data_path,"ImageNet-2012","val",file))
             os.system("cp {} {}".format(os.path.join("APCT","prepare","val_prepare.sh"),os.path.join(data_path,"ImageNet-2012","val")))
             os.system("cd {} && bash val_prepare.sh {}".format(os.path.join(data_path,"ImageNet-2012","val"), os.path.join(data_path,"ImageNet-2012","val")))
         #do same for train 
@@ -181,25 +182,25 @@ class ImagenetDataModule(LightningDataModule):
                 rm $file
                 
         '''
-        asyncio.run(self.extract_files(os.path.join(data_path,"ImageNet-2012","train")))
+        #asyncio.run(self.extract_files(os.path.join(data_path,"ImageNet-2012","train")))
        
-        for file in os.listdir(os.path.join(data_path,"ImageNet-2012","train")):
-            if file.endswith(".tar"):
-                filename=file[:-4]
-                if not os.path.exists(filename):
-                    os.makedirs(filename,exist_ok=True)
-                # else:
-                #     #do os.system("rm -rf {}".format(filename)) with shutil.rmtree
-                #     os.remove(filename)
-                #do the following with tarfile
-                #os.system("tar --touch -xvf {} -C {}".format(file,filename))
-                #os.system("rm {}".format(file))
-                with tarfile.open(os.path.join(data_path,"ImageNet-2012","train",file)) as t:
-                    t.extractall(os.path.join(data_path,"ImageNet-2012","train",filename))
-                try:
-                    os.remove(os.path.join(data_path,"ImageNet-2012","train",file))
-                except:
-                    pass
+        # for file in os.listdir(os.path.join(data_path,"ImageNet-2012","train")):
+        #     if file.endswith(".tar"):
+        #         filename=file[:-4]
+        #         if not os.path.exists(os.path.join(data_path,"ImageNet-2012","train",filename)):
+        #             os.makedirs(os.path.join(data_path,"ImageNet-2012","train",filename),exist_ok=True)
+        #         # else:
+        #         #     #do os.system("rm -rf {}".format(filename)) with shutil.rmtree
+        #         #     os.remove(filename)
+        #         #do the following with tarfile
+        #         #os.system("tar --touch -xvf {} -C {}".format(file,filename))
+        #         #os.system("rm {}".format(file))
+        #         with tarfile.open(os.path.join(data_path,"ImageNet-2012","train",file)) as t:
+        #             t.extractall(os.path.join(data_path,"ImageNet-2012","train",filename))
+        #         try:
+        #             os.remove(os.path.join(data_path,"ImageNet-2012","train",file))
+        #         except:
+        #             pass
     async def extract_files(self,dir):
         file_list = os.listdir(dir)
         #filter list by .tar
@@ -268,6 +269,7 @@ class ImagenetDataModule(LightningDataModule):
 if __name__ == '__main__':
     #add arg parser
     from argparse import ArgumentParser
+    from tqdm import tqdm
     parser = ArgumentParser(description='Prepare ImageNet dataset')
     #add arguments data_path 
     parser.add_argument('--data_path', type=str, default='/datasets3', help='path to data directory')
@@ -275,15 +277,15 @@ if __name__ == '__main__':
     dm = ImagenetDataModule(data_dir=path)
     dm.prepare_data()
     dm.setup()
-    for batch in dm.train_dataloader():
-        print(batch[0].shape)
-        break
-    for batch in dm.val_dataloader():
-        print(batch[0].shape)
-        break
-    for batch in dm.test_dataloader():
-        print(batch[0].shape)
-        break
+    for batch in tqdm(dm.train_dataloader()):
+        tqdm.write(str(batch[0].shape))
+        
+    for batch in tqdm(dm.val_dataloader()):
+        tqdm.write(str(batch[0].shape))
+        
+    for batch in tqdm(dm.test_dataloader()):
+        tqdm.write(str(batch[0].shape))
+
 #    print(dm.test_dataloader()[0])
 #    print(dm.val_dataloader()[0])
 #    print(dm.train_dataloader()[0])
