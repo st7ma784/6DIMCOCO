@@ -1,13 +1,15 @@
 
-from cgi import test
+from functools import reduce
+from operator import add
 from model.trainclip_v5335DIM import LightningCLIPModule as base 
 import torch
-from transformers import AutoModelForMaskedLM
+from transformers import AutoModelForMaskedLM,AutoTokenizer
 import numpy as np
 class LightningCLIPModule(base):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.transformerModel=AutoModelForMaskedLM.from_pretrained("bert-base-uncased",return_dict=True)
+        self.tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
         if kwargs["exactlabels"]==1:
             with torch.no_grad():
                 testBatch=torch.rand(self.hparams.batch_size,self.transformer_width,device=self.device)*2 -1
@@ -120,5 +122,91 @@ class LightningCLIPModule(base):
 
         return {"loss": loss}
 
+    def on_test_epoch_start(self):
+        super().on_test_epoch_start()
+        self.bertscores = []
+    
+    def test_step(self, batch: dict, batch_idx: int) -> torch.Tensor:
+        """ Post-training evaluation.
+        Args:
+            batch (dict): the data batch
+            batch_idx (int): the batch index
+        Returns:
+            dict: the outputs.
+        """
+        super().test_step(batch, batch_idx)
+        output=self.translate(batch["CN"])
             
+        outs = {}
+        logits = output.logits
+        predictions = self.tokenizer.batch_decode(torch.argmax(logits, dim=-1),
+                                                skip_special_tokens=True)
+        predictions = [pred.strip() for pred in predictions]
 
+        references = self.tokenizer.batch_decode(batch["EN"],
+                                        skip_special_tokens=True)
+        references = [label.strip() for label in references]
+        refs = [[label] for label in references]
+
+        metric = self.getMetric("bertscore")
+        f1 = metric.compute(predictions=predictions,
+                        references=references,
+                        model_type="microsoft/deberta-xlarge-mnli",
+                        lang="en",
+                        device="cuda",
+                        batch_size=48)["f1"]
+        
+        self.bertscores.extend(f1)
+
+    def test_epoch_end(self, outputs: list) -> None:
+        """ Post-training evaluation.
+        Args:
+            outputs (list): the outputs from all batches.
+        """
+        super().test_epoch_end(outputs)
+        BertScore = reduce(add,self.bertscores) / len(self.bertscores)
+        self.log("BertScore", BertScore, prog_bar=True,enable_graph=False, rank_zero_only=True)
+
+import evaluate
+import time
+
+def getMetric(self, metricName: str) -> evaluate.EvaluationModule:
+    """ Gets a metric from HuggingFace's Evaluate API.
+        Tries three times because their network can get flaky when busy.
+        Call me once at the start.
+    Args:
+        metricName (str): the name of the metric to use.
+    Returns:
+        EvaluationModule: the metric.
+    """
+    try:
+        return evaluate.load(metricName)
+    except Exception:
+        time.sleep(60)
+        try:
+            return evaluate.load(metricName)
+        except Exception:
+            time.sleep(60)
+            try:
+                return evaluate.load(metricName)
+            except Exception as e:
+                print(f"could not access HuggingFace {metricName}")
+                raise e
+            
+def getBSf1(metric: evaluate.EvaluationModule,
+            predictions: list,
+            references: list) -> float:
+    # Predictions and references are lists of plaintext tokens
+    f1 = metric.compute(predictions=predictions,
+                    references=references,
+                    model_type="microsoft/deberta-xlarge-mnli", #  Pick a BERT.
+                    lang="en",
+                    device="cuda",
+                    batch_size=48)["f1"]
+    return sum(f1) / len(f1)
+
+
+"""
+    Don't publish this bit.
+
+"""
