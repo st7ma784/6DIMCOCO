@@ -1,4 +1,5 @@
 
+from cgi import test
 from model.trainclip_v5335DIM import LightningCLIPModule as base 
 import torch
 from transformers import AutoModelForMaskedLM
@@ -9,14 +10,16 @@ class LightningCLIPModule(base):
         self.transformerModel=AutoModelForMaskedLM.from_pretrained("bert-base-uncased",return_dict=True)
         if kwargs["exactlabels"]==1:
             with torch.no_grad():
-                testBatch=torch.rand(self.hparams.batch_size,self.transformer_width,device=self.device)
+                testBatch=torch.rand(self.hparams.batch_size,self.transformer_width,device=self.device)*2 -1
+                #norm the batch
+                # testBatch=testBatch/torch.norm(testBatch,dim=-1,keepdim=True)
                 if not kwargs["normlogits"]:
                     testBatch=testBatch/torch.norm(testBatch,dim=-1,keepdim=True)
-                    self.label=self.calculate_loss(testBatch,testBatch,testBatch,testBatch).to(self.device,non_blocking=True)
-                    #convert this to probabilities in range [0,1]
-                    self.label=torch.nn.functional.softmax(self.label)
-                    self.label=torch.nan_to_num(self.label, nan=1.0)
-                    print("using labels: ", self.label[:2,:2,:2,:2])
+                self.label=self.calculate_loss(testBatch,testBatch,testBatch,testBatch).to(self.device,non_blocking=True)
+                #convert this to probabilities in range [0,1]
+                self.label=torch.nn.functional.softmax(self.label)
+                self.label=torch.nan_to_num(self.label, nan=1.0)
+                print("using labels: ", self.label[:2,:2,:2,:2])
         #elif add in the case where using -inf or -1 instead of zeros as below....
         else:
             self.label=torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.ones(self.hparams.batch_size,dtype=torch.float,device=self.device))) )           #self.label=(self.label*2)-1 This makes loss negative! 
