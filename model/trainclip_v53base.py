@@ -197,9 +197,9 @@ class LightningCLIPModule(base):
         loss=loss/2
         loss = loss.mean()
         self.results.append({"loss": loss, "imfeatures":image_features, "tfeatures":captions,"classes":batch[2]})
-        return {"loss": loss, "imfeatures":image_features, "tfeatures":captions,"classes":batch[2]}
-    def on_validation_epoch_end(self,acc_val):
-        super().on_validation_epoch_end(acc_val)
+        return {"loss": loss}
+    def on_validation_epoch_end(self):
+        super().on_validation_epoch_end()
         #step 3, repeat for each previous epoch (as a cum sum?))
 
     def _insert_hooks(self):
