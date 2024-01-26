@@ -14,7 +14,8 @@ class LightningCLIPModule(base):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         config=AutoConfig.from_pretrained("Helsinki-NLP/opus-mt-zh-en")
-        config.decoder_vocab_size=self.clip.vocab_size
+        config.update({"decoder_vocab_size":self.clip.vocab_size})
+        
         
         self.transformerModel=AutoModelForSeq2SeqLM.from_config(config)
 
