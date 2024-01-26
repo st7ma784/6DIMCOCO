@@ -19,9 +19,9 @@ class LightningCLIPModule(base):
             decoder_eos_token_id=self.clip.vocab_size,
             pad_token_id=0,
             activation_dropout=0,
-            activation_function="gelu",
+            activation_function="gelu", #"swish" 
             attention_dropout=0.0,
-            classifier_dropout=0.01,
+            classifier_dropout=0.0,
             d_model=1024,
             decoder_attention_heads=16,
             decoder_ffn_dim=4096,
@@ -29,7 +29,7 @@ class LightningCLIPModule(base):
             decoder_layers=4, #would be higher if I had more VRAM
             decoder_start_token_id=self.clip.vocab_size-1,
             decoder_vocab_size=self.clip.vocab_size,
-            dropout=0.1,
+            dropout=0.0,
             encoder_attention_heads=16,
             encoder_ffn_dim=4096,
             encoder_layerdrop=0.0,
@@ -42,7 +42,7 @@ class LightningCLIPModule(base):
             model_type="marian",
             num_hidden_layers=4,
             scale_embedding=False,
-            share_encoder_decoder_embeddings=True,
+            share_encoder_decoder_embeddings=False,
             transformers_version="4.25.1",
             use_cache=False,
         )
