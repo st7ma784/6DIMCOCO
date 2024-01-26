@@ -116,7 +116,7 @@ class LightningCLIPModule(base):
 
         zeros=np.zeros(len(labels.shape))
         rang=np.arange(len(labels.shape))
-        logits=self(im,*[captions[:,i] for i in captions.shape[1]])*self.logit_scale.exp()
+        logits=self(im,*[captions[:,i] for i in range(captions.shape[1])])*self.logit_scale.exp()
         self.log("first logit",logits[zeros],enable_graph=False)
         self.log("BAD logit",logits[rang],enable_graph=False)
         self.log("logit scale",self.logit_scale.exp())
