@@ -59,17 +59,13 @@ class LightningCLIPModule(base):
         
  
         EOT_indexes=torch.argmax(text,dim=-1)# already tokenized ready to go¬  
-        output = self.translationModel(text,return_dict=True,output_hidden_states=True,output_encoder_states=True)
+        output = self.transformerModel(text,return_dict=True,output_hidden_states=True)
         #output is now in ENGLISH
-        print("output",output.keys())
-        hiddenstates=output.hidden_states[-1]
-        hiddenstates=output.encoder_outputs[-1]
-
         #print("hiddenstates",hiddenstates[-1].shape)
         #check shape is [batch_size, n_ctx, d_model]
         #we want to select the index in n_ctx that corresponds to the EOT tokens... 
         #so we need to find the index of the EOT token in the text, and then select that index from the hidden states
-        encoder_output=hiddenstates[torch.arange(hiddenstates[-1].shape[0]),EOT_indexes,:]
+        encoder_output=output["encoder_last_hidden_state"][torch.arange(output["encoder_last_hidden_state"].shape[0]),EOT_indexes,:]
         #shape should be [batch_size, 1, d_model]
 
         output=torch.nn.functional.gumbel_softmax(output.logits,hard=True,dim=-1)
