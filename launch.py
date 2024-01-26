@@ -89,7 +89,7 @@ def train(config={
                 Cache_dir='.', batch_size=256,ZHtokenizer=None,ENtokenizer=None)
             from BuildCNEvalmsr_zhen_translation_parity import CNDataModule
             from BuildCNEvalUNPC import CNDataModule
-
+            config["precision"]=8
             
         else: 
             from BuildSpainDataSet import COCODataModule

@@ -147,12 +147,16 @@ class LightningCLIPModule(LightningModule):
         return mask
              
     def configure_optimizers(self):
-        
-        optimizer = torch.optim.AdamW(
-            self.parameters(), lr=self.hparams.learning_rate, eps=10e-8,
-            #weight_decay=0.1,
-            #betas=(0.9, 0.95),
-            )
+        if self.hparams.precision==8:
+            from model.LionOptimizer import Lion as lion
+            #use lion optimizer
+            optimizer=lion(self.parameters(), lr=self.hparams.learning_rate)
+        else:
+            optimizer = torch.optim.AdamW(
+                self.parameters(), lr=self.hparams.learning_rate, eps=10e-8,
+                #weight_decay=0.1,
+             #betas=(0.9, 0.95),
+             )
         lr_schedulers = {"scheduler": ReduceLROnPlateau(optimizer), "monitor": "train_loss"}
 
         return [optimizer],[lr_schedulers]
