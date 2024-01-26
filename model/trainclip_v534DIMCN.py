@@ -20,8 +20,6 @@ class LightningCLIPModule(base):
             decoder_eos_token_id=self.clip.vocab_size,
             pad_token_id=0
         )
-        config=config.update({"decoder_vocab_size":self.clip.vocab_size})
-        print("config",config)
         
         self.transformerModel=MarianModel(config)
 
