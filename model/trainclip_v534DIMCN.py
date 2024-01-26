@@ -59,7 +59,7 @@ class LightningCLIPModule(base):
         
  
         EOT_indexes=torch.argmax(text,dim=-1)# already tokenized ready to go¬  
-        output = self.transformerModel(text,return_dict=True,output_hidden_states=True)
+        output = self.transformerModel(input_ids=text,decoder_input_ids=text,return_dict=True,output_hidden_states=True)
         #output is now in ENGLISH
         #print("hiddenstates",hiddenstates[-1].shape)
         #check shape is [batch_size, n_ctx, d_model]
