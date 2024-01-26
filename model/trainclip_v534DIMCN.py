@@ -2,8 +2,6 @@
 from functools import reduce, partial
 from operator import add
 
-from pydash import pad_end
-
 from model.trainclip_v5335DIM import LightningCLIPModule as base 
 import torch
 from transformers import MarianModel,MarianConfig, CLIPTokenizer
@@ -72,7 +70,7 @@ class LightningCLIPModule(base):
         #or decoder inputs= pad tokens? 
         decoder_input_ids=torch.zeros_like(text,dtype=torch.long,device=self.device,requires_grad=True)
         decoder_input_ids[:,0]=self.tokenizer.bos_token_id
-        
+
         output = self.transformerModel(input_ids=text,decoder_input_ids=decoder_input_ids,return_dict=True,output_hidden_states=True)
         #output = self.transformerModel(input_ids=text,decoder_input_ids=,return_dict=True,output_hidden_states=True)
 
