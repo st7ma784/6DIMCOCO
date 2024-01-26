@@ -1,8 +1,7 @@
 
-from functools import reduce
+from functools import reduce, partial
 from operator import add
 
-from pydash import partial
 from model.trainclip_v5335DIM import LightningCLIPModule as base 
 import torch
 from transformers import AutoModelForSeq2SeqLM,AutoTokenizer, AutoConfig, CLIPTokenizer
