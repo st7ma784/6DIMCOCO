@@ -20,7 +20,7 @@ class LightningCLIPModule(base):
             decoder_eos_token_id=self.clip.vocab_size,
             pad_token_id=0
         )
-        
+        self.bos_token_id=self.clip.vocab_size-1
         self.transformerModel=MarianModel(config)
 
         self.exact_labels=kwargs["exactlabels"]
@@ -67,7 +67,7 @@ class LightningCLIPModule(base):
         #or decoder inputs= sot tokens?
         #or decoder inputs= pad tokens? 
         decoder_input_ids=torch.zeros_like(text,dtype=torch.long,device=self.device,requires_grad=False)
-        decoder_input_ids[:,0]=self.tokenizer.bos_token_id
+        decoder_input_ids[:,0]=self.bos_token_id
 
         output = self.transformerModel(input_ids=text,decoder_input_ids=decoder_input_ids,return_dict=True,output_hidden_states=True)
         #output = self.transformerModel(input_ids=text,decoder_input_ids=,return_dict=True,output_hidden_states=True)
