@@ -18,7 +18,7 @@ class LightningCLIPModule(base):
             decoder_bos_token_id=self.clip.vocab_size-1,
             decoder_eos_token_id=self.clip.vocab_size,
             pad_token_id=0,
-            activation_dropout=0.01,
+            activation_dropout=0,
             activation_function="gelu",
             attention_dropout=0.0,
             classifier_dropout=0.01,
