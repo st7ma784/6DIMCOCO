@@ -38,7 +38,7 @@ class LightningCLIPModule(base):
             forced_eos_token_id=0,
             init_std=0.02,
             is_encoder_decoder=True,
-            max_position_embeddings=1024,
+            max_position_embeddings=512,
             model_type="marian",
             num_hidden_layers=12,
             scale_embedding=False,
