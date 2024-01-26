@@ -16,15 +16,15 @@ class LightningCLIPModule(base):
         super().__init__(*args, **kwargs)
         config=AutoConfig.from_pretrained("Helsinki-NLP/opus-mt-zh-en")
         config.decoder_vocab_size=self.clip.vocab_size
-
-        self.transformerModel=AutoModelForSeq2SeqLM(config=config,return_dict=True)
+        
+        self.transformerModel=AutoModelForSeq2SeqLM.from_config(config)
 
         self.exact_labels=kwargs["exactlabels"]
         self.label=self.generate_labels((4,self.hparams.batch_size,self.transformer_width))
         self.pruneLabels=  len(self.label.shape)>=4
 
 
-        if kwargs["gumbel"]:
+        if kwargs.get("gumbel",False):
             self.token_select=partial(torch.nn.functional.gumbel_softmax,hard=True,dim=-1)
         else:
             def token_select(i):
@@ -50,13 +50,19 @@ class LightningCLIPModule(base):
             for i in range(inputshape[0]):
                 label=torch.diag_embed(self.label)
         return torch.nan_to_num(label, nan=0.0)
-        
+    def on_validation_epoch_start(self):
+        pass
+    def on_validation_epoch_end(self):
+        pass
+    def validation_step(self, batch, batch_idx):
+        pass
     def encode_text(self, text):
         
  
         EOT_indexes=torch.argmax(text,dim=-1)# already tokenized ready to go¬  
         output = self.translationModel(text,return_dict=True,output_hidden_states=True,output_encoder_states=True)
         #output is now in ENGLISH
+        print("output",output.keys())
         hiddenstates=output.hidden_states[-1]
         hiddenstates=output.encoder_outputs[-1]
 
@@ -108,10 +114,11 @@ class LightningCLIPModule(base):
             #labels wrong size!!?!
             labels=self.generate_labels((len(captions)+1,self.hparams.batch_size,self.transformer_width)).to(self.device,non_blocking=True)
 
-
+        zeros=np.zeros(len(labels.shape))
+        rang=np.arange(len(labels.shape))
         logits=self(im,*[captions[:,i] for i in captions.shape[1]])*self.logit_scale.exp()
-        self.log("first logit",logits[*np.zeros(len(labels.shape))],enable_graph=False)
-        self.log("BAD logit",logits[*list(np.arange(len(labels.shape)))],enable_graph=False)
+        self.log("first logit",logits[zeros],enable_graph=False)
+        self.log("BAD logit",logits[rang],enable_graph=False)
         self.log("logit scale",self.logit_scale.exp())
 
         # The idea is that good logits are 1s,   bad should be -1s... so if logits are coming back as ~6000....
@@ -141,7 +148,7 @@ class LightningCLIPModule(base):
         return self.translationModel(text,return_dict=True,output_hidden_states=True,output_encoder_states=True)
         
     def on_test_epoch_start(self):
-        super().on_test_epoch_start()
+        # super().on_test_epoch_start()
 
         self.tokenizer =CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32",cache_dir=self.data_dir)
         self.metric=self.getMetric("bertscore")
@@ -155,13 +162,13 @@ class LightningCLIPModule(base):
         Returns:
             dict: the outputs.
         """
-        super().test_step(batch, batch_idx)
-        output=self.translate(batch["CN"])
+        # super().test_step(batch, batch_idx)
+        output=self.translate(batch["zh"])
             
-        outs = {}
+
         logits = output.logits # [batch_size, sequence_length, vocab_size]
         self.translations.extend(torch.argmax(logits, dim=-1))
-        self.references.extend(batch["EN"])
+        self.references.extend(batch["en"])
 
 
     def on_test_epoch_end(self):

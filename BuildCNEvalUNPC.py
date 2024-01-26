@@ -1,26 +1,14 @@
 
-from grpc import stream_stream_rpc_method_handler
-from torchvision import transforms
-from PIL import Image
 import torch     
 import os
-import zipfile
-import tarfile
-import json as js
-from pySmartDL import SmartDL
 import pytorch_lightning as pl
-from torch.utils.data import ConcatDataset
-from torchvision.datasets import CocoCaptions
-from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor, Normalize
-import time
-from pathlib import Path
 from transformers import (
   BertTokenizerFast,
-  AutoModel,
+  CLIPTokenizer
 )
 os.environ["TOKENIZERS_PARALLELISM"]='true'
 
-class MagicSwordCNDataModule(pl.LightningDataModule):
+class CNDataModule(pl.LightningDataModule):
 
     def __init__(self, Cache_dir='.', batch_size=256,ZHtokenizer=None,ENtokenizer=None):
         super().__init__()
@@ -32,7 +20,7 @@ class MagicSwordCNDataModule(pl.LightningDataModule):
             self.ZHtokenizer = ZHtokenizer
         if ENtokenizer is None:
 
-            self.ENtokenizer = BertTokenizerFast.from_pretrained('bert-base-uncased',cache_dir=self.data_dir)
+            self.ENtokenizer =CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32",cache_dir=self.data_dir)
         else:
             self.ENtokenizer = ENtokenizer
     # def train_dataloader(self, B=None):

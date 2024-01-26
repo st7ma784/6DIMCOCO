@@ -9,6 +9,9 @@ def wandbtrain(config=None,dir=None,devices=None,accelerator=None,Dataset=None,p
         config=config.__dict__
         logdir=config.get("log_path",dir)
         wandb.login(key='9cf7e97e2460c18a89429deed624ec1cbfb537bc')
+        #get config cn flag
+        if config.get("cn",False):
+            project+="CNTranslate"
         project+="{}DIM".format(config.get("dims",6)) 
         logtool= pytorch_lightning.loggers.WandbLogger( project=project,entity=entity, save_dir=logdir)
 
@@ -23,7 +26,8 @@ def wandbtrain(config=None,dir=None,devices=None,accelerator=None,Dataset=None,p
 
         run=wandb.init(project=project,entity=entity,name=project,config=config)
         config=run.config.as_dict()
-        
+        if config.get("cn",False):
+            project+="CNTranslate"
         project+="{}DIM".format(config.get("dims",6))
         logtool= pytorch_lightning.loggers.WandbLogger( project=project,entity=entity,experiment=run, save_dir=config.get("log_path",dir))
     
@@ -44,21 +48,24 @@ def train(config={
     version=int(config.get("codeversion",-1))
     
     from pytorch_lightning.callbacks import TQDMProgressBar,EarlyStopping
-    if config.get("dims",6)==3:
-        from model.trainclip_v533DIM import LightningCLIPModule
-    elif config.get("dims",6)==3.5:
-        from model.trainclip_v5335DIM import LightningCLIPModule
-    elif config.get("dims",6)==4:
-        from model.trainclip_v534DIM import LightningCLIPModule
-    elif config.get("dims",6)==-1:
-        from model.trainclip_cka_base import LightningCLIPModule
-    elif config.get("dims",6)==6:
-        from model.trainclip_v53 import LightningCLIPModule
-    elif config.get("dims",6)==0:
-
-        from model.trainclip_v53_baseline import BaselineLightningCLIPModule as LightningCLIPModule
+    if config.get("cn",False):
+        from model.trainclip_v534DIMCN import LightningCLIPModule
     else:
-        raise ValueError("Invalid number of dims")
+        if config.get("dims",6)==3:
+            from model.trainclip_v533DIM import LightningCLIPModule
+        elif config.get("dims",6)==3.5:
+            from model.trainclip_v5335DIM import LightningCLIPModule
+        elif config.get("dims",6)==4:
+            from model.trainclip_v534DIM import LightningCLIPModule
+        elif config.get("dims",6)==-1:
+            from model.trainclip_cka_base import LightningCLIPModule
+        elif config.get("dims",6)==6:
+            from model.trainclip_v53 import LightningCLIPModule
+        elif config.get("dims",6)==0:
+
+            from model.trainclip_v53_baseline import BaselineLightningCLIPModule as LightningCLIPModule
+        else:
+            raise ValueError("Invalid number of dims")
     # from pl_bolts.datamodules import ImagenetDataModule
     model=LightningCLIPModule( train_batch_size=config["batch_size"],
                                 **config)
@@ -71,23 +78,36 @@ def train(config={
     if dir is None:
         dir=config.get("dir",".")
     if Dataset is None:
-        from BuildSpainDataSet import COCODataModule
+        
         
         #Dataset=LaionDataModule(Cache_dir=dir,batch_size=config["batch_size"])
-        Dataset=COCODataModule(Cache_dir=dir,annotations=config.get("annotations",dir),batch_size=config["batch_size"])
-        from BuildImagenet import ImagenetDataModule
-        from pytorch_lightning.strategies import DDPStrategy as DDP
+        if config.get("cn",False):
+            from BuildCNDataset import COCOCNDataModule as COCODataModule
 
-        TestLoader=ImagenetDataModule(
-            data_dir=dir, 
-            meta_dir=dir,
-            num_imgs_per_val_class=50,
-            image_size=224,
-            num_workers=4, 
-            batch_size=config["batch_size"], 
-            shuffle=True,
-            pin_memory=True,
-            drop_last=True)
+            from BuildCNEvalMagicSword import MagicSwordCNDataModule
+            TestLoaderA=MagicSwordCNDataModule(
+                Cache_dir='.', batch_size=256,ZHtokenizer=None,ENtokenizer=None)
+            from BuildCNEvalmsr_zhen_translation_parity import CNDataModule
+            from BuildCNEvalUNPC import CNDataModule
+
+            
+        else: 
+            from BuildSpainDataSet import COCODataModule
+            from BuildImagenet import ImagenetDataModule
+
+            TestLoader=ImagenetDataModule(
+                data_dir=dir, 
+                meta_dir=dir,
+                num_imgs_per_val_class=50,
+                image_size=224,
+                num_workers=4, 
+                batch_size=config["batch_size"], 
+                shuffle=True,
+                pin_memory=True,
+                drop_last=True)
+        Dataset=COCODataModule(Cache_dir=dir,annotations=config.get("annotations",dir),batch_size=config["batch_size"])
+        from pytorch_lightning.strategies import DDPStrategy as DDP
+        
     if devices is None:
         devices=config.get("devices","auto")
     if accelerator is None:
