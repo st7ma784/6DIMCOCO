@@ -2,9 +2,11 @@
 from functools import reduce, partial
 from operator import add
 
+from pydash import pad_end
+
 from model.trainclip_v5335DIM import LightningCLIPModule as base 
 import torch
-from transformers import AutoModelForSeq2SeqLM,AutoTokenizer, AutoConfig, CLIPTokenizer
+from transformers import MarianModel,MarianConfig, CLIPTokenizer
 import numpy as np
 
 import evaluate
@@ -12,12 +14,18 @@ import time
 
 class LightningCLIPModule(base):
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        config=AutoConfig.from_pretrained("Helsinki-NLP/opus-mt-zh-en")
-        config.update({"decoder_vocab_size":self.clip.vocab_size})
+        super().__init__(vocab_size=65001,*args, **kwargs)
+        config=MarianConfig(
+            vocab_size=vocab_size,
+            decoder_vocab_size=self.clip.vocab_size,
+            decoder_bos_token_id=self.clip.vocab_size-1,
+            decoder_eos_token_id=self.clip.vocab_size,
+            pad_token_id=0
+        )
+        config=config.update({"decoder_vocab_size":self.clip.vocab_size})
+        print("config",config)
         
-        
-        self.transformerModel=AutoModelForSeq2SeqLM.from_config(config)
+        self.transformerModel=MarianModel(config)
 
         self.exact_labels=kwargs["exactlabels"]
         self.label=self.generate_labels((4,self.hparams.batch_size,self.transformer_width))
@@ -60,10 +68,12 @@ class LightningCLIPModule(base):
         
  
         EOT_indexes=torch.argmax(text,dim=-1)# already tokenized ready to go¬
-        inputs=text  
         #or decoder inputs= sot tokens?
         #or decoder inputs= pad tokens? 
-        output = self.transformerModel(input_ids=text,decoder_input_ids=text,return_dict=True,output_hidden_states=True)
+        decoder_input_ids=torch.zeros_like(text,dtype=torch.long,device=self.device,requires_grad=True)
+        decoder_input_ids[:,0]=self.tokenizer.bos_token_id
+        
+        output = self.transformerModel(input_ids=text,decoder_input_ids=decoder_input_ids,return_dict=True,output_hidden_states=True)
         #output = self.transformerModel(input_ids=text,decoder_input_ids=,return_dict=True,output_hidden_states=True)
 
         #output is now in ENGLISH
@@ -75,8 +85,7 @@ class LightningCLIPModule(base):
         #shape should be [batch_size, 1, d_model]
 
         output=torch.nn.functional.gumbel_softmax(output.logits,hard=True,dim=-1)
-        #output is the shape sequence_length, batch_size, vocab_sizeZH
-        #we need to convert this back to batch_size, sequence_length, vocab_sizeEN
+
         x=output@self.token_embedding.weight 
         # [batch_size, n_ctx, d_model]
         x = x + self.positional_embedding.type(self.dtype)
