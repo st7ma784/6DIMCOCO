@@ -84,7 +84,7 @@ class COCODataset(CocoCaptions):
                     truncation=True,
                     return_attention_mask = False,   # Construct attn. masks.
                     return_tensors = 'pt',     # Return pytorch tensors.
-        )['input_ids'] for sent in target[:5]],dim=0)
+        )['input_ids'] for sent in target[:2]],dim=0)
         #find last non-zero token
         #index of first 0 is findable with argmin
         indexes=torch.argmin(target,dim=1)
