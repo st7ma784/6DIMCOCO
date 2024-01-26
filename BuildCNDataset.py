@@ -85,8 +85,8 @@ class COCODataset(CocoCaptions):
                     return_attention_mask = False,   # Construct attn. masks.
                     return_tensors = 'pt',     # Return pytorch tensors.
         )['input_ids'] for sent in target[:2]],dim=0)
-        #find last non-zero token
-        #index of first 0 is findable with argmin
+        #if I had more time... this would be fixed to use all the possible annotations 
+        
         indexes=torch.argmin(target,dim=1)
         EOT=indexes-1
         target[:,EOT]=self.tokenizer.vocab_size
