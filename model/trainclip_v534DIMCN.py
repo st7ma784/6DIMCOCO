@@ -4,7 +4,7 @@ from operator import add
 
 from model.trainclip_v5335DIM import LightningCLIPModule as base 
 import torch
-from transformers import MarianModel,MarianConfig, CLIPTokenizer
+from transformers import MarianMTModel,MarianConfig, CLIPTokenizer
 import numpy as np
 
 import evaluate
@@ -47,7 +47,10 @@ class LightningCLIPModule(base):
             use_cache=False,
         )
         self.bos_token_id=self.clip.vocab_size-1
-        self.transformerModel=MarianModel(config)
+        self.transformerModel=MarianMTModel(config)
+        self.transformerModel.train()
+
+
 
         self.exact_labels=kwargs["exactlabels"]
         self.label=self.generate_labels((4,self.hparams.batch_size,self.transformer_width))
