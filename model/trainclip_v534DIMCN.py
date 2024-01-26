@@ -11,8 +11,8 @@ import evaluate
 import time
 
 class LightningCLIPModule(base):
-    def __init__(self, *args, **kwargs):
-        super().__init__(vocab_size=65001,*args, **kwargs)
+    def __init__(self, vocab_size=65001,*args, **kwargs):
+        super().__init__(*args, **kwargs)
         config=MarianConfig(
             vocab_size=vocab_size,
             decoder_vocab_size=self.clip.vocab_size,
