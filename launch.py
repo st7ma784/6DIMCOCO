@@ -85,7 +85,7 @@ def train(config={
             from BuildCNDataset import COCOCNDataModule as COCODataModule
 
             from BuildCNEvalMagicSword import MagicSwordCNDataModule
-            TestLoaderA=MagicSwordCNDataModule(
+            TestLoader=MagicSwordCNDataModule(
                 Cache_dir='.', batch_size=256,ZHtokenizer=None,ENtokenizer=None)
             from BuildCNEvalmsr_zhen_translation_parity import CNDataModule
             from BuildCNEvalUNPC import CNDataModule
