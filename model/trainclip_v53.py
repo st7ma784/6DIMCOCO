@@ -75,7 +75,7 @@ class LightningCLIPModule(CKA_base):
         from model.LossCalculation import calculate_lossStock as sl
         self.calculate_lossStock=sl
         from model.LossCalculation import get_loss_fn 
-        self.calculate_loss=get_loss_fn(logitsversion=logitsversion,norm=normlogits,log=logvariance)
+        self.calculate_loss=get_loss_fn(logitsversion=logitsversion,norm=normlogits,log=logvariance,JSE=kwargs.get("JSE",0))
         # if logitsversion==0:
         #     from model.LossCalculation import calculate_loss as cl
         # elif logitsversion==1: 

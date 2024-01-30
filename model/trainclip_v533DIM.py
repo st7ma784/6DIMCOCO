@@ -76,7 +76,7 @@ class LightningCLIPModule(base):
         self.calculate_lossStock=sl
 
         self.calculate_lossStock2=calculate_lossNormsvc
-        self.calculate_loss=get_loss_fn(logitsversion=logitsversion,norm=normlogits,log=logvariance)
+        self.calculate_loss=get_loss_fn(logitsversion=logitsversion,norm=normlogits,log=logvariance,JSE=kwargs.get("JSE",0))
 
         self.projection=get_proj_fn(projection)
         self.prune=prune

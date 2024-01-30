@@ -81,7 +81,7 @@ class LightningCLIPModule(base):
 
         self.calculate_lossStock2=calculate_lossNormsvc
         from model.nargsLossCalculation import get_loss_fn,get_loss_calc
-        self.calculate_loss=get_loss_fn(logitsversion=logitsversion,norm=normlogits,log=logvariance)
+        self.calculate_loss=get_loss_fn(logitsversion=logitsversion,norm=normlogits,log=logvariance,JSE=kwargs.get("JSE",0))
 
         from model.Projection import get_proj_fn
         self.projection=get_proj_fn(projection)
