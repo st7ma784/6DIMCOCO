@@ -60,9 +60,8 @@ class LightningCLIPModule(base):
         if kwargs.get("gumbel",False):
             self.token_select=partial(torch.nn.functional.gumbel_softmax,hard=True,dim=-1)
         else:
-            def token_select(i):
-                return torch.nn.functional.one_hot(torch.argmax(i),num_classes=self.tokenizer.vocab_size).type(self.dtype)
-            self.token_select=token_select
+            self.token_select=partial(torch.nn.functional.softmax,dim=-1)
+            
     def generate_labels(self, inputshape):
         if self.exact_labels==1:
             with torch.no_grad():
