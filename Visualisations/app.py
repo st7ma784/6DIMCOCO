@@ -146,8 +146,6 @@ if __name__ == "__main__":
 
 
 
-    functions={i:get_loss_fn(i,norm=False) for i in range(1,17)}
-    normedfunctions={i:get_loss_fn(i,norm=True) for i in range(1,17)}
     usefulpoints={"mean":mean,"variance":variance, "std":std,"l2mean":l2mean,"l3mean":l3mean,"lsqrtmean":lsqrtmean,"dynmean":dynmean}
     app = Flask(__name__,template_folder='.')
     
@@ -172,11 +170,9 @@ if __name__ == "__main__":
             out={name:(torch.nan_to_num(func(xys))*wh).tolist() for name,func in usefulpoints.items()}
             #getting error that > not supported between instances of int and str??
 
-        normed=data['norm']
-        if normed:
-            out.update({str(name):(torch.nan_to_num(func(*xys))).tolist() for name,func in normedfunctions.items()})
-        else:
-            out.update({str(name):(torch.nan_to_num(func(*xys))).tolist() for name,func in functions.items()})
+        functions={i:get_loss_fn(i,norm=data["norm"],JSE=1 if data["jse"] else 0) for i in range(1,17)}
+        out.update({str(name):(torch.nan_to_num(func(*xys))).tolist() for name,func in functions.items()})
+        
         return jsonify(out)
     
 
@@ -189,8 +185,10 @@ if __name__ == "__main__":
         xys=torch.stack([torch.tensor([[x,y]],requires_grad=False)for x,y in zip(x,y)])-wh
         xys=xys/wh         
         normed=data['norm']
+        jse=1 if data["jse"] else 0
         zip_buffer = BytesIO()
-        funclist=normedfunctions if normed else functions
+        funclist={i:get_loss_fn(i,norm=data["norm"],JSE=jse) for i in range(1,17)}
+
 
         with zipfile.ZipFile(zip_buffer, "a", compression=zipfile.ZIP_DEFLATED,allowZip64=False) as zip_file:
             for name, func in funclist.items():
