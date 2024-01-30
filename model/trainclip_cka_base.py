@@ -8,7 +8,7 @@ import clip
 import matplotlib.pyplot as plt
 from CKA_test import add_colorbar 
 from sklearn.linear_model import LogisticRegression
-from model.LossCalculation import get_loss_fn 
+from model.nargsLossCalculation import get_loss_fn 
 from model.Projection import get_proj_fn
 import seaborn as sns
 
