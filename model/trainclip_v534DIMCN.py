@@ -109,7 +109,7 @@ class LightningCLIPModule(base):
         encoder_output=output["encoder_last_hidden_state"][torch.arange(output["encoder_last_hidden_state"].shape[0]),EOT_indexes,:]
         #shape should be [batch_size, 1, d_model]
 
-        output=torch.nn.functional.gumbel_softmax(output.logits,hard=True,dim=-1)
+        output=self.token_select(output.logits)
 
         x=output@self.token_embedding.weight 
         # [batch_size, n_ctx, d_model]
