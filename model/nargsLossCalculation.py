@@ -14,8 +14,7 @@ This code is a copy of the LossCalculation.py file, but with the loss functions 
 
 
 def calc_mean(*vecs):
-    return reduce(torch.add,vecs)/len(vecs)
-
+    return reduce(torch.add,vecs)
 def JSE_mean(*vecs):
    
    
@@ -417,7 +416,7 @@ def get_loss_calc(reduction='sum',ver=0,mask=None):
 
 
 def calc_mean(*vecs):
-    return reduce(torch.add,vecs)/len(vecs)
+    return reduce(torch.add,vecs)
 
 def JSE_mean(*vecs):
    
