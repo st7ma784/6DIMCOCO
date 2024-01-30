@@ -59,23 +59,23 @@ class LightningCLIPModule(base):
             activation_function="gelu", #"swish" 
             attention_dropout=0.0,
             classifier_dropout=0.0,
-            d_model=2*self.transformer_width,
+            d_model=512,
             decoder_attention_heads=16,
-            decoder_ffn_dim=8*self.transformer_width,
+            decoder_ffn_dim=512,
             decoder_layerdrop=0.0,
             decoder_layers=4, #would be higher if I had more VRAM
             decoder_start_token_id=self.clip.vocab_size-1,
             decoder_vocab_size=self.clip.vocab_size,
             dropout=0.0,
             encoder_attention_heads=16,
-            encoder_ffn_dim=8*self.transformer_width,
+            encoder_ffn_dim=512,
             encoder_layerdrop=0.0,
             encoder_layers=4, #would be higher if I had more VRAM
             eos_token_id=self.clip.vocab_size,
             forced_eos_token_id=0,
             init_std=0.02,
             is_encoder_decoder=True,
-            max_position_embeddings=2*self.transformer_width,
+            max_position_embeddings=512,
             model_type="marian",
             num_hidden_layers=4,
             scale_embedding=False,
@@ -164,7 +164,7 @@ class LightningCLIPModule(base):
     def encode_text(self, text):
         decoder_ids=torch.zeros_like(text)
         decoder_ids[:,0]=self.clip.vocab_size-1
-        output = self.transformerModel(text, decoder_input_ids=decoder_ids)
+        output = self.transformerModel(text, decoder_input_ids=decoder_ids,)
         #take the output probabilities as a vector, 
         output=self.token_select(output.logits)
         x=output@self.token_embedding.weight 
