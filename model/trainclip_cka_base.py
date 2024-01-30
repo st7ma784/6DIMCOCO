@@ -50,7 +50,27 @@ class LightningCLIPModule(LightningModule):
         self.positional_embedding=self.clip.positional_embedding
         self.ln_final=self.clip.ln_final
  
- 
+     
+    def generate_labels(self, inputshape):
+        if self.exact_labels==1:
+            with torch.no_grad():
+                testBatch=torch.rand((inputshape[1],self.transformer_width),device=self.device)*2 -1
+                #norm the batch
+
+                # testBatch=testBatch/torch.norm(testBatch,dim=-1,keepdim=True)
+                testBatch=testBatch/torch.norm(testBatch,dim=-1,keepdim=True)
+
+                label=self.calculate_loss(*[testBatch for _ in range(inputshape[0])]).to(self.device,non_blocking=True)
+                #convert this to probabilities in range [0,1]
+                label=torch.nn.functional.softmax(self.label)
+                label=torch.nan_to_num(self.label, nan=1.0)
+                
+        #elif add in the case where using -inf or -1 instead of zeros as below....
+        else:
+            label=torch.ones(self.hparams.batch_size,dtype=torch.float,device=self.device)
+            for i in range(inputshape[0]):
+                label=torch.diag_embed(self.label)
+        return torch.nan_to_num(label, nan=0.0)
     def initialize_parameters(self):
         if self.token_embedding:
             nn.init.normal_(self.token_embedding.weight, std=0.02)

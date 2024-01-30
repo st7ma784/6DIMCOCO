@@ -3,13 +3,12 @@ from functools import reduce
 from operator import add
 from model.trainclip_v5335DIM import LightningCLIPModule as base 
 import torch
-from transformers import AutoModelForMaskedLM,AutoTokenizer
+from transformers import AutoModelForMaskedLM,CLIPTokenizer
 import numpy as np
 class LightningCLIPModule(base):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.transformerModel=AutoModelForMaskedLM.from_pretrained("bert-base-uncased",return_dict=True)
-        self.tokenizer = AutoTokenizer.from_pretrained("bert-base-uncased")
+        self.tokenizer = CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32")
         if kwargs["exactlabels"]==1:
             with torch.no_grad():
                 testBatch=torch.rand(self.hparams.batch_size,self.transformer_width,device=self.device)*2 -1
@@ -30,29 +29,21 @@ class LightningCLIPModule(base):
         
         self.label=torch.nan_to_num(self.label)
     def encode_text(self, text):
-        
-        #keep note of the output of the translation model, 
-        # but also the intermediate encoder outputs, and
-        #  we're going to use the same trick as CLIP does
-        #  for summarizing based on the EOT token.
-        #assume text is [batch_size, n_ctx]
-        print("text shape",text.shape)
+ 
+        EOT_indexes=torch.argmax(text,dim=-1)# already tokenized ready to go¬
+        #or decoder inputs= sot tokens?
+        #or decoder inputs= pad tokens? 
+        decoder_input_ids=torch.zeros_like(text)
+        decoder_input_ids[:,0]=self.bos_token_id
 
-        EOT_indexes=torch.argmax(text,dim=-1) 
-        print("EOT_indexes",EOT_indexes.shape)
-        output = self.translationModel(text,return_dict=True,output_hidden_states=True)
-        #take the output probabilities as a vector, 
-        #print(output.keys())
-        hiddenstates=output.hidden_states
-        #print(hiddenstates[0].shape) #torch.Size([10, 77, 512])
-        print("hiddenstates",hiddenstates[-1].shape)
-        #check shape is [batch_size, n_ctx, d_model]
-        #we want to select the index in n_ctx that corresponds to the EOT tokens... 
-        #so we need to find the index of the EOT token in the text, and then select that index from the hidden states
-        encoder_output=hiddenstates[-1][torch.arange(hiddenstates[-1].shape[0]),EOT_indexes,:]
+        output = self.transformerModel(input_ids=text,decoder_input_ids=decoder_input_ids,return_dict=True,output_hidden_states=True)
+        #output = self.transformerModel(input_ids=text,decoder_input_ids=,return_dict=True,output_hidden_states=True)
+
+        encoder_output=output["encoder_last_hidden_state"][torch.arange(output["encoder_last_hidden_state"].shape[0]),EOT_indexes,:]
         #shape should be [batch_size, 1, d_model]
 
-        output=torch.nn.functional.gumbel_softmax(output.logits,hard=True,dim=-1)
+        output=self.token_select(output.logits)
+
         x=output@self.token_embedding.weight 
         # [batch_size, n_ctx, d_model]
         x = x + self.positional_embedding.type(self.dtype)
@@ -65,35 +56,35 @@ class LightningCLIPModule(base):
 
 
     # @torch.jit.script
-    def forward(self, im, captions1, captions2, captions3, captions4, captions5):
+    def forward(self, im, captions1,*captions):
         image_features=self.clip.encode_image(im)
         caption_features1=self.clip.encode_text(captions1)
-        caption_features2,hidden_states=self.encode_text(captions2)#
-      
-
+        features=[self.encode_text(c) for c in captions]
+        caption_features=[f[0] for f in features]+[f[1] for f in features]
         if self.projection=="inv":
             image_features=image_features@ self.text_projection
         elif self.projection=="iinv":
             image_features=image_features@torch.inverse(self.text_projection)
         elif self.projection=="None":
-            caption_features1=caption_features1@self.text_projection
-            caption_features2=caption_features2@self.text_projection#
-            hidden_states=hidden_states@self.text_projection     
+            caption_features=[c@self.text_projection for c in caption_features]
           
-        return self.calculate_loss(image_features, caption_features1,caption_features2,hidden_states)
+        return self.calculate_loss(image_features, caption_features1,*caption_features)
         #return self.calculate_lossStock(image_features, caption_features1)[0]*self.logit_scale.exp()
 
-  
+
     def training_step(self, batch, batch_idx):
 
         im,captions= batch[0],batch[1]
         assert len(self.label.shape)>=4
-        if self.pruneLabels:
-            labels=self.label[:(im.shape[0]),:(captions.shape[0]),:(captions.shape[0]),:(captions.shape[0])].to(self.device,non_blocking=True)
-        #labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,non_blocking=True) 
-        else:
-            labels=self.label.to(self.device,non_blocking=True)
+
         logits=self(im,*[captions[:,i] for i in range(captions.shape[1])])*self.logit_scale.exp()
+
+        try:
+            labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,non_blocking=True) 
+        except:
+            #labels wrong size!!?!
+            labels=self.generate_labels((len(logits.shape),self.hparams.batch_size,self.transformer_width)).to(self.device,non_blocking=True)
+
         self.log("first logit",logits[0,0,0,0],enable_graph=False)
         self.log("BAD logit",logits[0,1,2,3],enable_graph=False)
         self.log("logit scale",self.logit_scale.exp())

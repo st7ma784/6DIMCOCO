@@ -106,8 +106,6 @@ class LightningCLIPModule(base):
         self.maskLoss=maskLosses
         self.maskloss=torch.nn.MSELoss(reduction='none')
 
-        torch.autograd.set_detect_anomaly(True)
-        #with torch.no_grad():
         B,N=self.hparams.batch_size,3
         Views=torch.diag_embed(torch.ones(N,dtype=torch.long)*B-1)+1
         self.Lossmask=torch.sum(reduce(torch.add,list(map(lambda Arr: torch.nn.functional.one_hot(torch.arange(B).view(*Arr),num_classes=B),Views.tolist()))).pow(4),dim=-1)
@@ -128,13 +126,11 @@ class LightningCLIPModule(base):
 
 
     # @torch.jit.script
-    def forward(self, im, *captions):
-        captions1=captions[0]
-        captions2=captions[1]
+    def forward(self, im, captions1,*captions):
 
         image_features=self.clip.encode_image(im)
         caption_features1=self.clip.encode_text(captions1)
-        caption_features2=self.encode_text(captions2)#
+        caption_features2=[self.encode_text(c) for c in captions]#
       
 
         if self.projection=="inv":
@@ -143,21 +139,26 @@ class LightningCLIPModule(base):
             image_features=image_features@torch.inverse(self.text_projection)
         elif self.projection=="None":
             caption_features1=caption_features1@self.text_projection
-            caption_features2=caption_features2@self.text_projection#
+            caption_features2=[c@self.text_projection for c in caption_features2]
           
-        return self.calculate_loss(image_features, caption_features1,caption_features2)
+        return self.calculate_loss(image_features, caption_features1,*caption_features2)
         #return self.calculate_lossStock(image_features, caption_features1)[0]*self.logit_scale.exp()
 
         
     def training_step(self, batch, batch_idx):
 
         im,captions= batch[0],batch[1]
-        labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,non_blocking=True) 
-
+        
         logits=self(im,*[captions[:,i] for i in range(captions.shape[1])])*self.logit_scale.exp()
         self.log("first logit",logits[0,0,0],enable_graph=False)
         self.log("BAD logit",logits[0,1,2],enable_graph=False)
         self.log("logit scale",self.logit_scale.exp())
+        try:
+            labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,non_blocking=True) 
+        except:
+            #labels wrong size!!?!
+            labels=self.generate_labels((len(logits.shape),self.hparams.batch_size,self.transformer_width)).to(self.device,non_blocking=True)
+
 
         # The idea is that good logits are 1s,   bad should be -1s... so if logits are coming back as ~6000....
         #  Option 1: divide down.

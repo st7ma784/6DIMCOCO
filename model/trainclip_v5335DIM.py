@@ -5,10 +5,10 @@ import numpy as np
 from typing import Optional
 from clip.model import LayerNorm
 from functools import reduce
-from transformers import AutoModelForMaskedLM,BertConfig
+from transformers import MarianMTModel,MarianConfig, CLIPTokenizer
 from model.trainclip_cka_base import LightningCLIPModule as base
 from model.trainclip_cka_base import batch_HSIC2,batch_HSIC3
-
+from functools import partial
 class LightningCLIPModule(base):
     def __init__(self,
                 
@@ -50,15 +50,42 @@ class LightningCLIPModule(base):
         
         #on top of this transformer, we're going to have a full translation model to 
         #translate the language to
-        conf=BertConfig(
-        vocab_size=50257,
-        hidden_size=transformer_width,
-        num_attention_heads=transformer_heads,
-        num_hidden_layers=transformer_layers,
-        intermediate_size=transformer_width*4,
-        hidden_act="gelu",
-        layer_norm_eps=1e-12)
-        self.translationModel=AutoModelForMaskedLM.from_config(conf)
+        config=MarianConfig(
+            vocab_size=vocab_size,
+            decoder_bos_token_id=self.clip.vocab_size-1,
+            decoder_eos_token_id=self.clip.vocab_size,
+            pad_token_id=0,
+            activation_dropout=0,
+            activation_function="gelu", #"swish" 
+            attention_dropout=0.0,
+            classifier_dropout=0.0,
+            d_model=2*self.transformer_width,
+            decoder_attention_heads=16,
+            decoder_ffn_dim=8*self.transformer_width,
+            decoder_layerdrop=0.0,
+            decoder_layers=4, #would be higher if I had more VRAM
+            decoder_start_token_id=self.clip.vocab_size-1,
+            decoder_vocab_size=self.clip.vocab_size,
+            dropout=0.0,
+            encoder_attention_heads=16,
+            encoder_ffn_dim=8*self.transformer_width,
+            encoder_layerdrop=0.0,
+            encoder_layers=4, #would be higher if I had more VRAM
+            eos_token_id=self.clip.vocab_size,
+            forced_eos_token_id=0,
+            init_std=0.02,
+            is_encoder_decoder=True,
+            max_position_embeddings=2*self.transformer_width,
+            model_type="marian",
+            num_hidden_layers=4,
+            scale_embedding=False,
+            share_encoder_decoder_embeddings=True,
+            transformers_version="4.25.1",
+            use_cache=True,
+        )
+        self.bos_token_id=self.clip.vocab_size-1
+        self.transformerModel=MarianMTModel(config)
+        self.transformerModel.train()
         #we need to first make some modifications to make this compatible with the CLIP tokenizers 
         #self.linear.weight=torch.nn.Parameter(self.clip.token_embedding.weight.T)
 
@@ -127,13 +154,18 @@ class LightningCLIPModule(base):
         self.meanloss=get_loss_sum(meanloss)
         self.loss=get_loss_calc(reduction='sum',ver=self.maskLoss,mask=self.Lossmask)
             
+        if kwargs.get("gumbel",False):
+            self.token_select=partial(torch.nn.functional.gumbel_softmax,hard=True,dim=-1)
+        else:
+            self.token_select=partial(torch.nn.functional.softmax,dim=-1)
+            
             #alpha for weighting regions. 
         #this is one set of masks, theres another set however, of
   
     def encode_text(self, text):
-        output = self.translationModel(text)
+        output = self.transformerModel(text)
         #take the output probabilities as a vector, 
-        output=torch.nn.functional.gumbel_softmax(output.logits,hard=True,dim=-1)
+        output=self.token_select(output.logits)
         x=output@self.token_embedding.weight 
         # [batch_size, n_ctx, d_model]
         x = x + self.positional_embedding.type(self.dtype)

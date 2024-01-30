@@ -62,26 +62,6 @@ class LightningCLIPModule(base):
         else:
             self.token_select=partial(torch.nn.functional.softmax,dim=-1)
             
-    def generate_labels(self, inputshape):
-        if self.exact_labels==1:
-            with torch.no_grad():
-                testBatch=torch.rand((inputshape[1],self.transformer_width),device=self.device)*2 -1
-                #norm the batch
-
-                # testBatch=testBatch/torch.norm(testBatch,dim=-1,keepdim=True)
-                testBatch=testBatch/torch.norm(testBatch,dim=-1,keepdim=True)
-
-                label=self.calculate_loss(*[testBatch for _ in range(inputshape[0])]).to(self.device,non_blocking=True)
-                #convert this to probabilities in range [0,1]
-                label=torch.nn.functional.softmax(self.label)
-                label=torch.nan_to_num(self.label, nan=1.0)
-                
-        #elif add in the case where using -inf or -1 instead of zeros as below....
-        else:
-            label=torch.ones(self.hparams.batch_size,dtype=torch.float,device=self.device)
-            for i in range(inputshape[0]):
-                label=torch.diag_embed(self.label)
-        return torch.nan_to_num(label, nan=0.0)
     def on_validation_epoch_start(self):
         pass
     def on_validation_epoch_end(self):
@@ -94,17 +74,12 @@ class LightningCLIPModule(base):
         EOT_indexes=torch.argmax(text,dim=-1)# already tokenized ready to go¬
         #or decoder inputs= sot tokens?
         #or decoder inputs= pad tokens? 
-        decoder_input_ids=torch.zeros_like(text,device=self.device)
+        decoder_input_ids=torch.zeros_like(text)
         decoder_input_ids[:,0]=self.bos_token_id
 
-        output = self.transformerModel(input_ids=text.to(dtype=torch.long),decoder_input_ids=decoder_input_ids,return_dict=True,output_hidden_states=True)
+        output = self.transformerModel(input_ids=text,decoder_input_ids=decoder_input_ids,return_dict=True,output_hidden_states=True)
         #output = self.transformerModel(input_ids=text,decoder_input_ids=,return_dict=True,output_hidden_states=True)
 
-        #output is now in ENGLISH
-        #print("hiddenstates",hiddenstates[-1].shape)
-        #check shape is [batch_size, n_ctx, d_model]
-        #we want to select the index in n_ctx that corresponds to the EOT tokens... 
-        #so we need to find the index of the EOT token in the text, and then select that index from the hidden states
         encoder_output=output["encoder_last_hidden_state"][torch.arange(output["encoder_last_hidden_state"].shape[0]),EOT_indexes,:]
         #shape should be [batch_size, 1, d_model]
 
@@ -133,7 +108,7 @@ class LightningCLIPModule(base):
         elif self.projection=="iinv":
             image_features=image_features@torch.inverse(self.text_projection)
         elif self.projection=="None":
-            captions=[c@self.text_projection for c in captions]
+            caption_features=[c@self.text_projection for c in caption_features]
           
         return self.calculate_loss(image_features, *caption_features)
         #return self.calculate_lossStock(image_features, caption_features1)[0]*self.logit_scale.exp()
@@ -179,8 +154,11 @@ class LightningCLIPModule(base):
 
         return {"loss": loss}
     def translate(self, text):
-        return self.translationModel(text,return_dict=True,output_hidden_states=True,output_encoder_states=True)
-        
+        decoder_input_ids=torch.zeros_like(text)
+        decoder_input_ids[:,0]=self.bos_token_id
+
+        return self.transformerModel(input_ids=text,decoder_input_ids=decoder_input_ids,return_dict=True,output_hidden_states=True)
+         
     def on_test_epoch_start(self):
         # super().on_test_epoch_start()
 
