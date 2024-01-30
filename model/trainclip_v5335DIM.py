@@ -42,8 +42,8 @@ class LightningCLIPModule(base):
         #     del self.clip
         self.save_hyperparameters()
         print("learning_rate",learning_rate)
-        transformer_width=512
-        embed_dim=512
+        self.transformer_width=transformer_width
+        self.embed_dim=transformer_width
         #this is needed for the clip model to work
         self.context_length = context_length
         
@@ -95,7 +95,6 @@ class LightningCLIPModule(base):
         self.ln_final = LayerNorm(transformer_width)
         self.text_projection = nn.Parameter(torch.empty(transformer_width, embed_dim))
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
-        self.transformer_width=transformer_width
         self.handles=[]
 
         self.labels=[]
