@@ -39,7 +39,7 @@ class LightningCLIPModule(LightningModule):
         #self.label=(self.label*2)-1 This makes loss negative! 
         print("using labelsv2: ", self.label[:2,:2,:2,:2,:2,:2])
         self.label=torch.nan_to_num(self.label)
-        self.calculate_loss=get_loss_fn(logitsversion=2)#        from model.LossCalculation import calculate_lossStock as sl???
+        self.calculate_loss=get_loss_fn(logitsversion=2,JSE=kwargs.get("JSE",0))#        from model.LossCalculation import calculate_lossStock as sl???
         from model.nargsLossCalculation import calculate_lossStock
         self.stock_loss=calculate_lossStock
         self.tfeatures=None
