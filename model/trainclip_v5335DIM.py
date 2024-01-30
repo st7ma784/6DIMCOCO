@@ -162,7 +162,9 @@ class LightningCLIPModule(base):
         #this is one set of masks, theres another set however, of
   
     def encode_text(self, text):
-        output = self.transformerModel(text)
+        decoder_ids=torch.zeros_like(text)
+        decoder_ids[:,0]=self.clip.vocab_size-1
+        output = self.transformerModel(text, decoder_input_ids=decoder_ids)
         #take the output probabilities as a vector, 
         output=self.token_select(output.logits)
         x=output@self.token_embedding.weight 
