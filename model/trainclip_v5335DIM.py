@@ -56,19 +56,19 @@ class LightningCLIPModule(base):
             decoder_eos_token_id=self.clip.vocab_size,
             pad_token_id=0,
             activation_dropout=0,
-            activation_function="gelu", #"swish" 
+            activation_function="swish", #"swish" 
             attention_dropout=0.0,
             classifier_dropout=0.0,
             d_model=512,
             decoder_attention_heads=16,
-            decoder_ffn_dim=512,
+            decoder_ffn_dim=2048,
             decoder_layerdrop=0.0,
             decoder_layers=4, #would be higher if I had more VRAM
             decoder_start_token_id=self.clip.vocab_size-1,
             decoder_vocab_size=self.clip.vocab_size,
             dropout=0.0,
             encoder_attention_heads=16,
-            encoder_ffn_dim=512,
+            encoder_ffn_dim=2048,
             encoder_layerdrop=0.0,
             encoder_layers=4, #would be higher if I had more VRAM
             eos_token_id=self.clip.vocab_size,
@@ -85,6 +85,7 @@ class LightningCLIPModule(base):
         )
         self.bos_token_id=self.clip.vocab_size-1
         self.transformerModel=MarianMTModel(config)
+        self.transformerModel=self.transformerModel.to(self.device)
         self.transformerModel.train()
         #we need to first make some modifications to make this compatible with the CLIP tokenizers 
         #self.linear.weight=torch.nn.Parameter(self.clip.token_embedding.weight.T)

@@ -22,23 +22,23 @@ class LightningCLIPModule(base):
             activation_function="gelu", #"swish" 
             attention_dropout=0.0,
             classifier_dropout=0.0,
-            d_model=512,
+            d_model=1024,
             decoder_attention_heads=16,
-            decoder_ffn_dim=512,
+            decoder_ffn_dim=4096,
             decoder_layerdrop=0.0,
             decoder_layers=4, #would be higher if I had more VRAM
             decoder_start_token_id=self.clip.vocab_size-1,
             decoder_vocab_size=self.clip.vocab_size,
             dropout=0.0,
             encoder_attention_heads=16,
-            encoder_ffn_dim=512,
+            encoder_ffn_dim=4096,
             encoder_layerdrop=0.0,
             encoder_layers=4, #would be higher if I had more VRAM
             eos_token_id=21129,
             forced_eos_token_id=0,
             init_std=0.02,
             is_encoder_decoder=True,
-            max_position_embeddings=512,
+            max_position_embeddings=1024,
             model_type="marian",
             num_hidden_layers=4,
             scale_embedding=False,
@@ -48,6 +48,8 @@ class LightningCLIPModule(base):
         )
         self.bos_token_id=self.clip.vocab_size-1
         self.transformerModel=MarianMTModel(config)
+        self.transformerModel=self.transformerModel.to(self.device)
+
         self.transformerModel.train()
 
 
@@ -56,7 +58,7 @@ class LightningCLIPModule(base):
         self.label=self.generate_labels((4,self.hparams.batch_size,self.transformer_width))
         self.pruneLabels=  len(self.label.shape)>=4
 
-
+        self.model_projection=torch.nn.Parameter(torch.empty(config.d_model, self.transformer_width))
         if kwargs.get("gumbel",False):
             self.token_select=partial(torch.nn.functional.gumbel_softmax,hard=True,dim=-1)
         else:
@@ -75,14 +77,13 @@ class LightningCLIPModule(base):
         #or decoder inputs= sot tokens?
         #or decoder inputs= pad tokens? 
         decoder_input_ids=torch.zeros_like(text)
-        decoder_input_ids[:,0]=self.bos_token_id
+        decoder_input_ids=torch.full((text.shape[0],2),self.bos_token_id)
 
         output = self.transformerModel(input_ids=text,decoder_input_ids=decoder_input_ids,return_dict=True,output_hidden_states=True)
         #output = self.transformerModel(input_ids=text,decoder_input_ids=,return_dict=True,output_hidden_states=True)
 
         encoder_output=output["encoder_last_hidden_state"][torch.arange(output["encoder_last_hidden_state"].shape[0]),EOT_indexes,:]
-        #shape should be [batch_size, 1, d_model]
-
+        #encoder_output=encoder_output@self.model_projection
         output=self.token_select(output.logits)
 
         x=output@self.token_embedding.weight 
