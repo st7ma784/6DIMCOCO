@@ -202,11 +202,16 @@ class LightningCLIPModule(base):
     def training_step(self, batch, batch_idx):
 
         im,captions= batch[0],batch[1]
-        labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,dtype=torch.float,non_blocking=True) 
 
         logits=self(im,*captions)*self.logit_scale.exp()
-        zeros=torch.zeros_like(logits,dtype=torch.int,device=self.device).tolist()
-        arange=tuple(torch.arange(logits.shape[0],dtype=torch.int,device=self.device).tolist())
+        try:
+            labels=self.label
+        except:
+            #labels wrong size!!?!
+            labels=self.generate_labels((len(logits.shape),self.hparams.batch_size,self.transformer_width)).to(self.device,non_blocking=True)
+        if labels.shape!=logits.shape:
+            labels=self.generate_labels((len(logits.shape),self.hparams.batch_size,self.transformer_width)).to(self.device,non_blocking=True)
+            self.labels=labels
         firstlogit=logits.flatten()[0]
        
 
