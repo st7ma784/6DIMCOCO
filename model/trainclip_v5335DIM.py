@@ -1,4 +1,5 @@
 
+from regex import B
 import torch.nn as nn
 import torch
 import numpy as np
@@ -180,10 +181,11 @@ class LightningCLIPModule(base):
 
 
     # @torch.jit.script
-    def forward(self, im, captions1, captions2, captions3, captions4, captions5):
+    def forward(self, im, captions1, *captions):
+        captions=captions[:2]
         image_features=self.clip.encode_image(im)
         caption_features1=self.clip.encode_text(captions1)
-        caption_features2=self.encode_text(captions2)#
+        caption_features2=[self.encode_text(c) for c in captions]
       
 
         if self.projection=="inv":
@@ -192,9 +194,9 @@ class LightningCLIPModule(base):
             image_features=image_features@torch.inverse(self.text_projection)
         elif self.projection=="None":
             caption_features1=caption_features1@self.text_projection
-            caption_features2=caption_features2@self.text_projection#
+            caption_features2=[c@self.text_projection for c in caption_features2]
           
-        return self.calculate_loss(image_features, caption_features1,caption_features2)
+        return self.calculate_loss(image_features, caption_features1,*caption_features2)
         #return self.calculate_lossStock(image_features, caption_features1)[0]*self.logit_scale.exp()
 
     def training_step(self, batch, batch_idx):
@@ -202,9 +204,16 @@ class LightningCLIPModule(base):
         im,captions= batch[0],batch[1]
         labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,dtype=torch.float,non_blocking=True) 
 
-        logits=self(im,captions[:,0],captions[:,1],captions[:,2],captions[:,3],captions[:,4])*self.logit_scale.exp()
-        self.log("first logit",logits[0,0,0],enable_graph=False)
-        self.log("BAD logit",logits[0,1,2],enable_graph=False)
+        logits=self(im,*captions)*self.logit_scale.exp()
+        zeros=torch.zeros_like(logits,dtype=torch.int,device=self.device).tolist()
+        arange=torch.arange(logits.shape[0],dtype=torch.int,device=self.device).tolist()
+        firstlogit=logits.flatten()[0]
+        bad_logit=logits[arange]
+        print(bad_logit)
+        print(firstlogit)
+        # assert bad_logit.shape[0]==firstlogit.shape[0]
+        self.log("first logit",firstlogit,enable_graph=False)
+        self.log("BAD logit",bad_logit,enable_graph=False)
         self.log("logit scale",self.logit_scale.exp())
 
         # The idea is that good logits are 1s,   bad should be -1s... so if logits are coming back as ~6000....
