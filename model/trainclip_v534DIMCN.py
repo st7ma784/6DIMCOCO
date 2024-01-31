@@ -118,24 +118,18 @@ class LightningCLIPModule(base):
     def training_step(self, batch, batch_idx):
 
         im,captions= batch[0],batch[1][:2]
+        
+        logits=self(im,*[captions[:,i] for i in range(captions.shape[1])])*self.logit_scale.exp()
         try:
-            labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,non_blocking=True) 
+            labels=self.label
         except:
             #labels wrong size!!?!
-            labels=self.generate_labels((len(captions)+1,self.hparams.batch_size,self.transformer_width)).to(self.device,non_blocking=True)
-
-        zeros=torch.zeros(len(labels.shape)).tolist()
-        rang=torch.arange(len(labels.shape)).tolist()
-        logits=self(im,*[captions[:,i] for i in range(captions.shape[1])])*self.logit_scale.exp()
-        self.log("first logit",logits[zeros],enable_graph=False)
-        self.log("BAD logit",logits[rang],enable_graph=False)
-        self.log("logit scale",self.logit_scale.exp())
-
-        # The idea is that good logits are 1s,   bad should be -1s... so if logits are coming back as ~6000....
-        #  Option 1: divide down.
-        #  Option 2: 1- output...
-        # option 3: logarithmic functions? 
-        # option 4: 1/(1+e^-x)  (sigmoid) ? this is auto gened???? Look at this when you feel like it. 
+            labels=self.generate_labels((len(logits.shape),self.hparams.batch_size,self.transformer_width)).to(self.device,non_blocking=True)
+        if labels.shape!=logits.shape:
+            labels=self.generate_labels((len(logits.shape),self.hparams.batch_size,self.transformer_width)).to(self.device,non_blocking=True)
+            self.labels=labels
+        firstlogit=logits.flatten()[0]
+       
 
         n_dims=len(logits.shape)
         dims=np.arange(n_dims).repeat(n_dims).reshape(n_dims,n_dims)
@@ -143,8 +137,18 @@ class LightningCLIPModule(base):
         dims_=np.expand_dims(dims_,axis=0)
         permutes=dims+dims_
         permutes=permutes%n_dims
-        #create a list of [0,1,2,3,4,5] and rotated versions of it.
+        bad_logit=logits[permutes].mean()
 
+        # assert bad_logit.shape[0]==firstlogit.shape[0]
+        self.log("first logit",firstlogit,enable_graph=False)
+        self.log("BAD logit",bad_logit,enable_graph=False)
+        self.log("logit scale",self.logit_scale.exp())
+
+        # The idea is that good logits are 1s,   bad should be -1s... so if logits are coming back as ~6000....
+        #  Option 1: divide down.
+        #  Option 2: 1- output...
+        # option 3: logarithmic functions? 
+        
 
         
         losses = [self.loss(logits.permute(*i), labels,alpha=self.alpha) for i in permutes]
