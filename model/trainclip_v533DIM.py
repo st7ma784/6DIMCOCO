@@ -150,8 +150,18 @@ class LightningCLIPModule(base):
         im,captions= batch[0],batch[1]
         
         logits=self(im,*[captions[:,i] for i in range(captions.shape[1])])*self.logit_scale.exp()
-        self.log("first logit",logits[0,0,0],enable_graph=False)
-        self.log("BAD logit",logits[0,1,2],enable_graph=False)
+        
+        n_dims=len(logits.shape)
+        zeros=np.zeros(n_dims)
+        dims=np.arange(n_dims).repeat(n_dims).reshape(n_dims,n_dims)
+        dims_=np.arange(n_dims)
+        dims_=np.expand_dims(dims_,axis=0)
+        permutes=dims+dims_
+        permutes=permutes%n_dims
+
+
+        self.log("first logit",logits[*zeros],enable_graph=False)
+        self.log("BAD logit",logits[*np.arange(n_dims)],enable_graph=False)
         self.log("logit scale",self.logit_scale.exp())
         try:
             labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,non_blocking=True) 
@@ -165,12 +175,6 @@ class LightningCLIPModule(base):
         #  Option 2: 1- output...
         # option 3: logarithmic functions? 
         
-        n_dims=len(logits.shape)
-        dims=np.arange(n_dims).repeat(n_dims).reshape(n_dims,n_dims)
-        dims_=np.arange(n_dims)
-        dims_=np.expand_dims(dims_,axis=0)
-        permutes=dims+dims_
-        permutes=permutes%n_dims
         #create a list of [0,1,2,3,4,5] and rotated versions of it.
 
 
