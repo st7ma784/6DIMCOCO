@@ -102,7 +102,7 @@ class LightningCLIPModule(base):
         image_features=self.clip.encode_image(im)
         #  This line is the problem, might need to grab the encoder from the translation model. 
 
-        features=[self.encode_text(c) for c in captions]
+        features=[self.encode_text(c) for c in captions[:2]]
         caption_features=[f[0] for f in features]+[f[1] for f in features]
         if self.projection=="inv":
             image_features=image_features@ self.text_projection
@@ -124,8 +124,8 @@ class LightningCLIPModule(base):
             #labels wrong size!!?!
             labels=self.generate_labels((len(captions)+1,self.hparams.batch_size,self.transformer_width)).to(self.device,non_blocking=True)
 
-        zeros=np.zeros(len(labels.shape))
-        rang=np.arange(len(labels.shape))
+        zeros=torch.zeros(len(labels.shape)).tolist()
+        rang=torch.arange(len(labels.shape)).tolist()
         logits=self(im,*[captions[:,i] for i in range(captions.shape[1])])*self.logit_scale.exp()
         self.log("first logit",logits[zeros],enable_graph=False)
         self.log("BAD logit",logits[rang],enable_graph=False)
