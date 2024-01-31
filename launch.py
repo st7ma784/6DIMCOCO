@@ -129,7 +129,7 @@ def train(config={
             devices=devices,
             #auto_select_gpus=True,
             accelerator=accelerator,
-            max_epochs=10,
+            max_epochs=20,
             #profiler="advanced",
             logger=logger,
             strategy=DDP(find_unused_parameters=True),
