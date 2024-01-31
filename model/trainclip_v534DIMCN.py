@@ -117,7 +117,7 @@ class LightningCLIPModule(base):
   
     def training_step(self, batch, batch_idx):
 
-        im,captions= batch[0],batch[1]
+        im,captions= batch[0],batch[1][:2]
         try:
             labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,non_blocking=True) 
         except:

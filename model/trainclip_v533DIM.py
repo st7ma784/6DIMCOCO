@@ -151,34 +151,32 @@ class LightningCLIPModule(base):
         
         logits=self(im,*[captions[:,i] for i in range(captions.shape[1])])*self.logit_scale.exp()
         
-        n_dims=len(logits.shape)
-        zeros=np.zeros(n_dims).tolist()
-        dims=np.arange(n_dims).repeat(n_dims).reshape(n_dims,n_dims)
-        dims_=np.arange(n_dims)
-        dims_=np.expand_dims(dims_,axis=0)
-        permutes=dims+dims_
-        permutes=permutes%n_dims
-
-        firstlogit=logits.flatten()[0]
-        bad_logit=logits[torch.arange(n_dims,dtype=torch.long,device=logits.device).tolist()]
-        print(bad_logit.shape)
-        self.log("first logit",firstlogit,enable_graph=False)
-        self.log("BAD logit",bad_logit,enable_graph=False)
-        self.log("logit scale",self.logit_scale.exp())
         try:
             labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,non_blocking=True) 
         except:
             #labels wrong size!!?!
             labels=self.generate_labels((len(logits.shape),self.hparams.batch_size,self.transformer_width)).to(self.device,non_blocking=True)
+        firstlogit=logits.flatten()[0]
+       
 
+        n_dims=len(logits.shape)
+        dims=np.arange(n_dims).repeat(n_dims).reshape(n_dims,n_dims)
+        dims_=np.arange(n_dims)
+        dims_=np.expand_dims(dims_,axis=0)
+        permutes=dims+dims_
+        permutes=permutes%n_dims
+        bad_logit=logits[permutes].mean()
+
+        # assert bad_logit.shape[0]==firstlogit.shape[0]
+        self.log("first logit",firstlogit,enable_graph=False)
+        self.log("BAD logit",bad_logit,enable_graph=False)
+        self.log("logit scale",self.logit_scale.exp())
 
         # The idea is that good logits are 1s,   bad should be -1s... so if logits are coming back as ~6000....
         #  Option 1: divide down.
         #  Option 2: 1- output...
         # option 3: logarithmic functions? 
         
-        #create a list of [0,1,2,3,4,5] and rotated versions of it.
-
 
         
         losses = [self.loss(logits.permute(*i), labels,alpha=self.alpha) for i in permutes]
@@ -186,8 +184,7 @@ class LightningCLIPModule(base):
         loss=self.meanloss(I=[losses[0]],T=losses[1:]).mean()
       
         self.log('train_loss', loss, prog_bar=True,enable_graph=False, rank_zero_only=True)
-       
-        
+
         return {"loss": loss}
 
 

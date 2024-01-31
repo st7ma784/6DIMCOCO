@@ -206,11 +206,18 @@ class LightningCLIPModule(base):
 
         logits=self(im,*captions)*self.logit_scale.exp()
         zeros=torch.zeros_like(logits,dtype=torch.int,device=self.device).tolist()
-        arange=torch.arange(logits.shape[0],dtype=torch.int,device=self.device).tolist()
+        arange=tuple(torch.arange(logits.shape[0],dtype=torch.int,device=self.device).tolist())
         firstlogit=logits.flatten()[0]
-        bad_logit=logits[arange]
-        print(bad_logit)
-        print(firstlogit)
+       
+
+        n_dims=len(logits.shape)
+        dims=np.arange(n_dims).repeat(n_dims).reshape(n_dims,n_dims)
+        dims_=np.arange(n_dims)
+        dims_=np.expand_dims(dims_,axis=0)
+        permutes=dims+dims_
+        permutes=permutes%n_dims
+        bad_logit=logits[permutes].mean()
+
         # assert bad_logit.shape[0]==firstlogit.shape[0]
         self.log("first logit",firstlogit,enable_graph=False)
         self.log("BAD logit",bad_logit,enable_graph=False)
@@ -220,16 +227,17 @@ class LightningCLIPModule(base):
         #  Option 1: divide down.
         #  Option 2: 1- output...
         # option 3: logarithmic functions? 
-        lossim = self.loss(logits, labels,alpha=self.alpha)
-            
         
-        loss1 = self.loss(logits.permute(1,2,0), labels,alpha=self.alpha)
-        loss2 = self.loss(logits.permute(2,0,1), labels,alpha=self.alpha)
-        loss=self.meanloss(I=[lossim],T=[loss1,loss2]).mean()
+
+        
+        losses = [self.loss(logits.permute(*i), labels,alpha=self.alpha) for i in permutes]
+        
+        loss=self.meanloss(I=[losses[0]],T=losses[1:]).mean()
       
         self.log('train_loss', loss, prog_bar=True,enable_graph=False, rank_zero_only=True)
-        
+
         return {"loss": loss}
+
 
 
     def validation_step(self,batch,*args):
