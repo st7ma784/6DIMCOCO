@@ -77,7 +77,7 @@ class LightningCLIPModule(base):
         #or decoder inputs= sot tokens?
         #or decoder inputs= pad tokens? 
         decoder_input_ids=torch.zeros_like(text)
-        decoder_input_ids=torch.full((text.shape[0],2),self.bos_token_id)
+        decoder_input_ids=torch.full((text.shape[0],2),self.bos_token_id).to(self.device,non_blocking=True)
 
         output = self.transformerModel(input_ids=text,decoder_input_ids=decoder_input_ids,return_dict=True,output_hidden_states=True)
         #output = self.transformerModel(input_ids=text,decoder_input_ids=,return_dict=True,output_hidden_states=True)

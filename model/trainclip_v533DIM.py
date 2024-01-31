@@ -159,9 +159,11 @@ class LightningCLIPModule(base):
         permutes=dims+dims_
         permutes=permutes%n_dims
 
-
-        self.log("first logit",logits[torch.zeros(n_dims,dtype=torch.long,device=logits.device)],enable_graph=False)
-        self.log("BAD logit",logits[torch.arange(n_dims,dtype=torch.long,device=logits.device)],enable_graph=False)
+        firstlogit=logits.flatten()[0]
+        bad_logit=logits[torch.arange(n_dims,dtype=torch.long,device=logits.device).tolist()]
+        print(bad_logit.shape)
+        self.log("first logit",firstlogit,enable_graph=False)
+        self.log("BAD logit",bad_logit,enable_graph=False)
         self.log("logit scale",self.logit_scale.exp())
         try:
             labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,non_blocking=True) 
