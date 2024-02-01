@@ -310,7 +310,22 @@ class LightningCLIPModule(LightningModule):
         del self.results
     
     def test_token_embeddings(self):
-        pass
+        #create int of all the tokens in vocab size
+        #embed them all with self.token_embeddings
+        #perform kmeans on them all, 
+        #log the clusters and the tokens nearest to each centroid. 
+        tokens=torch.arange(self.token_embedding.num_embeddings,device=self.device)
+        embeddings=self.token_embedding(tokens)
+        # kmeans = KMeans(n_clusters=40, random_state=0).fit(embeddings)
+        # for i in range(10):
+        #     print(kmeans.cluster_centers_[i])
+        #     print(tokens[kmeans.labels_==i])
+        # self.logger.log_text("token embeddings cluster centers ",str(kmeans.cluster_centers_))
+        # self.logger.log_text("token embeddings tokens nearest centers",str(tokens[kmeans.labels_==i]))
+        # #log the tokens closest to the mean of all embeddings.
+        values,indxs=torch.sort(torch.norm(embeddings-embeddings.mean(dim=0),dim=1),)
+        self.logger.log_text("token embeddings center-most tokens",columns=tokens[indxs[:10]].tolist(),data=[values[:10].tolist()])
+        self.logger.log_text("token embeddings furthest tokens",columns=tokens[indxs[-10:]].tolist(),data=[values[-10:].tolist()])
     def test_step(self,batch,*args):
         #do stock loss here
         image_features=self.encode_image(batch[0])
