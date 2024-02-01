@@ -155,4 +155,5 @@ tb_logs/*
 artifacts/*/Im Embeddings.table.json
 results/*
 maskStack*.stl
-models--*
+models--*/*
+models--bert-base-chinese/*
