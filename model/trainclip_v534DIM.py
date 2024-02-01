@@ -3,6 +3,7 @@ from functools import reduce
 from operator import add
 from model.trainclip_v5335DIM import LightningCLIPModule as base 
 import torch
+import torch.nn as nn
 from transformers import AutoModelForMaskedLM,CLIPTokenizer
 import numpy as np
 class LightningCLIPModule(base):
@@ -26,7 +27,8 @@ class LightningCLIPModule(base):
             self.label=torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.ones(self.hparams.batch_size,dtype=torch.float,device=self.device))) )           #self.label=(self.label*2)-1 This makes loss negative! 
             print("using labelsv2: ", self.label[:2,:2,:2,:2])
         self.pruneLabels=  len(self.label.shape)>=4
-        
+        self.token_emb=nn.Parameter(self.token_embedding.weight)
+        self.token_scale=nn.Parameter(torch.ones(self.token_emb.shape[0],device=self.device))
         self.label=torch.nan_to_num(self.label)
     def encode_text(self, text):
  
@@ -39,19 +41,30 @@ class LightningCLIPModule(base):
         output = self.transformerModel(input_ids=text,decoder_input_ids=decoder_input_ids,return_dict=True,output_hidden_states=True)
         #output = self.transformerModel(input_ids=text,decoder_input_ids=,return_dict=True,output_hidden_states=True)
 
-        encoder_output=output["encoder_last_hidden_state"][torch.arange(output["encoder_last_hidden_state"].shape[0]),EOT_indexes,:]
+        encoder_output=output["encoder_last_hidden_state"][torch.arange(output["encoder_last_hidden_state"].shape[0]),EOT_indexes]
         #shape should be [batch_size, 1, d_model]
-
+        EOT_locations=torch.argmax(torch.argmax(output.logits,dim=-1),dim=-1) #should be [batch_size,1]
+        #print("EOT locations: ",EOT_locations.shape)
         output=self.token_select(output.logits)
+        #print("output shape: ",output) #B,77,V #should be 1hot encoded?
+        x=output@self.token_emb
+        #scale x to be in range [-1,1]
+        x=x/torch.norm(x,dim=-1,keepdim=True)
+        x=x*self.token_scale
+        
+        x = x + self.positional_embedding.type(torch.half)
+        
+        x = x.permute(1, 0, 2).type(torch.float)  # NLD -> LND
+        print("x is nan",torch.isnan(x).sum())
 
-        x=output@self.token_embedding.weight 
-        # [batch_size, n_ctx, d_model]
-        x = x + self.positional_embedding.type(self.dtype)
-        x = x.permute(1, 0, 2)  # NLD -> LND
         x = self.clip.transformer(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
+        print("x is nan",torch.isnan(x).sum())
+
         x = self.ln_final(x).type(self.dtype)
-        x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)] 
+        print("x is nan",torch.isnan(x).sum())
+        print("x shape: ",x.shape) #B,77,d_model
+        x = x[torch.arange(x.shape[0]), EOT_locations] 
         return x,encoder_output
 
 
