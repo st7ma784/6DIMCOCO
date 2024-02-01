@@ -21,7 +21,7 @@ class LightningCLIPModule(LightningModule):
         self.save_hyperparameters()
         #problem for using this as a inheritance...
         self.clip,_=clip.load("ViT-B/32", device=self.device)
-        self.clip.eval()
+        self.clip.train()
         self.logit_scale = nn.Parameter(torch.ones([]) * np.log(1 / 0.07))
         self.context_length = self.clip.context_length
         #self.linear.weight=torch.nn.Parameter(self.clip.token_embedding.weight.T)
@@ -49,7 +49,7 @@ class LightningCLIPModule(LightningModule):
         self.token_embedding=self.clip.token_embedding
         self.positional_embedding=self.clip.positional_embedding
         self.ln_final=self.clip.ln_final
- 
+        self.exact_labels=kwargs.get("exact_labels",0)
      
     def generate_labels(self, inputshape):
         if self.exact_labels==1:

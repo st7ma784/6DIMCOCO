@@ -27,8 +27,8 @@ class LightningCLIPModule(base):
             self.label=torch.diag_embed(torch.diag_embed(torch.diag_embed(torch.ones(self.hparams.batch_size,dtype=torch.float,device=self.device))) )           #self.label=(self.label*2)-1 This makes loss negative! 
             print("using labelsv2: ", self.label[:2,:2,:2,:2])
         self.pruneLabels=  len(self.label.shape)>=4
-        self.token_emb=nn.Parameter(self.token_embedding.weight)
-        self.token_scale=nn.Parameter(torch.ones(self.token_emb.shape[0],device=self.device))
+        self.token_emb=nn.Parameter(self.token_embedding.weight) #V,D
+        self.token_scale=nn.Parameter(torch.ones(self.token_emb.shape[1],device=self.device))
         self.label=torch.nan_to_num(self.label)
     def encode_text(self, text):
  
@@ -51,19 +51,16 @@ class LightningCLIPModule(base):
         #scale x to be in range [-1,1]
         x=x/torch.norm(x,dim=-1,keepdim=True)
         x=x*self.token_scale
+        # x=x+1 
+        # x=x/2
+        #x = x + self.positional_embedding.type(self.dtype)
         
-        x = x + self.positional_embedding.type(torch.half)
-        
-        x = x.permute(1, 0, 2).type(torch.float)  # NLD -> LND
-        print("x is nan",torch.isnan(x).sum())
-
+        x = x.permute(1, 0, 2) # NLD -> LND
         x = self.clip.transformer(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
-        print("x is nan",torch.isnan(x).sum())
 
         x = self.ln_final(x).type(self.dtype)
-        print("x is nan",torch.isnan(x).sum())
-        print("x shape: ",x.shape) #B,77,d_model
+
         x = x[torch.arange(x.shape[0]), EOT_locations] 
         return x,encoder_output
 
