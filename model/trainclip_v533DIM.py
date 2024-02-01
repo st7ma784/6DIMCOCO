@@ -154,7 +154,7 @@ class LightningCLIPModule(base):
         if labels.shape!=logits.shape:
             labels=self.generate_labels((len(logits.shape),self.hparams.batch_size,self.transformer_width)).to(self.device,non_blocking=True)
             self.label=labels
-        firstlogit=logits.flatten()[0]
+        firstlogit=torch.flatten(logits)[0]
        
 
         n_dims=len(logits.shape)
