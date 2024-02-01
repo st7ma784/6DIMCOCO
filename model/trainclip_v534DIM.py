@@ -35,8 +35,8 @@ class LightningCLIPModule(base):
         EOT_indexes=torch.argmax(text,dim=-1)# already tokenized ready to go¬
         #or decoder inputs= sot tokens?
         #or decoder inputs= pad tokens? 
-        decoder_input_ids=torch.zeros_like(text)
-        decoder_input_ids[:,0]=self.bos_token_id
+        decoder_input_ids=torch.full((text.shape[0],77),self.bos_token_id,dtype=torch.long,device=self.device)
+
 
         output = self.transformerModel(input_ids=text,decoder_input_ids=decoder_input_ids,return_dict=True,output_hidden_states=True)
         #output = self.transformerModel(input_ids=text,decoder_input_ids=,return_dict=True,output_hidden_states=True)
