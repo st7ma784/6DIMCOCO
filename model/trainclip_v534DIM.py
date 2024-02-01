@@ -53,7 +53,7 @@ class LightningCLIPModule(base):
         x=x*self.token_scale
         # x=x+1 
         # x=x/2
-        #x = x + self.positional_embedding.type(self.dtype)
+        x = x + self.clip.positional_embedding.type(self.dtype)
         
         x = x.permute(1, 0, 2) # NLD -> LND
         x = self.clip.transformer(x)
