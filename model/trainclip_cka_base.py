@@ -68,7 +68,7 @@ class LightningCLIPModule(LightningModule):
         #elif add in the case where using -inf or -1 instead of zeros as below....
         else:
             label=torch.ones(self.hparams.batch_size,dtype=torch.float,device=self.device)
-            for i in range(inputshape[0]):
+            for i in range(inputshape[0]-2):
                 label=torch.diag_embed(self.label)
         return torch.nan_to_num(label, nan=0.0)
     def initialize_parameters(self):
