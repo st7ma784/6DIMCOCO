@@ -204,14 +204,11 @@ class LightningCLIPModule(base):
         im,captions= batch[0],batch[1]
 
         logits=self(im,*captions)*self.logit_scale.exp()
-        try:
-            labels=self.label
-        except:
-            #labels wrong size!!?!
-            labels=self.generate_labels((len(logits.shape),self.hparams.batch_size,self.transformer_width)).to(self.device,non_blocking=True)
+        labels=self.label
+        
         if labels.shape!=logits.shape:
             labels=self.generate_labels((len(logits.shape),self.hparams.batch_size,self.transformer_width)).to(self.device,non_blocking=True)
-            self.labels=labels
+            self.label=labels
         firstlogit=logits.flatten()[0]
        
 
