@@ -236,17 +236,18 @@ if __name__ == '__main__':
     myparser=parser()
     hyperparams = myparser.parse_args()
     defaultConfig=hyperparams.__dict__
-   
+    import time
     NumTrials=hyperparams.num_trials
     #BEDE has Env var containing hostname  #HOSTNAME=login2.bede.dur.ac.uk check we arent launching on this node
     if NumTrials==-1:
         while True:
             try:
                 trial=hyperparams.generate_trials(1)[0]
-                print("Running trial: {}".format(trial))
+                # print("Running trial: {}".format(trial))
                 wandbtrain(trial)
             except Exception as e:
                 print(e)
+                time.sleep(60)
                 continue
     elif NumTrials ==0 and not str(os.getenv("HOSTNAME","localhost")).startswith("login"): #We'll do a trial run...
         #means we've been launched from a BEDE script, so use config given in args///
