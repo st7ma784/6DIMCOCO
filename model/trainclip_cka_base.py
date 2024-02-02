@@ -167,7 +167,7 @@ class LightningCLIPModule(LightningModule):
         return mask
              
     def configure_optimizers(self):
-        if self.hparams.precision==16:
+        if self.hparams.precision==8:
             from model.LionOptimizer import Lion as lion
             #use lion optimizer
             optimizer=lion(self.parameters(), lr=self.hparams.learning_rate)

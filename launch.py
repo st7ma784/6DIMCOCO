@@ -121,6 +121,12 @@ def train(config={
     p=config['precision']
     if isinstance(p,str):
         p=16 if p=="bf16" else int(p)  ##needed for BEDE
+    if p==8:
+        #check for p100 or v100
+        if "P100" in os.popen("nvidia-smi --query-gpu=gpu_name --format=csv").read():
+            config['precision']=16
+            p=16
+        
     #for windows .... 
     if sys.platform == "win32":
        os.environ["PL_TORCH_DISTRIBUTED_BACKEND"]='gloo'

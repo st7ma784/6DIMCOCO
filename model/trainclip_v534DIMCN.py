@@ -26,14 +26,14 @@ class LightningCLIPModule(base):
             decoder_attention_heads=16,
             decoder_ffn_dim=4096,
             decoder_layerdrop=0.0,
-            decoder_layers=4, #would be higher if I had more VRAM
+            decoder_layers=3, #would be higher if I had more VRAM
             decoder_start_token_id=self.clip.vocab_size-1,
             decoder_vocab_size=self.clip.vocab_size,
             dropout=0.0,
             encoder_attention_heads=16,
             encoder_ffn_dim=4096,
             encoder_layerdrop=0.0,
-            encoder_layers=4, #would be higher if I had more VRAM
+            encoder_layers=3, #would be higher if I had more VRAM
             eos_token_id=21129,
             forced_eos_token_id=0,
             init_std=0.02,
