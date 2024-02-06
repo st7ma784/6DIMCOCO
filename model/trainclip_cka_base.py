@@ -406,21 +406,27 @@ class LightningCLIPModule(LightningModule):
             #log all these plots
             if self.logger is not None:
                 if hasattr(self.logger,"log_image"):
-                    self.logger.log_image(key=[
-                        "distribution_of_validation_features.jpg",
-                        "mean_distribution_of_validation_features.jpg",
-                        "distribution_of_validation_feature_deltas.jpg",
-                        "mean_distribution_of_validation_feature_deltas.jpg",
-                        "mean_similarity_of_first_5_features_across_validation_epochs.jpg",
-                        "mean_similarity_between_each_sample_across_validation_epochs.jpg",
-                        ], images=[
-                        "distribution_of_validation_features.jpg",
-                        "mean_distribution_of_validation_features.jpg",
-                        "distribution_of_validation_feature_deltas.jpg",
-                        "mean_distribution_of_validation_feature_deltas.jpg",
-                        "mean_similarity_of_first_5_features_across_validation_epochs.jpg",
-                        "mean_similarity_between_each_sample_across_validation_epochs.jpg",
-                        ])
+                    # self.logger.log_image(key=[
+                    #     "distribution_of_validation_features.jpg",
+                    #     "mean_distribution_of_validation_features.jpg",
+                    #     "distribution_of_validation_feature_deltas.jpg",
+                    #     "mean_distribution_of_validation_feature_deltas.jpg",
+                    #     "mean_similarity_of_first_5_features_across_validation_epochs.jpg",
+                    #     "mean_similarity_between_each_sample_across_validation_epochs.jpg",
+                    #     ], images=[
+                    #     "distribution_of_validation_features.jpg",
+                    #     "mean_distribution_of_validation_features.jpg",
+                    #     "distribution_of_validation_feature_deltas.jpg",
+                    #     "mean_distribution_of_validation_feature_deltas.jpg",
+                    #     "mean_similarity_of_first_5_features_across_validation_epochs.jpg",
+                    #     "mean_similarity_between_each_sample_across_validation_epochs.jpg",
+                    #     ])
+                    self.logger.log_image(key="distribution_of_validation_features", images=["distribution_of_validation_features.jpg"])
+                    self.logger.log_image(key="mean_distribution_of_validation_features", images=["mean_distribution_of_validation_features.jpg"])
+                    self.logger.log_image(key="distribution_of_validation_feature_deltas", images=["distribution_of_validation_feature_deltas.jpg"])
+                    self.logger.log_image(key="mean_distribution_of_validation_feature_deltas", images=["mean_distribution_of_validation_feature_deltas.jpg"])
+                    self.logger.log_image(key="mean_similarity_of_first_5_features_across_validation_epochs", images=["mean_similarity_of_first_5_features_across_validation_epochs.jpg"])
+                    self.logger.log_image(key="mean_similarity_between_each_sample_across_validation_epochs", images=["mean_similarity_between_each_sample_across_validation_epochs.jpg"])
                 #remove the tfeatures
                 
             self.tfeatures=None
