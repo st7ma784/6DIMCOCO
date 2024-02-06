@@ -57,6 +57,7 @@ class LightningCLIPModule(base):
         self.exact_labels=kwargs["exactlabels"]
         self.label=self.generate_labels((4,self.hparams.batch_size,self.transformer_width))
         self.pruneLabels=  len(self.label.shape)>=4
+        self.EOT_embedding=self.clip.token_embedding.weight[-1]
 
         self.model_projection=torch.nn.Parameter(torch.empty(config.d_model, self.transformer_width))
         if kwargs.get("gumbel",False):
@@ -88,7 +89,7 @@ class LightningCLIPModule(base):
         #shape should be [batch_size, 1, d_model]
         
         #from the logits, we're going to find indexes (shape [B,S]) of the maximum cosine similarity between  token embedding for EOT [1,512] for each position of [B,S,512]
-        eot=self.EOT_embedding.to(self.device,non_blocking=True)
+        eot=self.EOT_embedding.detach().to(self.device,non_blocking=True)
         x=output["last_hidden_state"]
         EOT_indexes=torch.nn.functional.gumbel_softmax(x@eot,dim=-1,hard=True)# already tokenized ready to go¬
         #scale x to be in range [-1,1]
