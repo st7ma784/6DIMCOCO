@@ -1,0 +1,22 @@
+version: '3'
+services:
+  runcontext:
+    image: st7ma784/runcontext
+    volumes:
+      - /path/to/local/dataset:/data
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+  watch-tower:
+    image: containrrr/watchtower
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    command: --interval 30
+    deploy:
+      mode: global
+      placement:
+        constraints:
+          - node.role == manager
