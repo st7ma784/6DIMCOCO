@@ -63,13 +63,13 @@ class LightningCLIPModule(LightningModule):
                 label=self.calculate_loss(*[testBatch for _ in range(inputshape[0])]).to(self.device,non_blocking=True)
                 #convert this to probabilities in range [0,1]
                 # label=torch.nn.functional.softmax(self.label)
-                label=torch.nan_to_num(self.label, nan=1.0)
+                label=torch.nan_to_num(label, nan=1.0)
                 
         #elif add in the case where using -inf or -1 instead of zeros as below....
         else:
             label=torch.ones(self.hparams.batch_size,dtype=torch.float,device=self.device)
             for i in range(1,inputshape[0]):
-                label=torch.diag_embed(self.label)
+                label=torch.diag_embed(label)
         return torch.nan_to_num(label, nan=0.0)
     def initialize_parameters(self):
         if self.token_embedding:
@@ -155,8 +155,9 @@ class LightningCLIPModule(LightningModule):
             for hook in self.pruneHooks:
                 hook.remove()
         if hasattr(self,"alpha"):
-            self.logger.log_text("mask weights",columns=self.masks.tolist(),data=[self.alpha.tolist()])
-            self.logger.log_text("effective weights", columns=self.masks.tolist(),data=[torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True)).tolist()])
+            if hasattr(self.logger,"log_text"):
+                self.logger.log_text("mask weights",columns=self.masks.tolist(),data=[self.alpha.tolist()])
+                self.logger.log_text("effective weights", columns=self.masks.tolist(),data=[torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True)).tolist()])
         
     def build_attention_mask(self):
         # lazily create causal attention mask, with full attention between the vision tokens
@@ -201,8 +202,9 @@ class LightningCLIPModule(LightningModule):
             self.projection_fn=self.projection
 
         if hasattr(self,"alpha"):
-            self.logger.log_text("mask weights",columns=self.masks.tolist(),data=[self.alpha.tolist()])
-            self.logger.log_text("effective weights", columns=self.masks.tolist(),data=[torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True)).tolist()])
+            if hasattr(self.logger,"log_text"):
+                self.logger.log_text("mask weights",columns=self.masks.tolist(),data=[self.alpha.tolist()])
+                self.logger.log_text("effective weights", columns=self.masks.tolist(),data=[torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True)).tolist()])
     def validation_step(self,batch,*args):
         #do stock loss here
        
@@ -290,8 +292,9 @@ class LightningCLIPModule(LightningModule):
         self.plot_results("IM","IMHSIC{}.jpg".format(self.current_epoch))
         self.plot_results("CAP","CAPHSIC{}.jpg".format(self.current_epoch))
         if self.logger is not None:
-            self.logger.log_image(key="IMHSIC{}".format(self.current_epoch), images=["IMHSIC{}.jpg".format(self.current_epoch)])        
-            self.logger.log_image(key="CAPHSIC{}".format(self.current_epoch), images=["CAPHSIC{}.jpg".format(self.current_epoch)])
+            if hasattr(self.logger,"log_image"):
+                self.logger.log_image(key="IMHSIC{}".format(self.current_epoch), images=["IMHSIC{}.jpg".format(self.current_epoch)])        
+                self.logger.log_image(key="CAPHSIC{}".format(self.current_epoch), images=["CAPHSIC{}.jpg".format(self.current_epoch)])
         for handle in self.handles:
             handle.remove()
         #print(self.naninfcount)
@@ -324,8 +327,9 @@ class LightningCLIPModule(LightningModule):
         # self.logger.log_text("token embeddings tokens nearest centers",str(tokens[kmeans.labels_==i]))
         # #log the tokens closest to the mean of all embeddings.
         values,indxs=torch.sort(torch.norm(embeddings-embeddings.mean(dim=0),dim=1),)
-        self.logger.log_text("token embeddings center-most tokens",columns=tokens[indxs[:10]].tolist(),data=[values[:10].tolist()])
-        self.logger.log_text("token embeddings furthest tokens",columns=tokens[indxs[-10:]].tolist(),data=[values[-10:].tolist()])
+        if hasattr(self.logger,"log_text"):
+            self.logger.log_text("token embeddings center-most tokens",columns=tokens[indxs[:10]].tolist(),data=[values[:10].tolist()])
+            self.logger.log_text("token embeddings furthest tokens",columns=tokens[indxs[-10:]].tolist(),data=[values[-10:].tolist()])
     def test_step(self,batch,*args):
         #do stock loss here
         image_features=self.encode_image(batch[0])
@@ -401,21 +405,22 @@ class LightningCLIPModule(LightningModule):
 
             #log all these plots
             if self.logger is not None:
-                self.logger.log_image(key=[
-                    "distribution_of_validation_features.jpg",
-                    "mean_distribution_of_validation_features.jpg",
-                    "distribution_of_validation_feature_deltas.jpg",
-                    "mean_distribution_of_validation_feature_deltas.jpg",
-                    "mean_similarity_of_first_5_features_across_validation_epochs.jpg",
-                    "mean_similarity_between_each_sample_across_validation_epochs.jpg",
-                    ], images=[
-                    "distribution_of_validation_features.jpg",
-                    "mean_distribution_of_validation_features.jpg",
-                    "distribution_of_validation_feature_deltas.jpg",
-                    "mean_distribution_of_validation_feature_deltas.jpg",
-                    "mean_similarity_of_first_5_features_across_validation_epochs.jpg",
-                    "mean_similarity_between_each_sample_across_validation_epochs.jpg",
-                    ])
+                if hasattr(self.logger,"log_image"):
+                    self.logger.log_image(key=[
+                        "distribution_of_validation_features.jpg",
+                        "mean_distribution_of_validation_features.jpg",
+                        "distribution_of_validation_feature_deltas.jpg",
+                        "mean_distribution_of_validation_feature_deltas.jpg",
+                        "mean_similarity_of_first_5_features_across_validation_epochs.jpg",
+                        "mean_similarity_between_each_sample_across_validation_epochs.jpg",
+                        ], images=[
+                        "distribution_of_validation_features.jpg",
+                        "mean_distribution_of_validation_features.jpg",
+                        "distribution_of_validation_feature_deltas.jpg",
+                        "mean_distribution_of_validation_feature_deltas.jpg",
+                        "mean_similarity_of_first_5_features_across_validation_epochs.jpg",
+                        "mean_similarity_between_each_sample_across_validation_epochs.jpg",
+                        ])
                 #remove the tfeatures
                 
             self.tfeatures=None

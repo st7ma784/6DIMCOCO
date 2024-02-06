@@ -247,7 +247,7 @@ class LightningCLIPModule(base):
         labels=torch.diag_embed(torch.ones(self.hparams.batch_size,dtype=torch.float,device=self.device))
         self.model1_features = {}  #reset list of forward hooks
         self.model2_features = {}  #reset list of forward hooks
-        image_features=self.clip.encode_image(batch[0])
+        image_features=self.encode_image(batch[0])
         self.model2.encode_image(batch[0])# to compare supervision model
         a=torch.nan_to_num(torch.stack(list(self.model1_features.values())))
         self.IMhsic_matrix0=torch.add(self.IMhsic_matrix0,torch.nan_to_num(batch_HSIC2(a),nan=0.0,posinf=100,neginf=-200)) 

@@ -1,11 +1,15 @@
 
-from curses.ascii import EOT
 from functools import reduce
 from operator import add
+
+import sys
+sys.path.append("/data/6DIMCOCO")
+
+
 from model.trainclip_v5335DIM import LightningCLIPModule as base 
 import torch
 import torch.nn as nn
-from transformers import AutoModelForMaskedLM,CLIPTokenizer
+from transformers import CLIPTokenizer
 import numpy as np
 class LightningCLIPModule(base):
     def __init__(self, *args, **kwargs):
@@ -31,7 +35,7 @@ class LightningCLIPModule(base):
         self.token_emb=nn.Parameter(self.token_embedding.weight) #V,D
         self.token_scale=nn.Parameter(torch.ones(self.token_emb.shape[1],device=self.device))
         self.label=torch.nan_to_num(self.label)
-        self.EOT_embedding=self.clip.token_embedding.weight[-1]
+        self.EOT_embedding=self.clip.token_embedding.weight[-1].to(self.device)
         #check shape is [512]
 
     def encode_text(self, text):
@@ -52,25 +56,35 @@ class LightningCLIPModule(base):
         #shape should be [batch_size, 1, d_model]
         
         #from the logits, we're going to find indexes (shape [B,S]) of the maximum cosine similarity between  token embedding for EOT [1,512] for each position of [B,S,512]
-
-
-        x=output["logits"]
-
-        EOT_indexes=torch.nn.functional.gumbel_softmax(x@self.EOT_embedding,dim=-1,hard=True)# already tokenized ready to go¬
+        eot=self.EOT_embedding.to(self.device,non_blocking=True)
+        x=output["last_hidden_state"]
+        EOT_indexes=torch.nn.functional.gumbel_softmax(x@eot,dim=-1,hard=True)# already tokenized ready to go¬
         #scale x to be in range [-1,1]
         #EOT should be size B,S shape as a one hot vector
+        #print(EOT_indexes.shape)
+        #print(EOT_indexes)
         x=x/torch.norm(x,dim=-1,keepdim=True)
         x=x*self.token_scale
-        # x=x+1 
-        # x=x/2
+
         x = x + self.clip.positional_embedding.type(self.dtype)
         
         x = x.permute(1, 0, 2) # NLD -> LND
         x = self.clip.transformer(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
         x = self.ln_final(x).type(self.dtype)
-        x = x[torch.arange(x.shape[0]), EOT_indexes] 
-        return x,encoder_output
+
+        # checksum = x[torch.arange(x.shape[0]), EOT_indexes.argmax(dim=-1)]
+        #x is B,S,D . EOT is B,S
+        
+        y=torch.sum(x * EOT_indexes.unsqueeze(-1),dim=1)
+        # print("y",y.shape)
+        #X is shaoe B,S,D, EOT is shape B,S  of one hot vectors, I want the matrix mul that gives me B,D where each value is the one where EOT is 1
+        # x=torch.einsum("bsd,bs->bd",x,EOT_indexes) # not sure if this is right?
+        # sumx=torch.sub(x,checksum)
+        # sumy=torch.sub(y,checksum)
+        # print("resultx",torch.sum(sumx))
+        # print("resulty",torch.sum(sumy))
+        return y,encoder_output
 
 
     # @torch.jit.script
@@ -93,19 +107,25 @@ class LightningCLIPModule(base):
     def training_step(self, batch, batch_idx):
 
         im,captions= batch[0],batch[1]
-        assert len(self.label.shape)>=4
+        #assert len(self.label.shape)>=4
 
-        logits=self(im,*[captions[:,i] for i in range(captions.shape[1])])*self.logit_scale.exp()
+        logits=self.forward(im,*[captions[:,i] for i in range(captions.shape[1])])*self.logit_scale.exp()
+        # print(logits.shape)
 
-        try:
-            labels=self.label[:(im.shape[0]),:(im.shape[0]),:(im.shape[0]),:(im.shape[0])].to(self.device,non_blocking=True) 
-        except:
-            #labels wrong size!!?!
+        labels=self.label
+  
+        if labels.shape != logits.shape:
+            # print((len(logits.shape)))
             labels=self.generate_labels((len(logits.shape),self.hparams.batch_size,self.transformer_width)).to(self.device,non_blocking=True)
+            self.label=labels
+            # print(labels.shape)
+            # print(self.label.shape)
 
-        self.log("first logit",logits[0,0,0,0],enable_graph=False)
-        self.log("BAD logit",logits[0,1,2,3],enable_graph=False)
-        self.log("logit scale",self.logit_scale.exp())
+        #     print(labels.shape)
+        # print(labels.shape)
+        # self.log("first logit",logits[0,0,0,0],enable_graph=False)
+        # self.log("BAD logit",logits[0,1,2,3],enable_graph=False)
+        # self.log("logit scale",self.logit_scale.exp())
 
         # The idea is that good logits are 1s,   bad should be -1s... so if logits are coming back as ~6000....
         #  Option 1: divide down.
@@ -127,15 +147,18 @@ class LightningCLIPModule(base):
         
         loss=self.meanloss(I=[losses[0]],T=losses[1:]).mean()
       
-        self.log('train_loss', loss, prog_bar=True,enable_graph=False, rank_zero_only=True)
+        
+        #self.log('train_loss', loss, prog_bar=True,enable_graph=False, rank_zero_only=True)
 
         return {"loss": loss}
 
     def on_test_epoch_start(self):
+        
         super().on_test_epoch_start()
         self.bertscores = []
     
     def test_step(self, batch: dict, batch_idx: int) -> torch.Tensor:
+        
         """ Post-training evaluation.
         Args:
             batch (dict): the data batch
@@ -175,7 +198,12 @@ class LightningCLIPModule(base):
         super().test_epoch_end(outputs)
         BertScore = reduce(add,self.bertscores) / len(self.bertscores)
         self.log("BertScore", BertScore, prog_bar=True,enable_graph=False, rank_zero_only=True)
-
+    def on_validation_epoch_start(self):
+        pass
+    def validation_step(self, batch, batch_idx):
+        pass
+    def on_validation_epoch_end(self):
+        pass
 import evaluate
 import time
 
@@ -218,28 +246,25 @@ def getBSf1(metric: evaluate.EvaluationModule,
 
 if __name__ == "__main__":
     print("Testing LightningCLIPModule")
-    model = LightningCLIPModule()
-    import sys
-    sys.path.append("..")
 
 
     from BuildSpainDataSet import COCODataModule
-    from BuildImagenet import ImagenetDataModule
+    # from BuildImagenet import ImagenetDataModule
 
-    TestLoader=ImagenetDataModule(
-        data_dir="/data", 
-        meta_dir="/data",
-        num_imgs_per_val_class=50,
-        image_size=224,
-        num_workers=4, 
-        batch_size=8, 
-        shuffle=True,
-        pin_memory=True,
-        drop_last=True)
+    # TestLoader=ImagenetDataModule(
+    #     data_dir="/data", 
+    #     meta_dir="/data",
+    #     num_imgs_per_val_class=50,
+    #     image_size=224,
+    #     num_workers=4, 
+    #     batch_size=8, 
+    #     shuffle=True,
+    #     pin_memory=True,
+    #     drop_last=True)
     Dataset=COCODataModule(Cache_dir="/data",annotations="/data/annotations",batch_size=8)
     # from pl_bolts.datamodules import ImagenetDataModule
     model=LightningCLIPModule( 
-        batch_size=32,
+        batch_size=8,
         learning_rate=3e-5,
         dir="/data",
         annotations="/data/annotations",
@@ -247,6 +272,7 @@ if __name__ == "__main__":
         exactlabels=1,
         normlogits=1,
         alpha=0.5,
+        precision=16,
         projection="None"
     )
   
@@ -280,5 +306,5 @@ if __name__ == "__main__":
             precision=16,
     )
     trainer.fit(model,Dataset)
-    trainer.test(model,TestLoader)
+    # trainer.test(model,TestLoader)
    
