@@ -1,4 +1,5 @@
 
+from curses.ascii import EOT
 from functools import reduce
 from operator import add
 from model.trainclip_v5335DIM import LightningCLIPModule as base 
@@ -30,6 +31,9 @@ class LightningCLIPModule(base):
         self.token_emb=nn.Parameter(self.token_embedding.weight) #V,D
         self.token_scale=nn.Parameter(torch.ones(self.token_emb.shape[1],device=self.device))
         self.label=torch.nan_to_num(self.label)
+        self.EOT_embedding=self.clip.token_embedding.weight[-1]
+        #check shape is [512]
+
     def encode_text(self, text):
  
         EOT_indexes=torch.argmax(text,dim=-1)# already tokenized ready to go¬
@@ -39,19 +43,22 @@ class LightningCLIPModule(base):
 
 
         output = self.transformerModel.model(input_ids=text,
-                                            decoder_input_ids=decoder_input_ids,
-                                            return_dict=True,
-                                            output_hidden_states=True)
+                                             decoder_input_ids=decoder_input_ids,
+                                             return_dict=True,
+                                             output_hidden_states=True)
         #output = self.transformerModel(input_ids=text,decoder_input_ids=,return_dict=True,output_hidden_states=True)
 
         encoder_output=output["encoder_last_hidden_state"][torch.arange(output["encoder_last_hidden_state"].shape[0]),EOT_indexes]
         #shape should be [batch_size, 1, d_model]
-        EOT_locations=torch.argmax(torch.argmax(output.logits,dim=-1),dim=-1) #should be [batch_size,1]
-        #print("EOT locations: ",EOT_locations.shape)
-        output=self.token_select(output.logits)
-        #print("output shape: ",output) #B,77,V #should be 1hot encoded?
-        x=output@self.token_emb
+        
+        #from the logits, we're going to find indexes (shape [B,S]) of the maximum cosine similarity between  token embedding for EOT [1,512] for each position of [B,S,512]
+
+
+        x=output["logits"]
+
+        EOT_indexes=torch.nn.functional.gumbel_softmax(x@self.EOT_embedding,dim=-1,hard=True)# already tokenized ready to go¬
         #scale x to be in range [-1,1]
+        #EOT should be size B,S shape as a one hot vector
         x=x/torch.norm(x,dim=-1,keepdim=True)
         x=x*self.token_scale
         # x=x+1 
@@ -61,10 +68,8 @@ class LightningCLIPModule(base):
         x = x.permute(1, 0, 2) # NLD -> LND
         x = self.clip.transformer(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
-
         x = self.ln_final(x).type(self.dtype)
-
-        x = x[torch.arange(x.shape[0]), EOT_locations] 
+        x = x[torch.arange(x.shape[0]), EOT_indexes] 
         return x,encoder_output
 
 
@@ -210,7 +215,70 @@ def getBSf1(metric: evaluate.EvaluationModule,
     return sum(f1) / len(f1)
 
 
-"""
-    Don't publish this bit.
 
-"""
+if __name__ == "__main__":
+    print("Testing LightningCLIPModule")
+    model = LightningCLIPModule()
+    import sys
+    sys.path.append("..")
+
+
+    from BuildSpainDataSet import COCODataModule
+    from BuildImagenet import ImagenetDataModule
+
+    TestLoader=ImagenetDataModule(
+        data_dir="/data", 
+        meta_dir="/data",
+        num_imgs_per_val_class=50,
+        image_size=224,
+        num_workers=4, 
+        batch_size=8, 
+        shuffle=True,
+        pin_memory=True,
+        drop_last=True)
+    Dataset=COCODataModule(Cache_dir="/data",annotations="/data/annotations",batch_size=8)
+    # from pl_bolts.datamodules import ImagenetDataModule
+    model=LightningCLIPModule( 
+        batch_size=32,
+        learning_rate=3e-5,
+        dir="/data",
+        annotations="/data/annotations",
+        debug=False,
+        exactlabels=1,
+        normlogits=1,
+        alpha=0.5,
+        projection="None"
+    )
+  
+        
+    from pytorch_lightning.strategies import DDPStrategy as DDP
+    import os
+    import pytorch_lightning
+    from pytorch_lightning.callbacks import EarlyStopping,TQDMProgressBar
+    Dataset.batch_size=8
+    callbacks=[
+        TQDMProgressBar(),
+        EarlyStopping(monitor="train_loss", mode="min",patience=10,check_finite=True,stopping_threshold=0.001),
+    ]
+  
+    #for windows .... 
+    if sys.platform == "win32":
+       os.environ["PL_TORCH_DISTRIBUTED_BACKEND"]='gloo'
+    print("Launching with precision",16)
+    trainer=pytorch_lightning.Trainer(
+            devices="auto",
+            #auto_select_gpus=True,
+            accelerator="auto",
+            max_epochs=20,
+            #profiler="advanced",
+            strategy=DDP(find_unused_parameters=True),
+            num_nodes=int(os.getenv("SLURM_NNODES",1)),
+            callbacks=callbacks,
+            gradient_clip_val=0.25,# Not supported for manual optimization
+            accumulate_grad_batches=16,
+            fast_dev_run=False,
+            precision=16,
+    )
+    trainer.fit(model,Dataset)
+    trainer.test(model,TestLoader)
+   
