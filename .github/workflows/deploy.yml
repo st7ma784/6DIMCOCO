@@ -36,7 +36,7 @@ jobs:
         id: meta
         uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
         with:
-          images: st7ma784/run_context
+          images: st7ma784/runcontext
           tags: |
             latest
             ${{ github.sha }}      
