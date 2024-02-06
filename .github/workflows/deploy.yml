@@ -14,7 +14,7 @@ on:
     paths:
       - model/*
       - requirements.txt
-      - .github/workflows/docker-publish.yml
+      - .github/workflows/deploy.yml
   #release:
   #  types: [published]
 
