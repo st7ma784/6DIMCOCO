@@ -35,7 +35,7 @@ class LightningCLIPModule(base):
         self.token_emb=nn.Parameter(self.token_embedding.weight) #V,D
         self.token_scale=nn.Parameter(torch.ones(self.token_emb.shape[1],device=self.device))
         self.label=torch.nan_to_num(self.label)
-        self.EOT_embedding=self.clip.token_embedding.weight[-1].to(self.device)
+        self.EOT_embedding=self.clip.token_embedding.weight[-1]
         #check shape is [512]
 
     def encode_text(self, text):
@@ -56,7 +56,7 @@ class LightningCLIPModule(base):
         #shape should be [batch_size, 1, d_model]
         
         #from the logits, we're going to find indexes (shape [B,S]) of the maximum cosine similarity between  token embedding for EOT [1,512] for each position of [B,S,512]
-        eot=self.EOT_embedding.to(self.device,non_blocking=True)
+        eot=self.EOT_embedding.detach().to(self.device)
         x=output["last_hidden_state"]
         EOT_indexes=torch.nn.functional.gumbel_softmax(x@eot,dim=-1,hard=True)# already tokenized ready to go¬
         #scale x to be in range [-1,1]
@@ -76,8 +76,8 @@ class LightningCLIPModule(base):
         # checksum = x[torch.arange(x.shape[0]), EOT_indexes.argmax(dim=-1)]
         #x is B,S,D . EOT is B,S
         
-        x=torch.sum(x * EOT_indexes.unsqueeze(-1),dim=1)
-
+        x=x * EOT_indexes.unsqueeze(-1)
+        x=x.sum(dim=1)
         return x,encoder_output
 
 
@@ -85,7 +85,7 @@ class LightningCLIPModule(base):
     def forward(self, im, captions1,*captions):
         image_features=self.clip.encode_image(im)
         caption_features1=self.clip.encode_text(captions1)
-        features=[self.encode_text(c) for c in captions]
+        features=[self.encode_text(c) for c in captions[:-2]]
         caption_features=[f[0] for f in features]+[f[1] for f in features]
         if self.projection=="inv":
             image_features=image_features@ self.text_projection
