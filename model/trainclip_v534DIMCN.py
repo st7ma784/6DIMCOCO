@@ -60,11 +60,17 @@ class LightningCLIPModule(base):
         self.EOT_embedding=self.clip.token_embedding.weight[-1]
 
         self.model_projection=torch.nn.Parameter(torch.empty(config.d_model, self.transformer_width))
-        if kwargs.get("gumbel",False):
-            self.token_select=partial(torch.nn.functional.gumbel_softmax,hard=True,dim=-1)
+        # if kwargs.get("gumbel",False):
+        #     self.token_select=partial(torch.nn.functional.gumbel_softmax,hard=True,dim=-1)
+        # else:
+        #     self.token_select=partial(torch.nn.functional.softmax,dim=-1)
+        EOT_finder=kwargs.get("EOTGrad",0)
+        if EOT_finder==0:
+            self.EOT_summarization=self.EOT_finder
+        elif EOT_finder==1:
+            self.EOT_summarization=self.EOT_finder2
         else:
-            self.token_select=partial(torch.nn.functional.softmax,dim=-1)
-            
+            raise ValueError("EOTGrad must be 0 or 1")
     def on_validation_epoch_start(self):
         pass
     def on_validation_epoch_end(self):
@@ -89,9 +95,8 @@ class LightningCLIPModule(base):
         #shape should be [batch_size, 1, d_model]
         
         #from the logits, we're going to find indexes (shape [B,S]) of the maximum cosine similarity between  token embedding for EOT [1,512] for each position of [B,S,512]
-        eot=self.EOT_embedding.detach().to(self.device,non_blocking=True)
+        
         x=output["last_hidden_state"]
-        EOT_indexes=torch.nn.functional.gumbel_softmax(x@eot,dim=-1,hard=True)# already tokenized ready to go¬
         #scale x to be in range [-1,1]
         #EOT should be size B,S shape as a one hot vector
         #print(EOT_indexes.shape)
@@ -105,20 +110,20 @@ class LightningCLIPModule(base):
         x = self.clip.transformer(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
         x = self.ln_final(x).type(self.dtype)
-
-        # checksum = x[torch.arange(x.shape[0]), EOT_indexes.argmax(dim=-1)]
+        x = self.EOT_summarization(x)
         #x is B,S,D . EOT is B,S
-        
-        y=torch.sum(x * EOT_indexes.unsqueeze(-1),dim=1)
-        # print("y",y.shape)
-        #X is shaoe B,S,D, EOT is shape B,S  of one hot vectors, I want the matrix mul that gives me B,D where each value is the one where EOT is 1
-        # x=torch.einsum("bsd,bs->bd",x,EOT_indexes) # not sure if this is right?
-        # sumx=torch.sub(x,checksum)
-        # sumy=torch.sub(y,checksum)
-        # print("resultx",torch.sum(sumx))
-        # print("resulty",torch.sum(sumy))
-        return y,encoder_output
+        #EOT_indexes=torch.nn.functional.gumbel_softmax(x@eot,dim=-1,hard=True)# already tokenized ready to go¬
 
+        # x=x * EOT_indexes.unsqueeze(-1)
+        # x=x.sum(dim=1)
+        return x,encoder_output
+    def EOT_finder(self,x):
+        eot=self.EOT_embedding.detach().to(self.device)
+        return x[torch.arange(x.shape[0]), torch.argmax(x@eot,dim=-1)]
+    def EOT_finder2(self,x):
+        eot=self.EOT_embedding.detach().to(self.device)
+        x=x * torch.nn.functional.gumbel_softmax(x@eot,dim=-1,hard=True).unsqueeze(-1)
+        return x.sum(dim=1)
 
 
     # @torch.jit.script

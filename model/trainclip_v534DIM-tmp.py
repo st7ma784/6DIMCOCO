@@ -1,6 +1,7 @@
 
 from functools import reduce
 from operator import add
+from torch.optim.lr_scheduler import ReduceLROnPlateau
 
 import sys
 sys.path.append("/data/6DIMCOCO")
@@ -37,8 +38,19 @@ class LightningCLIPModule(base):
         self.label=torch.nan_to_num(self.label)
         self.EOT_embedding=self.clip.token_embedding.weight[-1]
         #check shape is [512]
+        self.clip.train()
+        self.transformerModel.train()
+        EOT_finder=kwargs.get("EOTGrad",0)
+        if EOT_finder==0:
+            self.EOT_summarization=self.EOT_finder
+        elif EOT_finder==1:
+            self.EOT_summarization=self.EOT_finder2
+        else:
+            raise ValueError("EOTGrad must be 0 or 1")
+        
 
     def encode_text(self, text):
+
  
         EOT_indexes=torch.argmax(text,dim=-1)# already tokenized ready to go¬
         #or decoder inputs= sot tokens?
@@ -48,23 +60,20 @@ class LightningCLIPModule(base):
 
         output = self.transformerModel.model(input_ids=text,
                                              decoder_input_ids=decoder_input_ids,
-                                             return_dict=True,
                                              output_hidden_states=True)
         #output = self.transformerModel(input_ids=text,decoder_input_ids=,return_dict=True,output_hidden_states=True)
-
-        encoder_output=output["encoder_last_hidden_state"][torch.arange(output["encoder_last_hidden_state"].shape[0]),EOT_indexes]
-        #shape should be [batch_size, 1, d_model]
-        
+        # print(output.keys())
+        encoder_output=output.encoder_last_hidden_state[torch.arange(output.encoder_last_hidden_state.shape[0]),EOT_indexes]
+        #print(encoder_output.has_g)
         #from the logits, we're going to find indexes (shape [B,S]) of the maximum cosine similarity between  token embedding for EOT [1,512] for each position of [B,S,512]
         eot=self.EOT_embedding.detach().to(self.device)
-        x=output["last_hidden_state"]
-        EOT_indexes=torch.nn.functional.gumbel_softmax(x@eot,dim=-1,hard=True)# already tokenized ready to go¬
+        x=output.last_hidden_state
         #scale x to be in range [-1,1]
         #EOT should be size B,S shape as a one hot vector
         #print(EOT_indexes.shape)
         #print(EOT_indexes)
         x=x/torch.norm(x,dim=-1,keepdim=True)
-        x=x*self.token_scale
+        #x=x*self.token_scale
 
         x = x + self.clip.positional_embedding.type(self.dtype)
         
@@ -72,20 +81,25 @@ class LightningCLIPModule(base):
         x = self.clip.transformer(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
         x = self.ln_final(x).type(self.dtype)
-
-        # checksum = x[torch.arange(x.shape[0]), EOT_indexes.argmax(dim=-1)]
+        x = self.EOT_summarization(x)
         #x is B,S,D . EOT is B,S
-        
-        x=x * EOT_indexes.unsqueeze(-1)
-        x=x.sum(dim=1)
+        #EOT_indexes=torch.nn.functional.gumbel_softmax(x@eot,dim=-1,hard=True)# already tokenized ready to go¬
+
+        # x=x * EOT_indexes.unsqueeze(-1)
+        # x=x.sum(dim=1)
         return x,encoder_output
-
-
+    def EOT_finder(self,x):
+        eot=self.EOT_embedding.detach().to(self.device)
+        return x[torch.arange(x.shape[0]), torch.argmax(x@eot,dim=-1)]
+    def EOT_finder2(self,x):
+        eot=self.EOT_embedding.detach().to(self.device)
+        x=x * torch.nn.functional.gumbel_softmax(x@eot,dim=-1,hard=True).unsqueeze(-1)
+        return x.sum(dim=1)
     # @torch.jit.script
     def forward(self, im, captions1,*captions):
         image_features=self.clip.encode_image(im)
         caption_features1=self.clip.encode_text(captions1)
-        features=[self.encode_text(c) for c in captions[:-2]]
+        features=[self.encode_text(c) for c in captions[:2]]
         caption_features=[f[0] for f in features]+[f[1] for f in features]
         if self.projection=="inv":
             image_features=image_features@ self.text_projection
@@ -142,7 +156,7 @@ class LightningCLIPModule(base):
         loss=self.meanloss(I=[losses[0]],T=losses[1:]).mean()
       
         
-        #self.log('train_loss', loss, prog_bar=True,enable_graph=False, rank_zero_only=True)
+        self.log('train_loss', loss, prog_bar=True,enable_graph=False, rank_zero_only=True)
 
         return {"loss": loss}
 
@@ -198,6 +212,20 @@ class LightningCLIPModule(base):
         pass
     def on_validation_epoch_end(self):
         pass
+
+
+
+    def configure_optimizers(self):
+        parameters = list(self.transformerModel.model.parameters()) + [self.text_projection]
+        optimizer = torch.optim.AdamW(
+                parameters, lr=self.hparams.learning_rate, eps=10e-8,
+                #weight_decay=0.1,
+             #betas=(0.9, 0.95),
+             )
+        lr_schedulers = {"scheduler": ReduceLROnPlateau(optimizer), "monitor": "train_loss"}
+
+        return [optimizer],[lr_schedulers]
+
 import evaluate
 import time
 
@@ -255,15 +283,16 @@ if __name__ == "__main__":
     #     shuffle=True,
     #     pin_memory=True,
     #     drop_last=True)
-    Dataset=COCODataModule(Cache_dir="/data",annotations="/data/annotations",batch_size=8)
+    Dataset=COCODataModule(Cache_dir="/data",annotations="/data/annotations",batch_size=10)
     # from pl_bolts.datamodules import ImagenetDataModule
     model=LightningCLIPModule( 
-        batch_size=8,
-        learning_rate=3e-5,
+        batch_size=10,
+        learning_rate=3e-4,
         dir="/data",
         annotations="/data/annotations",
         debug=False,
         exactlabels=1,
+        logitsversion=8,
         normlogits=1,
         alpha=0.5,
         precision=16,
@@ -275,7 +304,6 @@ if __name__ == "__main__":
     import os
     import pytorch_lightning
     from pytorch_lightning.callbacks import EarlyStopping,TQDMProgressBar
-    Dataset.batch_size=8
     callbacks=[
         TQDMProgressBar(),
         EarlyStopping(monitor="train_loss", mode="min",patience=10,check_finite=True,stopping_threshold=0.001),

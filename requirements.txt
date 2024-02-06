@@ -11,3 +11,4 @@ test_tube
 scikit-learn
 pytorch_lightning_bolts
 datasets
+seaborn
