@@ -76,15 +76,9 @@ class LightningCLIPModule(base):
         # checksum = x[torch.arange(x.shape[0]), EOT_indexes.argmax(dim=-1)]
         #x is B,S,D . EOT is B,S
         
-        y=torch.sum(x * EOT_indexes.unsqueeze(-1),dim=1)
-        # print("y",y.shape)
-        #X is shaoe B,S,D, EOT is shape B,S  of one hot vectors, I want the matrix mul that gives me B,D where each value is the one where EOT is 1
-        # x=torch.einsum("bsd,bs->bd",x,EOT_indexes) # not sure if this is right?
-        # sumx=torch.sub(x,checksum)
-        # sumy=torch.sub(y,checksum)
-        # print("resultx",torch.sum(sumx))
-        # print("resulty",torch.sum(sumy))
-        return y,encoder_output
+        x=torch.sum(x * EOT_indexes.unsqueeze(-1),dim=1)
+
+        return x,encoder_output
 
 
     # @torch.jit.script

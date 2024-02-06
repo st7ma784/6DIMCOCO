@@ -71,30 +71,53 @@ class LightningCLIPModule(base):
     def validation_step(self, batch, batch_idx):
         pass
     def encode_text(self, text):
-        
  
         EOT_indexes=torch.argmax(text,dim=-1)# already tokenized ready to go¬
         #or decoder inputs= sot tokens?
         #or decoder inputs= pad tokens? 
-        decoder_input_ids=torch.zeros_like(text)
-        decoder_input_ids=torch.full((text.shape[0],2),self.bos_token_id).to(self.device,non_blocking=True)
+        decoder_input_ids=torch.full((text.shape[0],77),self.bos_token_id,dtype=torch.long,device=self.device)
 
-        output = self.transformerModel(input_ids=text,decoder_input_ids=decoder_input_ids,return_dict=True,output_hidden_states=True)
+
+        output = self.transformerModel.model(input_ids=text,
+                                             decoder_input_ids=decoder_input_ids,
+                                             return_dict=True,
+                                             output_hidden_states=True)
         #output = self.transformerModel(input_ids=text,decoder_input_ids=,return_dict=True,output_hidden_states=True)
 
-        encoder_output=output["encoder_last_hidden_state"][torch.arange(output["encoder_last_hidden_state"].shape[0]),EOT_indexes,:]
-        #encoder_output=encoder_output@self.model_projection
-        output=self.token_select(output.logits)
+        encoder_output=output["encoder_last_hidden_state"][torch.arange(output["encoder_last_hidden_state"].shape[0]),EOT_indexes]
+        #shape should be [batch_size, 1, d_model]
+        
+        #from the logits, we're going to find indexes (shape [B,S]) of the maximum cosine similarity between  token embedding for EOT [1,512] for each position of [B,S,512]
+        eot=self.EOT_embedding.to(self.device,non_blocking=True)
+        x=output["last_hidden_state"]
+        EOT_indexes=torch.nn.functional.gumbel_softmax(x@eot,dim=-1,hard=True)# already tokenized ready to go¬
+        #scale x to be in range [-1,1]
+        #EOT should be size B,S shape as a one hot vector
+        #print(EOT_indexes.shape)
+        #print(EOT_indexes)
+        x=x/torch.norm(x,dim=-1,keepdim=True)
+        x=x*self.token_scale
 
-        x=output@self.token_embedding.weight 
-        # [batch_size, n_ctx, d_model]
-        x = x + self.positional_embedding.type(self.dtype)
-        x = x.permute(1, 0, 2)  # NLD -> LND
+        x = x + self.clip.positional_embedding.type(self.dtype)
+        
+        x = x.permute(1, 0, 2) # NLD -> LND
         x = self.clip.transformer(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
         x = self.ln_final(x).type(self.dtype)
-        x = x[torch.arange(x.shape[0]), text.argmax(dim=-1)] 
-        return x,encoder_output
+
+        # checksum = x[torch.arange(x.shape[0]), EOT_indexes.argmax(dim=-1)]
+        #x is B,S,D . EOT is B,S
+        
+        y=torch.sum(x * EOT_indexes.unsqueeze(-1),dim=1)
+        # print("y",y.shape)
+        #X is shaoe B,S,D, EOT is shape B,S  of one hot vectors, I want the matrix mul that gives me B,D where each value is the one where EOT is 1
+        # x=torch.einsum("bsd,bs->bd",x,EOT_indexes) # not sure if this is right?
+        # sumx=torch.sub(x,checksum)
+        # sumy=torch.sub(y,checksum)
+        # print("resultx",torch.sum(sumx))
+        # print("resulty",torch.sum(sumy))
+        return y,encoder_output
+
 
 
     # @torch.jit.script
@@ -120,14 +143,15 @@ class LightningCLIPModule(base):
         im,captions= batch[0],batch[1][:2]
         
         logits=self(im,*[captions[:,i] for i in range(captions.shape[1])])*self.logit_scale.exp()
-        try:
-            labels=self.label
-        except:
-            #labels wrong size!!?!
+        labels=self.label
+  
+        if labels.shape != logits.shape:
+            # print((len(logits.shape)))
             labels=self.generate_labels((len(logits.shape),self.hparams.batch_size,self.transformer_width)).to(self.device,non_blocking=True)
-        if labels.shape!=logits.shape:
-            labels=self.generate_labels((len(logits.shape),self.hparams.batch_size,self.transformer_width)).to(self.device,non_blocking=True)
-            self.labels=labels
+            self.label=labels
+            # print(labels.shape)
+            # print(self.label.shape)
+
         firstlogit=logits.flatten()[0]
        
 
