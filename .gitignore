@@ -154,6 +154,7 @@ tb_logs/*
 /models--openai--clip-vit-base-patch32
 artifacts/*/Im Embeddings.table.json
 results/*
+results
 maskStack*.stl
 models--*/*
 models--bert-base-chinese/*
