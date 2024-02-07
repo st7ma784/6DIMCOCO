@@ -10,11 +10,12 @@ def wandbtrain(config=None,dir=None,devices=None,accelerator=None,Dataset=None,p
         logdir=config.get("log_path",dir)
         wandb.login(key='9cf7e97e2460c18a89429deed624ec1cbfb537bc')
         #get config cn flag
-        run=wandb.init(project=project,entity=entity,name=project,config=config)
-
+        
         if config.get("cn",False):
             project+="CNTranslate"
         project+="{}DIM".format(config.get("dims",6)) 
+        run=wandb.init(project=project,entity=entity,name=project,config=config)
+
         logtool= pytorch_lightning.loggers.WandbLogger( project=project,entity=entity, save_dir=logdir)
 
     else: 
