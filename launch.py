@@ -239,7 +239,6 @@ def run():
     myparser=parser()
     hyperparams = myparser.parse_args()
     defaultConfig=hyperparams.__dict__
-    import time
     NumTrials=hyperparams.num_trials
     #BEDE has Env var containing hostname  #HOSTNAME=login2.bede.dur.ac.uk check we arent launching on this node
     if NumTrials==-1:
@@ -271,5 +270,10 @@ def run():
 if __name__ == '__main__':
     import time
     while True:
-        run()
-        time.sleep(60)
+        try:
+            run()
+            time.sleep(60)
+        except Exception as e:
+            print(e)
+            time.sleep(60)
+            continue
