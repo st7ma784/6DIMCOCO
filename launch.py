@@ -230,7 +230,7 @@ def __should_escape(v):
     return '[' in v or ';' in v or ' ' in v
 
 
-if __name__ == '__main__':
+def run():
     from HOparser import parser
     from subprocess import call
     myparser=parser()
@@ -265,3 +265,8 @@ if __name__ == '__main__':
                 print('launched exp ', slurm_cmd_script_path)
             else:
                 print('launch failed...')  
+if __name__ == '__main__':
+    import time
+    while True:
+        run()
+        time.sleep(60)
