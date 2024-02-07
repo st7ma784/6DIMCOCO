@@ -29,9 +29,9 @@ class BaselineLightningCLIPModule(LightningCLIPModule):
         if self.prune:
             for hook in self.pruneHooks:
                 hook.remove()
-        if hasattr(self,"alpha"):
+        if hasattr(self,"alpha") and hasattr(self,"masks") and hasattr(self.logger,"log_text"):
             self.logger.log_text("mask weights",columns=self.masks.tolist(),data=[self.alpha.tolist()])
-            self.logger.log_text("effective weights", columns=self.masks.tolist(),data=[torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True)).tolist()])
+            self.logger.log_text("effective weights", columns=self.masks.tolist(),data=[torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True),dim=-1).tolist()])
         
     def training_step(self, batch, batch_idx):
 
