@@ -7,7 +7,7 @@ import torch
 from transformers import MarianMTModel,MarianConfig, CLIPTokenizer
 import numpy as np
 
-import evaluate
+# import evaluate
 import time
 
 class LightningCLIPModule(base):
@@ -250,14 +250,17 @@ class LightningCLIPModule(base):
             EvaluationModule: the metric.
         """
         try:
+            import evaluate
             return evaluate.load(metricName)
         except Exception:
             time.sleep(60)
             try:
+                import evaluate
                 return evaluate.load(metricName)
             except Exception:
                 time.sleep(60)
                 try:
+                    import evaluate
                     return evaluate.load(metricName)
                 except Exception as e:
                     print(f"could not access HuggingFace {metricName}")

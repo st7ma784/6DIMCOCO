@@ -225,8 +225,6 @@ class LightningCLIPModule(base):
         lr_schedulers = {"scheduler": ReduceLROnPlateau(optimizer), "monitor": "train_loss"}
 
         return [optimizer],[lr_schedulers]
-
-import evaluate
 import time
 
 def getMetric(self, metricName: str) -> evaluate.EvaluationModule:
@@ -239,20 +237,29 @@ def getMetric(self, metricName: str) -> evaluate.EvaluationModule:
         EvaluationModule: the metric.
     """
     try:
+
+        import evaluate
+
         return evaluate.load(metricName)
     except Exception:
         time.sleep(60)
         try:
+
+            import evaluate
+
             return evaluate.load(metricName)
         except Exception:
             time.sleep(60)
             try:
+
+                import evaluate
+
                 return evaluate.load(metricName)
             except Exception as e:
                 print(f"could not access HuggingFace {metricName}")
                 raise e
             
-def getBSf1(metric: evaluate.EvaluationModule,
+def getBSf1(metric,
             predictions: list,
             references: list) -> float:
     # Predictions and references are lists of plaintext tokens
