@@ -13,3 +13,4 @@ pytorch_lightning_bolts
 datasets
 seaborn
 evaluate
+pyarrow==8.0.0

@@ -141,7 +141,9 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
                 # print(feat1)
                 if feat1.shape[0]==10:
                     X = feat1.flatten(1)
-                                
+                    if permute:
+                        random_indices=torch.randperm(X.shape[1])
+                        X=X[:,random_indices]
                     features.append((X @ X.t()).fill_diagonal_(0))
             cka.model1_features = {}
 
@@ -187,7 +189,7 @@ def batch_test_method(methodA,methodB=None,convertOO=False,permute=True,dataload
     import matplotlib.pyplot as plt
     import numpy as np
     plt.imshow(RESULTS.cpu().numpy(),cmap="magma") 
-    plt.savefig('resultsCOCOclipL14B16Test.png') 
+    plt.savefig('resultsCOCPclipL14B16Test.png') 
 
 
 
@@ -214,7 +216,7 @@ if __name__ == "__main__":
     #time the new method
     print("Timing new batched method")
     starttimer=timeit.default_timer()
-    batch_test_method(methoda,methodb,convertOO=True,permute=False,dataloader=dataloader)
+    batch_test_method(methoda,methodb,convertOO=True,permute=True,dataloader=dataloader)
     print("New batched method took",timeit.default_timer()-starttimer)
 
     # print("Timing new batched method")
