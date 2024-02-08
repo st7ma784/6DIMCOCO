@@ -269,11 +269,6 @@ def run():
                 print('launch failed...')  
 if __name__ == '__main__':
     import time
-    while True:
-        try:
-            run()
-            time.sleep(60)
-        except Exception as e:
-            print(e)
-            time.sleep(60)
-            continue
+    run()
+    time.sleep(60)
+    print("Finished")
