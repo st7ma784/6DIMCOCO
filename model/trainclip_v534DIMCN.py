@@ -1,4 +1,5 @@
 
+from itertools import chain
 from sklearn.linear_model import LogisticRegression
 
 from model.trainclip_v5335DIM import LightningCLIPModule as base 
@@ -114,11 +115,15 @@ class LightningCLIPModule(base):
         return x,encoder_output
     def EOT_finder(self,x):
         eot=self.EOT_embedding.detach().to(self.device)
-        return x[torch.arange(x.shape[0]), torch.argmax(x@eot,dim=-1)]
+        x= x[torch.arange(x.shape[0]), torch.argmax(x@eot,dim=-1)]
+        print(x.shape) ##WHY 2,512???
+        return x
     def EOT_finder2(self,x):
         eot=self.EOT_embedding.detach().to(self.device)
         x=x * torch.nn.functional.gumbel_softmax(x@eot,dim=-1,hard=True).unsqueeze(-1)
-        return x.sum(dim=1)
+        x=x.sum(dim=1)
+        print(x.shape)
+        return x
 
 
     # @torch.jit.script
@@ -127,7 +132,7 @@ class LightningCLIPModule(base):
         #  This line is the problem, might need to grab the encoder from the translation model. 
 
         features=[self.encode_text(c) for c in captions[:2]]
-        caption_features=[f[0] for f in features]+[f[1] for f in features]
+        caption_features=chain(*features)
         if self.projection=="inv":
             image_features=image_features@ self.text_projection
         elif self.projection=="iinv":
