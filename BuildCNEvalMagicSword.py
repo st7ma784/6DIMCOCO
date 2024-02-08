@@ -66,6 +66,7 @@ class MagicSwordCNDataModule(pl.LightningDataModule):
         EOT=indexes-1
         zh[:,EOT]=self.ZHtokenizer.vocab_size
         zh[:,0]=self.ZHtokenizer.vocab_size-1
+        #print("vocab_size",self.ZHtokenizer.vocab_size)
         return {'en' :en,
                 'zh' : zh}
         

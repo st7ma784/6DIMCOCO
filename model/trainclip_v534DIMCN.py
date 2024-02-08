@@ -11,10 +11,10 @@ import time
 torch.set_anomaly_enabled(True)
 
 class LightningCLIPModule(base):
-    def __init__(self, vocab_size=21129,*args, **kwargs):
+    def __init__(self, vocab_size=50257,*args, **kwargs):
         super().__init__(*args, **kwargs)
         config=MarianConfig(
-            vocab_size=vocab_size,
+            vocab_size=self.clip.vocab_size,
             pad_token_id=0,
             activation_dropout=0,
             activation_function="swish", #"swish" 
@@ -34,7 +34,7 @@ class LightningCLIPModule(base):
             encoder_ffn_dim=2048,
             encoder_layerdrop=0.0,
             encoder_layers=3, #would be higher if I had more VRAM
-            eos_token_id=vocab_size-1,
+            eos_token_id=self.clip.vocab_size-1,
             forced_eos_token_id=0,
             init_std=0.02,
             is_encoder_decoder=True,
@@ -164,11 +164,12 @@ class LightningCLIPModule(base):
         dims_=np.expand_dims(dims_,axis=0)
         permutes=dims+dims_
         permutes=permutes%n_dims
-        bad_logit=logits[permutes].mean()
-
+        bad_logit=logits[permutes[0]]
+        # bad_logit=bad_logits.sum(dim=0)
+        # bad_logit=bad_logit/n_dims
         # assert bad_logit.shape[0]==firstlogit.shape[0]
         self.log("first logit",firstlogit,enable_graph=False)
-        self.log("BAD logit",bad_logit,enable_graph=False)
+        self.log("BAD logit",bad_logit.mean(),enable_graph=False)
         self.log("logit scale",self.logit_scale.exp())
 
         # The idea is that good logits are 1s,   bad should be -1s... so if logits are coming back as ~6000....

@@ -317,9 +317,10 @@ if __name__ == "__main__":
     trainer=pytorch_lightning.Trainer(
             devices="auto",
             #auto_select_gpus=True,
-            accelerator="auto",
+            accelerator="gpu",
             max_epochs=20,
             #profiler="advanced",
+            logger=pytorch_lightning.loggers.WandbLogger( project="CNTranslatertmp",entity="st7ma784"),
             strategy=DDP(find_unused_parameters=True),
             num_nodes=int(os.getenv("SLURM_NNODES",1)),
             callbacks=callbacks,
