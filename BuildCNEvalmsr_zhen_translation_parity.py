@@ -17,46 +17,6 @@ class CNDataModule(pl.LightningDataModule):
         self.batch_size = batch_size
         if ZHtokenizer is None:
             self.tokenizer = BertTokenizerFast.from_pretrained('bert-base-chinese',cache_dir=self.data_dir)
-
-            path=self.tokenizer.save_pretrained(os.path.join(self.data_dir,"bert-base-chinese"))
-            print("path",path)
-            import json
-            with open(os.path.join(self.data_dir,"bert-base-chinese","tokenizer.json")) as f:
-                token_dict=json.load(f)
-                print("token_dict",token_dict.keys())
-                token_dict['model']['vocab'].update({'##😂': 102, '##😎': 101,'[CLS]':21126,'[SEP]':21127, '[SOT]':21128,'[EOT]':21129})        
-            with open(os.path.join(self.data_dir,"bert-base-chinese","tokenizer.json"),'w') as f:
-                json.dump(token_dict,f)
-            #in the vocab.txt file, we are going to remove lines 101-103 and then add [CLS] and [SEP] to the end of the file
-            # ta/bert-base-chinese/tokenizer_config.json', '/data/bert-base-chinese/special_tokens_map.json' '/data/bert-base-chinese/tokenizer.json')
-            #edit the files 
-            with open(os.path.join(self.data_dir,"bert-base-chinese","vocab.txt")) as f:
-                lines=f.readlines()
-                lines=lines[:101]+lines[104:]
-                lines.append("[CLS]\n")
-                lines.append("[SEP]\n")
-            with open(os.path.join(self.data_dir,"bert-base-chinese","vocab.txt"),'w') as f:
-                f.writelines(lines)
-
-            with open(os.path.join(self.data_dir,"bert-base-chinese","special_tokens_map.json")) as f:
-                token_dict=json.load(f)
-                print("token_dict",token_dict)
-                token_dict.update({"bos_token":"[SOT]","eos_token":"[EOT]"})
-                
-            self.tokenizer = BertTokenizerFast.from_pretrained(os.path.join(self.data_dir,"bert-base-chinese"),cache_dir=self.data_dir)
-            print(self.tokenizer.backend_tokenizer.__dir__())
-            print("tokenizer EOT/SEP token", self.tokenizer._tokenizer.token_to_id("[SEP]"))
-            print("tokenizer EOT/SEP token", self.tokenizer._tokenizer.token_to_id("[CLS]"))
-            print("tokenizer EOT/SEP token", self.tokenizer._tokenizer.token_to_id("[EOT]"))
-            print("tokenizer EOT/SEP token", self.tokenizer._tokenizer.token_to_id("[SOT]"))
-            print("tokenizer EOT/SEP token", self.tokenizer._tokenizer.id_to_token(21126))
-            print("tokenizer EOT/SEP token", self.tokenizer._tokenizer.id_to_token(21127))
-            vocab=self.tokenizer.get_vocab()
-
-            assert vocab['[CLS]']==21126
-            assert vocab['[SEP]']==21127
-            assert vocab['##😂']==102
-            assert vocab['##😎']==101
         else :
             self.ZHtokenizer = ZHtokenizer
         if ENtokenizer is None:
@@ -95,10 +55,19 @@ class CNDataModule(pl.LightningDataModule):
                                )
    
     def tokenization(self,sample):
-
-        return {'en' : self.ENtokenizer(sample["en"], padding="max_length", truncation=True, max_length=77),
-                'zh' : self.ZHtokenizer(sample["zh"], padding="max_length", truncation=True, max_length=77)}
-
+        en= self.ENtokenizer(sample["en"], padding="max_length", truncation=True, max_length=77)
+        indexes=torch.argmin(en,dim=1)
+        EOT=indexes-1
+        en[:,EOT]=self.ENtokenizer.vocab_size
+        en[:,0]=self.ENtokenizer.vocab_size-1
+        zh= self.ZHtokenizer(sample["zh"], padding="max_length", truncation=True, max_length=77)
+        indexes=torch.argmin(zh,dim=1)
+        EOT=indexes-1
+        zh[:,EOT]=self.ZHtokenizer.vocab_size
+        zh[:,0]=self.ZHtokenizer.vocab_size-1
+        return {'en' :en,
+                'zh' : zh}
+        
     def setup(self, stage=None):
         '''called on each GPU separately - stage defines if we are at fit or test step'''
         #print("Entered COCO datasetup")
