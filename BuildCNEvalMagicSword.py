@@ -54,12 +54,21 @@ class MagicSwordCNDataModule(pl.LightningDataModule):
                                cache_dir=self.data_dir,
                                streaming=False,
                                )
-   
+      
     def tokenization(self,sample):
-
-        return {'en' : self.ENtokenizer(sample["en"], padding="max_length", truncation=True, max_length=77),
-                'zh' : self.ZHtokenizer(sample["zh"], padding="max_length", truncation=True, max_length=77)}
-
+        en= self.ENtokenizer(sample["en"], padding="max_length", truncation=True, max_length=77)
+        indexes=torch.argmin(en,dim=1)
+        EOT=indexes-1
+        en[:,EOT]=self.ENtokenizer.vocab_size
+        en[:,0]=self.ENtokenizer.vocab_size-1
+        zh= self.ZHtokenizer(sample["zh"], padding="max_length", truncation=True, max_length=77)
+        indexes=torch.argmin(zh,dim=1)
+        EOT=indexes-1
+        zh[:,EOT]=self.ZHtokenizer.vocab_size
+        zh[:,0]=self.ZHtokenizer.vocab_size-1
+        return {'en' :en,
+                'zh' : zh}
+        
     def setup(self, stage=None):
         '''called on each GPU separately - stage defines if we are at fit or test step'''
         #print("Entered COCO datasetup")
