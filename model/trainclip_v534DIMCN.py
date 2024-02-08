@@ -14,7 +14,7 @@ class LightningCLIPModule(base):
     def __init__(self, vocab_size=21129,*args, **kwargs):
         super().__init__(*args, **kwargs)
         config=MarianConfig(
-            vocab_size=vocab_size,
+            vocab_size=self.clip.vocab_size,
             pad_token_id=0,
             activation_dropout=0,
             activation_function="gelu", #"swish" 
@@ -34,7 +34,7 @@ class LightningCLIPModule(base):
             encoder_ffn_dim=4096,
             encoder_layerdrop=0.0,
             encoder_layers=3, #would be higher if I had more VRAM
-            eos_token_id=vocab_size,
+            eos_token_id=self.clip.vocab_size,
             forced_eos_token_id=0,
             init_std=0.02,
             is_encoder_decoder=True,
