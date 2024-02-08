@@ -99,7 +99,7 @@ class LightningCLIPModule(base):
         #print(EOT_indexes.shape)
         #print(EOT_indexes)
         x=x/torch.norm(x,dim=-1,keepdim=True)
-        x=x*self.token_scale
+        # x=x*self.token_scale
 
         x = x + self.clip.positional_embedding.type(self.dtype)
         

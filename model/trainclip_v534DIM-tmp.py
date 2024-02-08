@@ -162,11 +162,11 @@ class LightningCLIPModule(base):
 
     def on_test_epoch_start(self):
         
-        super().on_test_epoch_start()
-        self.bertscores = []
-    
+        self.tokenizer =CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32",cache_dir=self.data_dir)
+        self.metric=self.getMetric("bertscore")
+        self.translations = []
+        self.references=[]
     def test_step(self, batch: dict, batch_idx: int) -> torch.Tensor:
-        
         """ Post-training evaluation.
         Args:
             batch (dict): the data batch
@@ -174,36 +174,30 @@ class LightningCLIPModule(base):
         Returns:
             dict: the outputs.
         """
-        super().test_step(batch, batch_idx)
-        output=self.translate(batch["CN"])
-            
-        outs = {}
-        logits = output.logits
-        predictions = self.tokenizer.batch_decode(torch.argmax(logits, dim=-1),
-                                                skip_special_tokens=True)
-        predictions = [pred.strip() for pred in predictions]
+        zh=batch["zh"]
 
-        references = self.tokenizer.batch_decode(batch["EN"],
-                                        skip_special_tokens=True)
-        references = [label.strip() for label in references]
-        refs = [[label] for label in references]
+        #train the lm_head linear layer
+        output=self.translate(zh)
 
-        metric = self.getMetric("bertscore")
-        f1 = metric.compute(predictions=predictions,
-                        references=references,
-                        model_type="microsoft/deberta-xlarge-mnli",
-                        lang="en",
-                        device="cuda",
-                        batch_size=48)["f1"]
+        logits = output.last_hidden_state # [batch_size, sequence_length, vocab_size]
+        self.translations.extend(logits)
+        self.references.extend(batch["en"])
+
+
+    def on_test_epoch_end(self):
+        translated_tokens=torch.nan_to_num(torch.cat(self.translations,dim=0)).cpu().numpy()
+        labels=torch.cat(self.references,dim=0).cpu().numpy()
         
-        self.bertscores.extend(f1)
+        #train linear regression on the translated tokens of shape [data_size,sequence_length,D]
+        #with targets being the labels of 
+        LinReg=LogisticRegression(random_state=0, C=0.316, max_iter=1000, verbose=1, n_jobs=-1)
+        LinReg.fit(translated_tokens,labels)
+        self.log( "Tranlation Vocab to embedding fit",LinReg.score(translated_tokens, labels))
 
-    def test_epoch_end(self, outputs: list) -> None:
-        """ Post-training evaluation.
-        Args:
-            outputs (list): the outputs from all batches.
-        """
-        super().test_epoch_end(outputs)
+        #do linear regression on the translated tokens of shape [data_size,sequence_length,D]
+        token_outputs=LinReg.predict(translated_tokens)
+        predictions = self.tokenizer.batch_decode(token_outputs, dim=-1,
+                                                skip_special_tokens=True)
         BertScore = reduce(add,self.bertscores) / len(self.bertscores)
         self.log("BertScore", BertScore, prog_bar=True,enable_graph=False, rank_zero_only=True)
     def on_validation_epoch_start(self):
