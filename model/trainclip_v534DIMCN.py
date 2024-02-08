@@ -1,6 +1,5 @@
 
-from functools import reduce, partial
-from operator import add
+from sklearn.linear_model import LogisticRegression
 
 from model.trainclip_v5335DIM import LightningCLIPModule as base 
 import torch
@@ -189,10 +188,10 @@ class LightningCLIPModule(base):
 
         return {"loss": loss}
     def translate(self, text):
-        decoder_input_ids=torch.zeros_like(text)
-        decoder_input_ids[:,0]=self.bos_token_id
+        decoder_input_ids=torch.full((text.shape[0],77),self.bos_token_id,dtype=torch.long,device=self.device)
 
-        return self.transformerModel(input_ids=text,decoder_input_ids=decoder_input_ids,return_dict=True,output_hidden_states=True)
+
+        return self.transformerModel.model(input_ids=text,decoder_input_ids=decoder_input_ids,return_dict=True,output_hidden_states=True)
          
     def on_test_epoch_start(self):
         # super().on_test_epoch_start()
@@ -209,20 +208,39 @@ class LightningCLIPModule(base):
         Returns:
             dict: the outputs.
         """
-        # super().test_step(batch, batch_idx)
+        zh=batch["zh"]
+        en=batch["en"]
+
+        #train the lm_head linear layer
+        output=self.translate(zh)
+
+
+
+
+
+
+
         output=self.translate(batch["zh"])
             
 
-        logits = output.logits # [batch_size, sequence_length, vocab_size]
-        self.translations.extend(torch.argmax(logits, dim=-1))
+        logits = output.last_hidden_state # [batch_size, sequence_length, vocab_size]
+        self.translations.extend(logits)
         self.references.extend(batch["en"])
 
 
     def on_test_epoch_end(self):
-        translated_tokens=torch.nan_to_num(torch.cat(self.results,dim=0)).cpu().numpy()
+        translated_tokens=torch.nan_to_num(torch.cat(self.translations,dim=0)).cpu().numpy()
         labels=torch.cat(self.references,dim=0).cpu().numpy()
         
-        predictions = self.tokenizer.batch_decode(translated_tokens, dim=-1,
+        #train linear regression on the translated tokens of shape [data_size,sequence_length,D]
+        #with targets being the labels of 
+        LinReg=LogisticRegression(random_state=0, C=0.316, max_iter=1000, verbose=1, n_jobs=-1)
+        LinReg.fit(translated_tokens,labels)
+        self.log( "Tranlation Vocab to embedding fit",LinReg.score(translated_tokens, labels))
+
+        #do linear regression on the translated tokens of shape [data_size,sequence_length,D]
+        token_outputs=LinReg.predict(translated_tokens)
+        predictions = self.tokenizer.batch_decode(token_outputs, dim=-1,
                                                 skip_special_tokens=True)
         predictions = [pred.strip() for pred in predictions]
 
