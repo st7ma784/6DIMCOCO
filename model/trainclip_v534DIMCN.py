@@ -8,14 +8,13 @@ import numpy as np
 
 # import evaluate
 import time
+torch.set_anomaly_enabled(True)
 
 class LightningCLIPModule(base):
     def __init__(self, vocab_size=21129,*args, **kwargs):
         super().__init__(*args, **kwargs)
         config=MarianConfig(
             vocab_size=vocab_size,
-            decoder_bos_token_id=self.clip.vocab_size-1,
-            decoder_eos_token_id=self.clip.vocab_size,
             pad_token_id=0,
             activation_dropout=0,
             activation_function="gelu", #"swish" 
@@ -28,12 +27,14 @@ class LightningCLIPModule(base):
             decoder_layers=3, #would be higher if I had more VRAM
             decoder_start_token_id=self.clip.vocab_size-1,
             decoder_vocab_size=self.clip.vocab_size,
+            decoder_bos_token_id=self.clip.vocab_size-1,
+            decoder_eos_token_id=self.clip.vocab_size,
             dropout=0.0,
             encoder_attention_heads=16,
             encoder_ffn_dim=4096,
             encoder_layerdrop=0.0,
             encoder_layers=3, #would be higher if I had more VRAM
-            eos_token_id=21129,
+            eos_token_id=vocab_size,
             forced_eos_token_id=0,
             init_std=0.02,
             is_encoder_decoder=True,
@@ -47,9 +48,7 @@ class LightningCLIPModule(base):
         )
         self.bos_token_id=self.clip.vocab_size-1
         self.transformerModel=MarianMTModel(config)
-        self.transformerModel=self.transformerModel.to(self.device)
 
-        self.transformerModel.train()
 
 
 
@@ -81,8 +80,7 @@ class LightningCLIPModule(base):
         EOT_indexes=torch.argmax(text,dim=-1)# already tokenized ready to go¬
         #or decoder inputs= sot tokens?
         #or decoder inputs= pad tokens? 
-        decoder_input_ids=torch.full((text.shape[0],77),self.bos_token_id,dtype=torch.long,device=self.device)
-
+        decoder_input_ids=torch.full((text.shape[0],77),self.bos_token_id,dtype=torch.long).to(self.transformerModel.model.device)
 
         output = self.transformerModel.model(input_ids=text,
                                              decoder_input_ids=decoder_input_ids,
@@ -142,7 +140,9 @@ class LightningCLIPModule(base):
         return self.calculate_loss(image_features, *caption_features)
         #return self.calculate_lossStock(image_features, caption_features1)[0]*self.logit_scale.exp()
 
-  
+    def on_train_epoch_start(self):
+        super().on_train_epoch_start()  
+        self.transformerModel.to(self.device)
     def training_step(self, batch, batch_idx):
 
         im,captions= batch[0],batch[1][:2]
@@ -209,19 +209,9 @@ class LightningCLIPModule(base):
             dict: the outputs.
         """
         zh=batch["zh"]
-        en=batch["en"]
 
         #train the lm_head linear layer
         output=self.translate(zh)
-
-
-
-
-
-
-
-        output=self.translate(batch["zh"])
-            
 
         logits = output.last_hidden_state # [batch_size, sequence_length, vocab_size]
         self.translations.extend(logits)
