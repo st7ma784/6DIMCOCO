@@ -14,15 +14,15 @@ class LightningCLIPModule(base):
     def __init__(self, vocab_size=21129,*args, **kwargs):
         super().__init__(*args, **kwargs)
         config=MarianConfig(
-            vocab_size=self.clip.vocab_size,
+            vocab_size=vocab_size,
             pad_token_id=0,
             activation_dropout=0,
-            activation_function="gelu", #"swish" 
+            activation_function="swish", #"swish" 
             attention_dropout=0.0,
             classifier_dropout=0.0,
-            d_model=1024,
+            d_model=512,
             decoder_attention_heads=16,
-            decoder_ffn_dim=4096,
+            decoder_ffn_dim=2048,
             decoder_layerdrop=0.0,
             decoder_layers=3, #would be higher if I had more VRAM
             decoder_start_token_id=self.clip.vocab_size-1,
@@ -31,14 +31,14 @@ class LightningCLIPModule(base):
             decoder_eos_token_id=self.clip.vocab_size,
             dropout=0.0,
             encoder_attention_heads=16,
-            encoder_ffn_dim=4096,
+            encoder_ffn_dim=2048,
             encoder_layerdrop=0.0,
             encoder_layers=3, #would be higher if I had more VRAM
-            eos_token_id=self.clip.vocab_size,
+            eos_token_id=vocab_size-1,
             forced_eos_token_id=0,
             init_std=0.02,
             is_encoder_decoder=True,
-            max_position_embeddings=1024,
+            max_position_embeddings=512,
             model_type="marian",
             num_hidden_layers=4,
             scale_embedding=False,
@@ -84,23 +84,21 @@ class LightningCLIPModule(base):
 
         output = self.transformerModel.model(input_ids=text,
                                              decoder_input_ids=decoder_input_ids,
-                                             return_dict=True,
                                              output_hidden_states=True)
         #output = self.transformerModel(input_ids=text,decoder_input_ids=,return_dict=True,output_hidden_states=True)
 
-        encoder_output=output["encoder_last_hidden_state"][torch.arange(output["encoder_last_hidden_state"].shape[0]),EOT_indexes]
-        #shape should be [batch_size, 1, d_model]
-        
+        encoder_output=output.encoder_last_hidden_state[torch.arange(output.encoder_last_hidden_state.shape[0]),EOT_indexes]
+        #print(encoder_output.has_g)
         #from the logits, we're going to find indexes (shape [B,S]) of the maximum cosine similarity between  token embedding for EOT [1,512] for each position of [B,S,512]
-        
-        x=output["last_hidden_state"]
+        # eot=self.EOT_embedding.detach().to(self.device)
+        x=output.last_hidden_state
         #scale x to be in range [-1,1]
         #EOT should be size B,S shape as a one hot vector
         #print(EOT_indexes.shape)
         #print(EOT_indexes)
         x=x/torch.norm(x,dim=-1,keepdim=True)
         # x=x*self.token_scale
-
+        print()
         x = x + self.clip.positional_embedding.type(self.dtype)
         
         x = x.permute(1, 0, 2) # NLD -> LND

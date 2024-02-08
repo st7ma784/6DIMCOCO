@@ -2,7 +2,7 @@
 from functools import reduce
 from operator import add
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-
+from scikit_learn import LogisticRegression
 import sys
 sys.path.append("/data/6DIMCOCO")
 
