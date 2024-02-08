@@ -99,13 +99,15 @@ class LightningCLIPModule(base):
         #print(EOT_indexes)
         x=x/torch.norm(x,dim=-1,keepdim=True)
         # x=x*self.token_scale
-        print()
+        print(x.shape)
         x = x + self.clip.positional_embedding.type(self.dtype)
         
         x = x.permute(1, 0, 2) # NLD -> LND
         x = self.clip.transformer(x)
         x = x.permute(1, 0, 2)  # LND -> NLD
         x = self.ln_final(x).type(self.dtype)
+        
+
         x = self.EOT_summarization(x)
         #x is B,S,D . EOT is B,S
         #EOT_indexes=torch.nn.functional.gumbel_softmax(x@eot,dim=-1,hard=True)# already tokenized ready to go¬
@@ -114,12 +116,16 @@ class LightningCLIPModule(base):
         # x=x.sum(dim=1)
         return x,encoder_output
     def EOT_finder(self,x):
+        print("inp",x.shape)
+
         eot=self.EOT_embedding.detach().to(self.device)
         x= x[torch.arange(x.shape[0]), torch.argmax(x@eot,dim=-1)]
         print(x.shape) ##WHY 2,512???
         return x
     def EOT_finder2(self,x):
         eot=self.EOT_embedding.detach().to(self.device)
+        print("inp",x.shape)
+
         x=x * torch.nn.functional.gumbel_softmax(x@eot,dim=-1,hard=True).unsqueeze(-1)
         x=x.sum(dim=1)
         print(x.shape)
@@ -148,7 +154,7 @@ class LightningCLIPModule(base):
         self.transformerModel.to(self.device)
     def training_step(self, batch, batch_idx):
 
-        im,captions= batch[0],batch[1][:2]
+        im,captions= batch[0],batch[1]
         
         logits=self(im,*[captions[:,i] for i in range(captions.shape[1])])*self.logit_scale.exp()
         labels=self.label
