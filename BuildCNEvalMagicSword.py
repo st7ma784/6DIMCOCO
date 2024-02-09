@@ -16,7 +16,7 @@ class MagicSwordCNDataModule(pl.LightningDataModule):
         self.data_dir = Cache_dir
         self.batch_size = batch_size
         if ZHtokenizer is None:
-            self.tokenizer = BertTokenizerFast.from_pretrained('bert-base-chinese')
+            self.ZHtokenizer = BertTokenizerFast.from_pretrained('bert-base-chinese')
 
         else :
             self.ZHtokenizer = ZHtokenizer
