@@ -24,7 +24,7 @@ class parser(HyperOptArgumentParser):
         self.opt_list("--transformer_layers", default=8, type=int, options=[3,4,5,6], tunable=True)
         self.opt_list("--transformer_heads", default=16, type=int, options=[16], tunable=True)
         self.opt_list("--embed_dim", default=512, type=int, options=[512], tunable=True)
-        self.opt_list("--transformer_width", default=512, type=int, options=[128,512], tunable=True)
+        self.opt_list("--transformer_width", default=512, type=int, options=[512], tunable=True)
         self.opt_list("--devices", default=1, type=int, options=[1], tunable=False)
         self.opt_list("--accelerator", default='gpu', type=str, options=['gpu'], tunable=False)
         self.opt_list("--num_trials", default=0, type=int, tunable=False)
