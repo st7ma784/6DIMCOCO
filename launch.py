@@ -153,7 +153,10 @@ def train(config={
     if config["batch_size"] !=1:
         
         trainer.fit(model,Dataset)
-        trainer.test(model,TestLoader)
+        ##if not host ends in "bede.dur.ac.uk" then we are on a local machine, and so we can do a test run
+        if not str(os.getenv("HOSTNAME","localhost")).endswith("bede.dur.ac.uk"):
+            #this is until we can get the evaluate module to sit on Bede and run the tests
+            trainer.test(model,TestLoader)
     else:
         return 0 #No need to train if batch size is 1
     #do test
