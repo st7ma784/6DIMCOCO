@@ -51,7 +51,7 @@ class LightningCLIPModule(base):
         self.transformerModel=MarianMTModel(config)
 
 
-
+        self.data_dir=kwargs.get("data_dir",self.hparams.get("dir","."))
 
         self.exact_labels=kwargs["exactlabels"]
         self.label=self.generate_labels((4,self.hparams.batch_size,self.transformer_width))
@@ -128,7 +128,8 @@ class LightningCLIPModule(base):
 
         x=x * torch.nn.functional.gumbel_softmax(x@eot,dim=-1,hard=True).unsqueeze(-1)
         x=x.sum(dim=1)
-        #print(x.shape)
+        #
+        print(x.shape)
         return x
 
 
@@ -206,7 +207,7 @@ class LightningCLIPModule(base):
     def on_test_epoch_start(self):
         # super().on_test_epoch_start()
 
-        self.tokenizer =CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32",cache_dir=self.data_dir)
+        self.tokenizer =self.datamodule.ENtokenizer
         self.metric=self.getMetric("bertscore")
         self.translations = []
         self.references=[]
