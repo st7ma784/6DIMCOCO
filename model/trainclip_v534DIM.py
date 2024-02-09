@@ -174,7 +174,7 @@ class LightningCLIPModule(base):
 
 import time
 
-def getMetric(self, metricName: str) -> evaluate.EvaluationModule:
+def getMetric(self, metricName: str):
     """ Gets a metric from HuggingFace's Evaluate API.
         Tries three times because their network can get flaky when busy.
         Call me once at the start.
