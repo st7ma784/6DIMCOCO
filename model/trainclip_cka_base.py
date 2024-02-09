@@ -201,7 +201,7 @@ class LightningCLIPModule(LightningModule):
         else:
             self.projection_fn=self.projection
 
-        if hasattr(self,"alpha"):
+        if hasattr(self,"alpha") and hasattr(self,"masks"):
             if hasattr(self.logger,"log_text"):
                 self.logger.log_text("mask weights",columns=self.masks.tolist(),data=[self.alpha.tolist()])
                 self.logger.log_text("effective weights", columns=self.masks.tolist(),data=[torch.nn.functional.softmax(self.alpha/torch.norm(self.alpha,keepdim=True)).tolist()])

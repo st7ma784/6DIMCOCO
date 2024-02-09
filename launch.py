@@ -31,7 +31,8 @@ def wandbtrain(config=None,dir=None,devices=None,accelerator=None,Dataset=None,p
         config=run.config.as_dict()
         if config.get("cn",False):
             project+="CNTranslate"
-        project+="{}DIM".format(config.get("dims",6))
+        else:
+            project+="{}DIM".format(config.get("dims",6))
         logtool= pytorch_lightning.loggers.WandbLogger( project=project,entity=entity,experiment=run, save_dir=config.get("log_path",dir))
     
     train(config,dir,devices,accelerator,Dataset,logtool)
@@ -138,7 +139,7 @@ def train(config={
             devices=devices,
             #auto_select_gpus=True,
             accelerator=accelerator,
-            max_epochs=20,
+            max_epochs=config.get("max_epochs",10),
             #profiler="advanced",
             logger=logger,
             strategy=DDP(find_unused_parameters=True),

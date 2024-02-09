@@ -32,7 +32,7 @@ class parser(HyperOptArgumentParser):
         self.opt_list("--dims",default=3, type=float, options=[3.0,4.0,3.5,6.0,0], tunable=True)
         self.opt_list("--cn",default=False,type=bool,options=[True,False], tunable=True)
         self.opt_list("--gumbel",default=False,type=bool,options=[True,False], tunable=True)
-
+        self.opt_list("--epochs",default=10,type=int,options=[20], tunable=False)
 # Testing to check param outputs
 if __name__== "__main__":
     myparser=parser()

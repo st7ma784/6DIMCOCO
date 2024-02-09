@@ -99,7 +99,7 @@ class LightningCLIPModule(base):
         #print(EOT_indexes)
         x=x/torch.norm(x,dim=-1,keepdim=True)
         # x=x*self.token_scale
-        print(x.shape)
+        #print(x.shape)
         x = x + self.clip.positional_embedding.type(self.dtype)
         
         x = x.permute(1, 0, 2) # NLD -> LND
@@ -116,19 +116,19 @@ class LightningCLIPModule(base):
         # x=x.sum(dim=1)
         return x,encoder_output
     def EOT_finder(self,x):
-        print("inp",x.shape)
+        #print("inp",x.shape)
 
         eot=self.EOT_embedding.detach().to(self.device)
         x= x[torch.arange(x.shape[0]), torch.argmax(x@eot,dim=-1)]
-        print(x.shape) ##WHY 2,512???
+        #print(x.shape) ##WHY 2,512???
         return x
     def EOT_finder2(self,x):
         eot=self.EOT_embedding.detach().to(self.device)
-        print("inp",x.shape)
+        #print("inp",x.shape)
 
         x=x * torch.nn.functional.gumbel_softmax(x@eot,dim=-1,hard=True).unsqueeze(-1)
         x=x.sum(dim=1)
-        print(x.shape)
+        #print(x.shape)
         return x
 
 

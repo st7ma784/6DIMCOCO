@@ -57,11 +57,15 @@ class MagicSwordCNDataModule(pl.LightningDataModule):
       
     def tokenization(self,sample):
         en= self.ENtokenizer(sample["en"], padding="max_length", truncation=True, max_length=77)
+        #concatenate the tokenized sentence with the EOT token
+        print(en.keys())
+        
+        en=torch.cat([torch.tensor(i) for i in en['input_ids']]).reshape(-1,77)
         indexes=torch.argmin(en,dim=1)
         EOT=indexes-1
         en[:,EOT]=self.ENtokenizer.vocab_size
         en[:,0]=self.ENtokenizer.vocab_size-1
-        zh= self.ZHtokenizer(sample["zh"], padding="max_length", truncation=True, max_length=77)
+        zh= self.ZHtokenizer(sample["zh"], padding="max_length", truncation=True, max_length=77)["input_ids"]
         indexes=torch.argmin(zh,dim=1)
         EOT=indexes-1
         zh[:,EOT]=self.ZHtokenizer.vocab_size
