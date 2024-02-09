@@ -207,7 +207,7 @@ class LightningCLIPModule(base):
     def on_test_epoch_start(self):
         # super().on_test_epoch_start()
 
-        self.tokenizer =self.datamodule.ENtokenizer
+        self.tokenizer =CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32",cache_dir=self.data_dir)
         self.metric=self.getMetric("bertscore")
         self.translations = []
         self.references=[]
