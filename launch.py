@@ -139,7 +139,7 @@ def train(config={
             devices=devices,
             #auto_select_gpus=True,
             accelerator=accelerator,
-            max_epochs=config.get("max_epochs",10),
+            max_epochs=config.get("epochs",10),
             #profiler="advanced",
             logger=logger,
             strategy=DDP(find_unused_parameters=True),

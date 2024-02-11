@@ -14,3 +14,4 @@ datasets
 seaborn
 evaluate
 pyarrow==8.0.0
+bert_score

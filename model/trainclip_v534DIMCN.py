@@ -1,4 +1,5 @@
 
+from fnmatch import translate
 from itertools import chain
 from sklearn.linear_model import LogisticRegression
 
@@ -211,6 +212,9 @@ class LightningCLIPModule(base):
         self.metric=self.getMetric("bertscore")
         self.translations = []
         self.references=[]
+        self.LinReg=LogisticRegression(random_state=0, C=0.316, max_iter=1, verbose=1, n_jobs=-1)
+        self.transformerModel.eval()
+        #self.batch_counter=0
     def test_step(self, batch: dict, batch_idx: int) -> torch.Tensor:
         """ Post-training evaluation.
         Args:
@@ -220,35 +224,79 @@ class LightningCLIPModule(base):
             dict: the outputs.
         """
         zh=batch["zh"]
+        zh=torch.stack(zh,dim=1)
 
-        #train the lm_head linear layer
-        output=self.translate(zh)
+        en=batch["en"]
+        labels=torch.nan_to_num(torch.stack(en,dim=1).detach().cpu())
+        
+        logits = self.translate(zh).last_hidden_state # [batch_size, sequence_length, vocab_size]
 
-        logits = output.last_hidden_state # [batch_size, sequence_length, vocab_size]
-        self.translations.extend(logits)
-        self.references.extend(batch["en"])
+        
+        translated_tokens=torch.nan_to_num(torch.flatten(logits.detach().cpu(),start_dim=0, end_dim=-2))
+
+
+        self.LinReg=self.LinReg.fit(translated_tokens.numpy(),torch.flatten(labels).numpy())
+        
+        if batch_idx % 10 == 0:
+            #print(f"Batch {batch_idx} of {len(self.test_dataloader())}")
+            self.translations.extend(logits.detach().cpu())
+            self.references.extend(en)
 
 
     def on_test_epoch_end(self):
-        translated_tokens=torch.nan_to_num(torch.cat(self.translations,dim=0)).cpu().numpy()
-        labels=torch.cat(self.references,dim=0).cpu().numpy()
-        
+
         #train linear regression on the translated tokens of shape [data_size,sequence_length,D]
         #with targets being the labels of 
-        LinReg=LogisticRegression(random_state=0, C=0.316, max_iter=1000, verbose=1, n_jobs=-1)
-        LinReg.fit(translated_tokens,labels)
-        self.log( "Tranlation Vocab to embedding fit",LinReg.score(translated_tokens, labels))
+        translated_tokens=torch.nan_to_num(torch.stack(self.translations,dim=0).detach().cpu())
+        labels=torch.nan_to_num(torch.stack(self.references,dim=0).detach().cpu())
+        #replace 49407 with 0
+        labels[labels==49407]=0
+        labels[labels==49408]=0
+        token_outputs[token_outputs==49407]=0
+        token_outputs[token_outputs==49408]=0
 
+
+        self.log( "Tranlation Vocab to embedding fit",self.LinReg.score(torch.flatten(translated_tokens,0,-2).numpy(), torch.flatten(labels).numpy()))
+        # labels=torch.tensor(labels)
         #do linear regression on the translated tokens of shape [data_size,sequence_length,D]
-        token_outputs=LinReg.predict(translated_tokens)
-        predictions = self.tokenizer.batch_decode(token_outputs, dim=-1,
-                                                skip_special_tokens=True)
-        predictions = [pred.strip() for pred in predictions]
+        token_outputs=self.LinReg.predict(torch.flatten(translated_tokens,0,-2).numpy()).reshape(labels.shape)
+        #CONVERT NDARRAY TO LIST OF LISTS
+        #check token outputs is numpy.ndarray of shape [data_size,sequence_length]
+        #replace 49407 with 0
 
-        references = self.tokenizer.batch_decode(labels,
-                                        skip_special_tokens=True)
-        references = [label.strip() for label in references]
-        references = [[label] for label in references]
+
+        if not isinstance(token_outputs, np.ndarray):
+            token_outputs=token_outputs.numpy()
+        if not isinstance(labels, np.ndarray):
+            labels=labels.numpy()
+        
+        predictions = self.tokenizer.batch_decode(token_outputs.tolist())
+        predictions = [pred.strip() for pred in predictions]
+        #print("predictions",predictions)
+        try:
+            references = self.tokenizer.batch_decode(labels.tolist())
+        except Exception as e:
+            references=[]
+            for ref in labels:
+                #print(ref)
+                # #decode
+                # for r in ref:
+                #     print(r)
+                #     print(self.tokenizer.decode(r))
+                #where ref is 49407, replace with 0
+                ref = [r if r!=49407 else 0 for r in ref]
+                ref = [r if r!=49408 else 0 for r in ref]
+
+                reference=self.tokenizer.batch_decode(ref)
+                #remove !
+                reference = [r.replace("!", "") for r in reference]
+                #print(reference)
+                references.append(reference)
+                
+        #references = [label.strip() for label in references]
+        #print("references",references)
+        references = [[label.replace("!", " ")] for label in references]
+        predictions = [pred.replace("!", " ") for pred in predictions]
         f1 = self.metric.compute(predictions=predictions,
                     references=references,
                     model_type="microsoft/deberta-xlarge-mnli", #  Pick a BERT.
@@ -258,7 +306,7 @@ class LightningCLIPModule(base):
         BertScore= sum(f1) / len(f1)
 
         self.log("BertScore", BertScore, prog_bar=True,enable_graph=False, rank_zero_only=True)
-
+        self.transformerModel.train()
     def getMetric(self, metricName: str):
         """ Gets a metric from HuggingFace's Evaluate API.
             Tries three times because their network can get flaky when busy.

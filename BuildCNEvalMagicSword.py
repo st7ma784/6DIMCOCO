@@ -39,7 +39,7 @@ class MagicSwordCNDataModule(pl.LightningDataModule):
     def test_dataloader(self,B=None):
         if B is None:
             B=self.batch_size
-        return torch.utils.data.DataLoader(self.test, batch_size=B, shuffle=True, num_workers=1, prefetch_factor=1, pin_memory=True,drop_last=True)
+        return torch.utils.data.DataLoader(self.test, batch_size=B, shuffle=True, num_workers=4, prefetch_factor=1, pin_memory=True,drop_last=True)
     
     def prepare_data(self):
 
@@ -58,23 +58,23 @@ class MagicSwordCNDataModule(pl.LightningDataModule):
     def tokenization(self,sample):
         en= self.ENtokenizer(sample["en"], padding="max_length", truncation=True, max_length=77)
         #concatenate the tokenized sentence with the EOT token
-        print(en.keys())
+        #print(en.keys())
         
         en=torch.cat([torch.tensor(i).unsqueeze(0) for i in en['input_ids']]).reshape(-1,77)
-        indexes=torch.argmin(en,dim=1)
-        EOT=indexes-1
+        indexes=torch.argmax(en,dim=1)
+        #print(indexes.shape)
+        EOT=indexes
         en[:,EOT]=self.ENtokenizer.vocab_size
         en[:,0]=self.ENtokenizer.vocab_size-1
-        zh= self.ZHtokenizer(sample["zh"], padding="max_length", truncation=True, max_length=77)["input_ids"]
-        zh=torch.cat([torch.tensor(i).unsqueeze(0) for i in zh]).reshape(-1,77)
-
-        indexes=torch.argmin(zh,dim=1)
-        EOT=indexes-1
+        zh= self.ZHtokenizer(sample["zh"], padding="max_length", truncation=True, max_length=77)
+        zh=torch.cat([torch.tensor(i).unsqueeze(0) for i in zh["input_ids"]]).reshape(-1,77)
+        indexes=torch.argmax(zh,dim=1)
+        
+        EOT=indexes
         zh[:,EOT]=self.ZHtokenizer.vocab_size
         zh[:,0]=self.ZHtokenizer.vocab_size-1
         #print("vocab_size",self.ZHtokenizer.vocab_size)
-        return {'en' :en,
-                'zh' : zh}
+        return {'en' :en.squeeze(0),'zh' : zh.squeeze(0)}
         
     def setup(self, stage=None):
         '''called on each GPU separately - stage defines if we are at fit or test step'''
