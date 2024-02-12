@@ -158,7 +158,7 @@ class LightningCLIPModule(base):
                         model_type="microsoft/deberta-xlarge-mnli",
                         lang="en",
                         device="cuda",
-                        batch_size=48)["f1"]
+                        batch_size=batch["CN"].shape[0])["f1"]
         
         self.bertscores.extend(f1)
 
