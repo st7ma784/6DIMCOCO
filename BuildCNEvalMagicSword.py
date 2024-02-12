@@ -2,6 +2,7 @@
 import torch     
 import os
 import pytorch_lightning as pl
+from torch.utils.data import IterableDataset
 from transformers import (
   BertTokenizerFast,
   CLIPTokenizer
@@ -39,7 +40,7 @@ class MagicSwordCNDataModule(pl.LightningDataModule):
     def test_dataloader(self,B=None):
         if B is None:
             B=self.batch_size
-        return torch.utils.data.DataLoader(self.test, batch_size=B, shuffle=True, num_workers=4, prefetch_factor=1, pin_memory=True,drop_last=True)
+        return torch.utils.data.DataLoader(self.test, batch_size=B, shuffle=not isinstance(self.test,IterableDataset), num_workers=4, prefetch_factor=1, pin_memory=True,drop_last=True)
     
     def prepare_data(self):
 
@@ -56,20 +57,30 @@ class MagicSwordCNDataModule(pl.LightningDataModule):
                                )
       
     def tokenization(self,sample):
-        en= self.ENtokenizer(sample["en"], padding="max_length", truncation=True, max_length=77)
+        en= self.ENtokenizer(sample["en"],
+                            padding="max_length",
+                            truncation=True,
+                            max_length=77,
+                            #output as tensor,
+                            return_tensors="pt"
+                            )['input_ids']
         #concatenate the tokenized sentence with the EOT token
         #print(en.keys())
-        
-        en=torch.cat([torch.tensor(i).unsqueeze(0) for i in en['input_ids']]).reshape(-1,77)
-        indexes=torch.argmax(en,dim=1)
-        #print(indexes.shape)
-        EOT=indexes
-        en[:,EOT]=self.ENtokenizer.vocab_size
-        en[:,0]=self.ENtokenizer.vocab_size-1
-        zh= self.ZHtokenizer(sample["zh"], padding="max_length", truncation=True, max_length=77)
-        zh=torch.cat([torch.tensor(i).unsqueeze(0) for i in zh["input_ids"]]).reshape(-1,77)
+        #print("en",en.shape)
+
+        # indexes=torch.argmax(en,dim=1)
+        # #print(indexes.shape)
+        # EOT=indexes
+        # en[:,EOT]=self.ENtokenizer.vocab_size
+        # en[:,0]=self.ENtokenizer.vocab_size-1
+        zh= self.ZHtokenizer(sample["zh"], 
+                            padding="max_length",
+                            truncation=True,
+                            max_length=77,
+                            return_tensors="pt" 
+                            )["input_ids"]
         indexes=torch.argmax(zh,dim=1)
-        
+        #print(indexes)        
         EOT=indexes
         zh[:,EOT]=self.ZHtokenizer.vocab_size
         zh[:,0]=self.ZHtokenizer.vocab_size-1
@@ -81,7 +92,7 @@ class MagicSwordCNDataModule(pl.LightningDataModule):
         #print("Entered COCO datasetup")
         from datasets import load_dataset
 
-        if not self.dataset:
+        if not hasattr(self,"dataset"):
             self.dataset= load_dataset("magicsword/train-en-zh",
                                  cache_dir=self.data_dir,
                                  streaming=True,
@@ -91,7 +102,7 @@ class MagicSwordCNDataModule(pl.LightningDataModule):
         #remove the old "text" column
         reformatted_dataset.remove_columns("text")
         #tokenize the reformatted dataset
-        self.test = reformatted_dataset.map(lambda x: self.tokenization(x), batched=False)
+        self.test = reformatted_dataset.map(lambda x: self.tokenization(x), batched=True)
         
         
 if __name__=="__main__":
@@ -115,10 +126,10 @@ if __name__=="__main__":
     args = parser.parse_args()
     print("args",args)
     datalocation=args.data
-    datamodule=MagicSwordCNDataModule(Cache_dir=datalocation,annotations=os.path.join(datalocation,"annotations"),batch_size=2)
-
-    datamodule.download_data()
+    datamodule=MagicSwordCNDataModule(Cache_dir=datalocation,batch_size=2)
+    datamodule.prepare_data()
     datamodule.setup()
     dl=datamodule.test_dataloader()
     for batch in tqdm(dl):
         print(batch)
+        

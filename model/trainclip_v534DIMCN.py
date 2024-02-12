@@ -1,8 +1,7 @@
 
-from fnmatch import translate
 from itertools import chain
 from sklearn.linear_model import SGDClassifier
-
+from torch.autograd import Variable
 from model.trainclip_v5335DIM import LightningCLIPModule as base 
 import torch
 from transformers import MarianMTModel,MarianConfig, CLIPTokenizer
@@ -51,7 +50,7 @@ class LightningCLIPModule(base):
         self.bos_token_id=self.clip.vocab_size-1
         self.transformerModel=MarianMTModel(config)
 
-
+    
         self.data_dir=kwargs.get("data_dir",self.hparams.get("dir","."))
 
         self.exact_labels=kwargs["exactlabels"]
@@ -207,15 +206,27 @@ class LightningCLIPModule(base):
          
     def on_test_epoch_start(self):
         # super().on_test_epoch_start()
+        torch.set_grad_enabled(True)
 
         self.tokenizer =CLIPTokenizer.from_pretrained("openai/clip-vit-base-patch32",cache_dir=self.data_dir)
         self.metric=self.getMetric("bertscore")
-        self.translations = []
+        self.translations=[]
         self.references=[]
-        self.LinReg=SGDClassifier(loss="log", verbose=0, n_jobs=-1)
-        self.transformerModel.eval()
-        #self.batch_counter=0
-    def test_step(self, batch: dict, batch_idx: int) -> torch.Tensor:
+        if not hasattr(self,"linear_layer") and not hasattr(self,"test_optimizer"):
+            self.linear_layer=torch.nn.Linear(512,self.vocab_size).to(self.device)
+            self.linear_layer.train()
+            self.test_optimizer=torch.optim.AdamW(self.linear_layer.parameters(),lr=1e-4)
+            self.token_loss=torch.nn.CrossEntropyLoss(reduction="mean")
+        self.transformerModel.model.eval()
+        
+        self.linear_layer.register_forward_hook(self.Store_logits_hook)
+        self.test_losses=[]
+        self.test_idx=0
+    def Store_logits_hook(self, module, input,output):
+        if self.test_idx %10 ==0:
+            self.translations.append(torch.argmax(output,dim=-1))
+
+    def test_step(self, batch: dict, batch_idx: int):
         """ Post-training evaluation.
         Args:
             batch (dict): the data batch
@@ -223,78 +234,81 @@ class LightningCLIPModule(base):
         Returns:
             dict: the outputs.
         """
-        zh=batch["zh"]
-        zh=torch.stack(zh,dim=1)
+        with torch.inference_mode(False):
+            torch.set_grad_enabled(True)
+            zh=batch["zh"]
+            zh=torch.stack(zh,dim=1)
 
-        en=batch["en"]
-        labels=torch.nan_to_num(torch.stack(en,dim=1).detach().cpu())
-        assert labels.shape[1]==77
-        logits = self.translate(zh).last_hidden_state # [batch_size, sequence_length, vocab_size]
+            labels=torch.stack(batch["en"],dim=1)
+            if torch.is_grad_enabled() == False:
+                print("grad is disabled")
+                #reenable grad
+                torch.set_grad_enabled(True)
+            
+            assert labels.shape[1]==77
+            out=self.translate(zh)
+            logits=Variable(out["last_hidden_state"],requires_grad=True)
+            tokens=self.linear_layer(logits) #shape B,S,V
+            
+            loss=self.token_loss(tokens.permute(0,2,1),labels)
+            self.test_optimizer.zero_grad()
+            loss.backward()
 
-        
-        translated_tokens=torch.nan_to_num(torch.flatten(logits.detach().cpu(),start_dim=0, end_dim=-2))
-
-
-        self.LinReg=self.LinReg.partial_fit(translated_tokens.numpy(),torch.flatten(labels).numpy(),classes=np.arange(self.vocab_size))
-        
-        if batch_idx % 10 == 0:
-            #Really.... this could be done iwth a hook. HOWEVER doing this for a subset across the batch... this is the only way to do it.
-            self.translations.extend(logits.detach().cpu())
-            self.references.extend(en)
+            self.test_optimizer.step()
+            self.log("test_loss",loss)
+            self.test_losses.append(loss.item())
+            if self.test_idx %10 ==0:
+                self.references.append(labels)
+            
+            self.test_idx+=1
 
 
     def on_test_epoch_end(self):
 
+
+        #log self.losses - min, mean max range 
+        losses=torch.tensor(self.test_losses)
+        self.log("Min Test Loss:",torch.min(losses))
+        self.log("Max Test Loss", torch.max(losses))
+        self.log("Mean Test Loss", torch.mean(losses))
+
+
         #train linear regression on the translated tokens of shape [data_size,sequence_length,D]
         #with targets being the labels of 
-        translated_tokens=torch.nan_to_num(torch.stack(self.translations,dim=0).detach().cpu())
-        labels=torch.nan_to_num(torch.stack(self.references,dim=0).detach().cpu())
+        translated_tokens=torch.cat(self.translations,dim=0).detach()
+        labels=torch.cat(self.references,dim=0).detach()
         #replace 49407 with 0
-        labels[labels==49407]=0
-        labels[labels==49408]=0
+        labels[labels>=49407]=0
 
 
-
-        self.log( "Tranlation Vocab to embedding fit",self.LinReg.score(torch.flatten(translated_tokens,0,-2).numpy(), torch.flatten(labels).numpy()))
-        # labels=torch.tensor(labels)
-        #do linear regression on the translated tokens of shape [data_size,sequence_length,D]
-        token_outputs=self.LinReg.predict(torch.flatten(translated_tokens,0,-2).numpy()).reshape(labels.shape)
-        #CONVERT NDARRAY TO LIST OF LISTS
-        #check token outputs is numpy.ndarray of shape [data_size,sequence_length]
-        #replace 49407 with 0
-        token_outputs[token_outputs==49407]=0
-        token_outputs[token_outputs==49408]=0
-
-        if not isinstance(token_outputs, np.ndarray):
-            token_outputs=token_outputs.numpy()
-        if not isinstance(labels, np.ndarray):
-            labels=labels.numpy()
-        
-        predictions = self.tokenizer.batch_decode(token_outputs.tolist())
+        translated_tokens[translated_tokens>=49407]=0
+ 
+        # print(translated_tokens.shape) B,S
+        # print(labels.shape) B,S
+        predictions = self.tokenizer.batch_decode(translated_tokens.tolist())
         predictions = [pred.strip() for pred in predictions]
         #print("predictions",predictions)
-        try:
-            references = self.tokenizer.batch_decode(labels.tolist())
-        except Exception as e:
-            references=[]
-            for ref in labels:
-                #print(ref)
-                # #decode
-                # for r in ref:
-                #     print(r)
-                #     print(self.tokenizer.decode(r))
-                #where ref is 49407, replace with 0
-                ref = [r if r!=49407 else 0 for r in ref]
-                ref = [r if r!=49408 else 0 for r in ref]
+        references = self.tokenizer.batch_decode(labels.tolist())
+        # except Exception as e:
+        #     references=[]
+        #     for ref in labels:
+        #         #print(ref)
+        #         # #decode
+        #         # for r in ref:
+        #         #     print(r)
+        #         #     print(self.tokenizer.decode(r))
+        #         #where ref is 49407, replace with 0
+        #         ref = [r if r!=49407 else 0 for r in ref]
+        #         ref = [r if r!=49408 else 0 for r in ref]
 
-                reference=self.tokenizer.batch_decode(ref)
-                #remove !
-                reference = [r.replace("!", "") for r in reference]
-                #print(reference)
-                references.append(reference)
+        #         reference=self.tokenizer.batch_decode(ref)
+        #         #remove !
+        #         reference = [r.replace("!", "") for r in reference]
+        #         #print(reference)
+        #         references.append(reference)
                 
-        #references = [label.strip() for label in references]
-        #print("references",references)
+        # #references = [label.strip() for label in references]
+        # #print("references",references)
         references = [[label.replace("!", " ")] for label in references]
         predictions = [pred.replace("!", " ") for pred in predictions]
         f1 = self.metric.compute(predictions=predictions,
@@ -305,8 +319,9 @@ class LightningCLIPModule(base):
                     batch_size=48)["f1"]
         BertScore= sum(f1) / len(f1)
 
-        self.log("BertScore", BertScore, prog_bar=True,enable_graph=False, rank_zero_only=True)
+        self.log("BertScore across test_batch", BertScore, prog_bar=True,enable_graph=False, rank_zero_only=True)
         self.transformerModel.train()
+
     def getMetric(self, metricName: str):
         """ Gets a metric from HuggingFace's Evaluate API.
             Tries three times because their network can get flaky when busy.
