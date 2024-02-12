@@ -1,7 +1,7 @@
 
 from fnmatch import translate
 from itertools import chain
-from sklearn.linear_model import LogisticRegression
+from sklearn.linear_model import SGDClassifier
 
 from model.trainclip_v5335DIM import LightningCLIPModule as base 
 import torch
@@ -212,7 +212,7 @@ class LightningCLIPModule(base):
         self.metric=self.getMetric("bertscore")
         self.translations = []
         self.references=[]
-        self.LinReg=LogisticRegression(random_state=0, C=0.316, max_iter=1, verbose=1, n_jobs=-1)
+        self.LinReg=SGDClassifier(loss="log", verbose=0, n_jobs=-1)
         self.transformerModel.eval()
         #self.batch_counter=0
     def test_step(self, batch: dict, batch_idx: int) -> torch.Tensor:
@@ -228,17 +228,17 @@ class LightningCLIPModule(base):
 
         en=batch["en"]
         labels=torch.nan_to_num(torch.stack(en,dim=1).detach().cpu())
-        
+        assert labels.shape[1]==77
         logits = self.translate(zh).last_hidden_state # [batch_size, sequence_length, vocab_size]
 
         
         translated_tokens=torch.nan_to_num(torch.flatten(logits.detach().cpu(),start_dim=0, end_dim=-2))
 
 
-        self.LinReg=self.LinReg.fit(translated_tokens.numpy(),torch.flatten(labels).numpy())
+        self.LinReg=self.LinReg.partial_fit(translated_tokens.numpy(),torch.flatten(labels).numpy(),classes=np.arange(self.vocab_size))
         
         if batch_idx % 10 == 0:
-            #print(f"Batch {batch_idx} of {len(self.test_dataloader())}")
+            #Really.... this could be done iwth a hook. HOWEVER doing this for a subset across the batch... this is the only way to do it.
             self.translations.extend(logits.detach().cpu())
             self.references.extend(en)
 
@@ -252,8 +252,7 @@ class LightningCLIPModule(base):
         #replace 49407 with 0
         labels[labels==49407]=0
         labels[labels==49408]=0
-        token_outputs[token_outputs==49407]=0
-        token_outputs[token_outputs==49408]=0
+
 
 
         self.log( "Tranlation Vocab to embedding fit",self.LinReg.score(torch.flatten(translated_tokens,0,-2).numpy(), torch.flatten(labels).numpy()))
@@ -263,7 +262,8 @@ class LightningCLIPModule(base):
         #CONVERT NDARRAY TO LIST OF LISTS
         #check token outputs is numpy.ndarray of shape [data_size,sequence_length]
         #replace 49407 with 0
-
+        token_outputs[token_outputs==49407]=0
+        token_outputs[token_outputs==49408]=0
 
         if not isinstance(token_outputs, np.ndarray):
             token_outputs=token_outputs.numpy()
