@@ -152,7 +152,7 @@ def train(config={
             num_nodes=int(os.getenv("SLURM_NNODES",1)),
             callbacks=callbacks,
             gradient_clip_val=0.25,# Not supported for manual optimization
-            accumulate_grad_batches=16,
+            accumulate_grad_batches=4 if config.get("cn",False) else 16,
             fast_dev_run=config["debug"],
             precision=p
             
