@@ -25,7 +25,7 @@ class LightningCLIPModule(base):
             decoder_attention_heads=16,
             decoder_ffn_dim=2048,
             decoder_layerdrop=0.0,
-            decoder_layers=3, #would be higher if I had more VRAM
+            decoder_layers=self.hparams.transformer_layers, #would be higher if I had more VRAM
             decoder_start_token_id=self.clip.vocab_size-1,
             decoder_vocab_size=self.clip.vocab_size,
             decoder_bos_token_id=self.clip.vocab_size-1,
@@ -34,14 +34,14 @@ class LightningCLIPModule(base):
             encoder_attention_heads=16,
             encoder_ffn_dim=2048,
             encoder_layerdrop=0.0,
-            encoder_layers=3, #would be higher if I had more VRAM
+            encoder_layers=self.hparams.transformer_layers, #would be higher if I had more VRAM
             eos_token_id=self.clip.vocab_size-1,
             forced_eos_token_id=0,
             init_std=0.02,
             is_encoder_decoder=True,
             max_position_embeddings=512,
             model_type="marian",
-            num_hidden_layers=4,
+            num_hidden_layers=self.hparams.transformer_layers,
             scale_embedding=False,
             share_encoder_decoder_embeddings=False,
             transformers_version="4.25.1",
@@ -232,7 +232,7 @@ class LightningCLIPModule(base):
         if not hasattr(self,"linear_layer") and not hasattr(self,"test_optimizer"):
             self.linear_layer=torch.nn.Linear(512,self.vocab_size).to(self.device)
             self.linear_layer.train()
-            self.test_optimizer=torch.optim.AdamW(self.linear_layer.parameters(),lr=1e-4)
+            self.test_optimizer=torch.optim.AdamW(self.linear_layer.parameters(),lr=1e-3)
             self.token_loss=torch.nn.CrossEntropyLoss(reduction="mean")
         self.transformerModel.model.eval()
         
@@ -252,15 +252,10 @@ class LightningCLIPModule(base):
             dict: the outputs.
         """
         with torch.inference_mode(False):
-            torch.set_grad_enabled(True)
             zh=batch["zh"]
             zh=torch.stack(zh,dim=1)
 
             labels=torch.stack(batch["en"],dim=1)
-            if torch.is_grad_enabled() == False:
-                print("grad is disabled")
-                #reenable grad
-                torch.set_grad_enabled(True)
             
             assert labels.shape[1]==77
             out=self.translate(zh)
