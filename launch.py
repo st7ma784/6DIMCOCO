@@ -92,7 +92,13 @@ def train(config={
             TestLoader=MagicSwordCNDataModule(
                 Cache_dir='.', batch_size=256,ZHtokenizer=None,ENtokenizer=None)
             from BuildCNEvalmsr_zhen_translation_parity import CNDataModule
-            from BuildCNEvalUNPC import CNDataModule
+            TestLoader2=CNDataModule(
+                Cache_dir='.', batch_size=256,ZHtokenizer=None,ENtokenizer=None
+            )
+            from BuildCNEvalUNPC import CNDataModule as CNDataModule2
+            TestLoader3=CNDataModule2(
+                Cache_dir='.', batch_size=256,ZHtokenizer=None,ENtokenizer=None
+            )
             config["precision"]=16
             
         else: 
@@ -164,6 +170,8 @@ def train(config={
                     trainer.fit(model,
                                 Dataset)
                     trainer.test(model,TestLoader)
+                    trainer.test(model,TestLoader2)
+                    trainer.test(model,TestLoader3)
     else:
         return 0 #No need to train if batch size is 1
     #do test
