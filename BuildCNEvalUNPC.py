@@ -48,24 +48,40 @@ class CNDataModule(pl.LightningDataModule):
             os.makedirs(self.data_dir,exist_ok=True)
         from datasets import load_dataset
 
-        self.dataset = load_dataset("msr_zhen_translation_parity", 
+        self.dataset = load_dataset("un_pc","en-zh", 
                                cache_dir=self.data_dir,
                                streaming=False,
                                )
-   
     def tokenization(self,sample):
-        en= self.ENtokenizer(sample["en"], padding="max_length", truncation=True, max_length=77)
-        indexes=torch.argmin(en,dim=1)
-        EOT=indexes-1
-        en[:,EOT]=self.ENtokenizer.vocab_size
-        en[:,0]=self.ENtokenizer.vocab_size-1
-        zh= self.ZHtokenizer(sample["zh"], padding="max_length", truncation=True, max_length=77)
-        indexes=torch.argmin(zh,dim=1)
-        EOT=indexes-1
+        en= self.ENtokenizer(sample["en"],
+                            padding="max_length",
+                            truncation=True,
+                            max_length=77,
+                            #output as tensor,
+                            return_tensors="pt"
+                            )['input_ids']
+        #concatenate the tokenized sentence with the EOT token
+        #print(en.keys())
+        #print("en",en.shape)
+
+        # indexes=torch.argmax(en,dim=1)
+        # #print(indexes.shape)
+        # EOT=indexes
+        # en[:,EOT]=self.ENtokenizer.vocab_size
+        # en[:,0]=self.ENtokenizer.vocab_size-1
+        zh= self.ZHtokenizer(sample["zh"], 
+                            padding="max_length",
+                            truncation=True,
+                            max_length=77,
+                            return_tensors="pt" 
+                            )["input_ids"]
+        indexes=torch.argmax(zh,dim=1)
+        #print(indexes)        
+        EOT=indexes
         zh[:,EOT]=self.ZHtokenizer.vocab_size
         zh[:,0]=self.ZHtokenizer.vocab_size-1
-        return {'en' :en,
-                'zh' : zh}
+        #print("vocab_size",self.ZHtokenizer.vocab_size)
+        return {'en' :en.squeeze(0),'zh' : zh.squeeze(0)}
         
     def setup(self, stage=None):
         '''called on each GPU separately - stage defines if we are at fit or test step'''
@@ -78,7 +94,7 @@ class CNDataModule(pl.LightningDataModule):
                                  streaming=True,
                                  )
         
-        self.test = self.dataset["train"]["translation"].map(lambda x: self.tokenization(x), batched=False)
+        self.test = self.dataset["train"]["translation"].map(lambda x: self.tokenization(x), batched=True)
         
         
 if __name__=="__main__":

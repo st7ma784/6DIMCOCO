@@ -55,18 +55,35 @@ class CNDataModule(pl.LightningDataModule):
                                )
    
     def tokenization(self,sample):
-        en= self.ENtokenizer(sample["en"], padding="max_length", truncation=True, max_length=77)
-        indexes=torch.argmin(en,dim=1)
-        EOT=indexes-1
-        en[:,EOT]=self.ENtokenizer.vocab_size
-        en[:,0]=self.ENtokenizer.vocab_size-1
-        zh= self.ZHtokenizer(sample["zh"], padding="max_length", truncation=True, max_length=77)
-        indexes=torch.argmin(zh,dim=1)
-        EOT=indexes-1
+        en= self.ENtokenizer(sample["en"],
+                            padding="max_length",
+                            truncation=True,
+                            max_length=77,
+                            #output as tensor,
+                            return_tensors="pt"
+                            )['input_ids']
+        #concatenate the tokenized sentence with the EOT token
+        #print(en.keys())
+        #print("en",en.shape)
+
+        # indexes=torch.argmax(en,dim=1)
+        # #print(indexes.shape)
+        # EOT=indexes
+        # en[:,EOT]=self.ENtokenizer.vocab_size
+        # en[:,0]=self.ENtokenizer.vocab_size-1
+        zh= self.ZHtokenizer(sample["zh"], 
+                            padding="max_length",
+                            truncation=True,
+                            max_length=77,
+                            return_tensors="pt" 
+                            )["input_ids"]
+        indexes=torch.argmax(zh,dim=1)
+        #print(indexes)        
+        EOT=indexes
         zh[:,EOT]=self.ZHtokenizer.vocab_size
         zh[:,0]=self.ZHtokenizer.vocab_size-1
-        return {'en' :en,
-                'zh' : zh}
+        #print("vocab_size",self.ZHtokenizer.vocab_size)
+        return {'en' :en.squeeze(0),'zh' : zh.squeeze(0)}
         
     def setup(self, stage=None):
         '''called on each GPU separately - stage defines if we are at fit or test step'''
@@ -83,7 +100,7 @@ class CNDataModule(pl.LightningDataModule):
         #remove the old "text" column
         reformatted_dataset.remove_columns("text")
         #tokenize the reformatted dataset
-        self.test = reformatted_dataset.map(lambda x: self.tokenization(x), batched=False)
+        self.test = reformatted_dataset.map(lambda x: self.tokenization(x), batched=True)
         
         
 if __name__=="__main__":

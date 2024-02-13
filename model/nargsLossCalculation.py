@@ -112,7 +112,9 @@ def get_loss_fn(logitsversion=0,norm=False,log=False,JSE=0):
         norm=True
         def baseLogits(*args):
             return calculate_lossNormsv7(*args,mean_fn=mean_fn)
-
+    elif logitsversion==-1:
+        def baseLogits(*args):
+            return Fast_loss_Hdim(*args)
     normfunction=lambda x:x
     if norm:
         normfunction=normargs

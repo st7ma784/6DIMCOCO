@@ -57,12 +57,21 @@ class LightningCLIPModule(base):
         self.label=self.generate_labels((4,self.hparams.batch_size,self.transformer_width))
         self.pruneLabels=  len(self.label.shape)>=4
         self.EOT_embedding=self.clip.token_embedding.weight[-1]
-
+        self.label=torch.diag_embed(
+                                torch.ones(self.hparams.batch_size,
+                                            dtype=torch.float,
+                                            device=self.device)
+                                ).unsqueeze(2).repeat(1,1,25)
+        if self.hparams.logitsversion==-1:
+            self.loss=torch.nn.CrossEntropyLoss(reduction="mean")
         self.model_projection=torch.nn.Parameter(torch.empty(config.d_model, self.transformer_width))
         # if kwargs.get("gumbel",False):
         #     self.token_select=partial(torch.nn.functional.gumbel_softmax,hard=True,dim=-1)
         # else:
         #     self.token_select=partial(torch.nn.functional.softmax,dim=-1)
+        # self.label=torch.ones((self.hparams.batch_size,),dtype=torch.float,device=self.device)
+        # self.label=self.label.diag_embed()
+        # self.label=self.label.unsqueeze(-1).repeat(1,1,25).to(self.device)
         EOT_finder=kwargs.get("EOTGrad",0)
         if EOT_finder==0:
             self.EOT_summarization=self.EOT_finder
@@ -71,10 +80,16 @@ class LightningCLIPModule(base):
         else:
             raise ValueError("EOTGrad must be 0 or 1")
     def on_validation_epoch_start(self):
+        # self.on_test_epoch_start()
         pass
     def on_validation_epoch_end(self):
+        #self.on_test_epoch_end()
+        #del self.linear_layer
+        #del self.test_optimizer
+        #del self.token_loss
         pass
     def validation_step(self, batch, batch_idx):
+        #return self.test_step(batch, batch_idx)
         pass
     def encode_text(self, text):
  
@@ -158,9 +173,10 @@ class LightningCLIPModule(base):
         im,captions= batch[0],batch[1]
         
         logits=self(im,*[captions[:,i] for i in range(captions.shape[1])])*self.logit_scale.exp()
-        labels=self.label
-  
-        if labels.shape != logits.shape:
+        labels=self.label.to(self.device,non_blocking=True)
+        # print(logits.shape)
+        # print(labels.shape)
+        if labels.shape[0] != logits.shape[0]:
             # print((len(logits.shape)))
             labels=self.generate_labels((len(logits.shape),self.hparams.batch_size,self.transformer_width)).to(self.device,non_blocking=True)
             self.label=labels
@@ -189,11 +205,12 @@ class LightningCLIPModule(base):
         #  Option 2: 1- output...
         # option 3: logarithmic functions? 
         
-
+        if self.hparams.logitsversion==-1:
+            loss=self.loss(logits,labels)
+        else:
+            losses = [self.loss(logits.permute(*i), labels,alpha=self.alpha) for i in permutes]
         
-        losses = [self.loss(logits.permute(*i), labels,alpha=self.alpha) for i in permutes]
-        
-        loss=self.meanloss(I=[losses[0]],T=losses[1:]).mean()
+            loss=self.meanloss(I=[losses[0]],T=losses[1:]).mean()
       
         self.log('train_loss', loss, prog_bar=True,enable_graph=False, rank_zero_only=True)
 
