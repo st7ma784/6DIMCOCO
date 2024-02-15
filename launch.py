@@ -1,6 +1,8 @@
 
 import os,sys
 from pytorch_lightning import loggers as pl_loggers
+from transformers import BertTokenizerFast
+
 
 def wandbtrain(config=None,dir=None,devices=None,accelerator=None,Dataset=None,project="6DIMCLIPTOKSweepvfinal",entity="st7ma784"):
     import pytorch_lightning
@@ -87,19 +89,25 @@ def train(config={
         #Dataset=LaionDataModule(Cache_dir=dir,batch_size=config["batch_size"])
         if config.get("cn",False):
             from BuildCNDataset import COCOCNDataModule as COCODataModule
+            tokenizer = BertTokenizerFast.from_pretrained('bert-base-chinese',cache_dir=dir)
 
             from BuildCNEvalMagicSword import MagicSwordCNDataModule
             TestLoader=MagicSwordCNDataModule(
-                Cache_dir='.', batch_size=256,ZHtokenizer=None,ENtokenizer=None)
+                Cache_dir='.', batch_size=256,ZHtokenizer=tokenizer,ENtokenizer=None)
             from BuildCNEvalmsr_zhen_translation_parity import CNDataModule
             TestLoader2=CNDataModule(
-                Cache_dir='.', batch_size=256,ZHtokenizer=None,ENtokenizer=None
+                Cache_dir='.', batch_size=256,ZHtokenizer=tokenizer,ENtokenizer=None
             )
             from BuildCNEvalUNPC import CNDataModule as CNDataModule2
             TestLoader3=CNDataModule2(
-                Cache_dir='.', batch_size=256,ZHtokenizer=None,ENtokenizer=None
+                Cache_dir='.', batch_size=256,ZHtokenizer=tokenizer,ENtokenizer=None
             )
             config["precision"]=16
+            Dataset=COCODataModule(Cache_dir=dir,
+                                   tokenizer=tokenizer,
+                                   annotations=config.get("annotations",dir),
+                                   batch_size=config["batch_size"])
+
             
         else: 
             from BuildSpainDataSet import COCODataModule
@@ -115,7 +123,7 @@ def train(config={
                 shuffle=True,
                 pin_memory=True,
                 drop_last=True)
-        Dataset=COCODataModule(Cache_dir=dir,annotations=config.get("annotations",dir),batch_size=config["batch_size"])
+            Dataset=COCODataModule(Cache_dir=dir,annotations=config.get("annotations",dir),batch_size=config["batch_size"])
         from pytorch_lightning.strategies import DDPStrategy as DDP
         
     if devices is None:
@@ -145,7 +153,7 @@ def train(config={
             devices=devices,
             #auto_select_gpus=True,
             accelerator=accelerator,
-            max_epochs=config.get("epochs",10),
+            max_epochs=config.get("epochs",20),
             #profiler="advanced",
             logger=logger,
             strategy=DDP(find_unused_parameters=True),

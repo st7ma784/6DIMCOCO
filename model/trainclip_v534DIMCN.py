@@ -72,13 +72,13 @@ class LightningCLIPModule(base):
         # self.label=torch.ones((self.hparams.batch_size,),dtype=torch.float,device=self.device)
         # self.label=self.label.diag_embed()
         # self.label=self.label.unsqueeze(-1).repeat(1,1,25).to(self.device)
-        EOT_finder=kwargs.get("EOTGrad",0)
-        if EOT_finder==0:
+        EOT_finder=kwargs.get("gumbel",False)
+        if EOT_finder:
             self.EOT_summarization=self.EOT_finder
-        elif EOT_finder==1:
-            self.EOT_summarization=self.EOT_finder2
         else:
-            raise ValueError("EOTGrad must be 0 or 1")
+            self.EOT_summarization=self.EOT_finder2
+        #else:
+        #    raise ValueError("EOTGrad must be 0 or 1")
     def on_validation_epoch_start(self):
         # self.on_test_epoch_start()
         pass
@@ -144,7 +144,7 @@ class LightningCLIPModule(base):
         x=x * torch.nn.functional.gumbel_softmax(x@eot,dim=-1,hard=True).unsqueeze(-1)
         x=x.sum(dim=1)
         #
-        print(x.shape)
+        # print(x.shape)
         return x
 
 
@@ -176,7 +176,7 @@ class LightningCLIPModule(base):
         labels=self.label.to(self.device,non_blocking=True)
         # print(logits.shape)
         # print(labels.shape)
-        if labels.shape[0] != logits.shape[0]:
+        if labels.shape != logits.shape:
             # print((len(logits.shape)))
             labels=self.generate_labels((len(logits.shape),self.hparams.batch_size,self.transformer_width)).to(self.device,non_blocking=True)
             self.label=labels
