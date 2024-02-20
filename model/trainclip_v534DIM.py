@@ -42,13 +42,14 @@ class LightningCLIPModule(base):
                                             decoder_input_ids=decoder_input_ids,
                                             return_dict=True,
                                             output_hidden_states=True)
+        out=output.get("logits",output.get("last_hidden_state",None))
         #output = self.transformerModel(input_ids=text,decoder_input_ids=,return_dict=True,output_hidden_states=True)
 
         encoder_output=output["encoder_last_hidden_state"][torch.arange(output["encoder_last_hidden_state"].shape[0]),EOT_indexes]
         #shape should be [batch_size, 1, d_model]
-        EOT_locations=torch.argmax(torch.argmax(output["logits"],dim=-1),dim=-1) #should be [batch_size,1]
+        EOT_locations=torch.argmax(torch.argmax(out,dim=-1),dim=-1) #should be [batch_size,1]
         #print("EOT locations: ",EOT_locations.shape)
-        output=self.token_select(output["logits"])
+        output=self.token_select(out)
         #print("output shape: ",output) #B,77,V #should be 1hot encoded?
         x=output@self.token_emb
         #scale x to be in range [-1,1]
