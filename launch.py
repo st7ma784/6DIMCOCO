@@ -1,4 +1,5 @@
 
+from math import exp
 import os,sys
 from pytorch_lightning import loggers as pl_loggers
 from transformers import BertTokenizerFast
@@ -16,9 +17,10 @@ def wandbtrain(config=None,dir=None,devices=None,accelerator=None,Dataset=None,p
         if config.get("cn",False):
             project+="CNTranslate"
         project+="{}DIM".format(config.get("dims",6)) 
+        wandb.finish()
         run=wandb.init(project=project,entity=entity,name=project,config=config)
 
-        logtool= pytorch_lightning.loggers.WandbLogger( project=project,entity=entity, save_dir=logdir)
+        logtool= pytorch_lightning.loggers.WandbLogger( project=project,entity=entity, save_dir=logdir,experiment=run)
 
     else: 
         #We've got no config, so we'll just use the default, and hopefully a trainAgent has been passed
@@ -28,7 +30,7 @@ def wandbtrain(config=None,dir=None,devices=None,accelerator=None,Dataset=None,p
         #n=wandb.init(project="SPARC-VisGenome",entity="st7ma784",name="VRE-Vis",config=args)
 
         #logtool= pl.loggers.WandbLogger( project="SPARC-VisGenome",entity="st7ma784",name="VRE-Vis",experiment=run,save_dir=savepath,log_model=True)
-
+        wandb.finish()
         run=wandb.init(project=project,entity=entity,name=project,config=config)
         config=run.config.as_dict()
         if config.get("cn",False):
