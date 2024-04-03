@@ -15,6 +15,7 @@ on:
       - model/*
       - dockerfile
       - requirements.txt
+      - BuildSpainDataSet.py
       - .github/workflows/deploy.yml
   #release:
   #  types: [published]
