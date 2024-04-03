@@ -18,4 +18,4 @@ COPY . /app
 RUN python3 -V
 RUN python -V
 # Run the launch command with the num_trials -1 flag
-CMD ["/bin/sh", "python", "launch.py", "--dir","/data","--annotations","/data/annotations","--log_path","\data\logs", "--num_trials","-1"]
+CMD ["python", "launch.py", "--dir","/data","--annotations","/data/annotations","--log_path","\data\logs", "--num_trials","-1"]
