@@ -54,7 +54,7 @@ class LightningCLIPModule(base):
         x=output@self.token_emb.T
         #scale x to be in range [-1,1]
         x=x/torch.norm(x,dim=-1,keepdim=True)
-        x=x*self.token_scale
+        # x=x*self.token_scale
         # x=x+1 
         # x=x/2
         x = x + self.clip.positional_embedding.type(self.dtype)
