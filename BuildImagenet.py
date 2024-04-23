@@ -99,6 +99,10 @@ class ImagenetDataModule(LightningDataModule):
         '''Download and prepare data'''
         # download dataset with pysmartDL
         # download dataset
+
+        if os.path.exists(os.path.join(self.data_dir,"ImageNet-2012")):
+            print("Dataset exists")
+            return
         urls=["https://image-net.org/data/ILSVRC/2012/ILSVRC2012_img_train.tar",
         "https://image-net.org/data/ILSVRC/2012/ILSVRC2012_img_val.tar",
         "https://image-net.org/data/ILSVRC/2012/ILSVRC2012_img_test_v10102019.tar",

@@ -51,7 +51,7 @@ class LightningCLIPModule(base):
         #print("EOT locations: ",EOT_locations.shape)
         output=self.token_select(out)
         #print("output shape: ",output) #B,77,V #should be 1hot encoded?
-        x=output@self.token_emb
+        x=output@self.token_emb.T
         #scale x to be in range [-1,1]
         x=x/torch.norm(x,dim=-1,keepdim=True)
         x=x*self.token_scale

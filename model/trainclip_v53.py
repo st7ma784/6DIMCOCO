@@ -206,6 +206,7 @@ class LightningCLIPModule(CKA_base):
         super().test_step(batch, batch_idx)
 
     def on_test_epoch_start(self):
+        super().on_test_epoch_start()
         self.results=[]
     
     def on_test_epoch_end(self):

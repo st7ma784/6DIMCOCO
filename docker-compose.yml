@@ -1,15 +1,18 @@
 version: '3'
 services:
   runcontext:
-    image: st7ma784/runcontext
+    image: st7ma784/runcontext:latest
     volumes:
-      - /path/to/local/dataset:/data
+      - /data:/data
     deploy:
+      mode: replicated
+      replicas: 1
       resources:
         reservations:
           devices:
             - driver: nvidia
               count: 1
+              capabilities: [gpu]
   watch-tower:
     image: containrrr/watchtower
     volumes:

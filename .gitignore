@@ -158,3 +158,5 @@ results
 maskStack*.stl
 models--*/*
 models--bert-base-chinese/*
+._magicsword_**
+models--**
