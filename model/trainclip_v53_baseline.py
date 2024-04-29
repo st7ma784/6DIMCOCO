@@ -10,7 +10,7 @@ class BaselineLightningCLIPModule(LightningCLIPModule):
 
     def forward(self, im, *captions):
         image_features=self.encode_image(im)
-        caption_features=[self.encode_text(c) for c in captions]
+        caption_features=[self.encode_text(c) for c in captions[0]]
 
         [i],captions=self.projection(self.text_projection,im=[image_features],text=caption_features)
         logits=Fast_loss_Hdim(i,*captions)
