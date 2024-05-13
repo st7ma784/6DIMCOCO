@@ -140,7 +140,7 @@ class LightningCLIPModule(base):
             dict: the outputs.
         """
         super().test_step(batch, batch_idx)
-        output=self.translate(batch["CN"])
+        output=self.translate(batch["zh"])
             
         outs = {}
         logits = output.logits
@@ -148,7 +148,7 @@ class LightningCLIPModule(base):
                                                 skip_special_tokens=True)
         predictions = [pred.strip() for pred in predictions]
 
-        references = self.tokenizer.batch_decode(batch["EN"],
+        references = self.tokenizer.batch_decode(batch["en"],
                                         skip_special_tokens=True)
         references = [label.strip() for label in references]
         refs = [[label] for label in references]
