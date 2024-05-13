@@ -140,28 +140,28 @@ class LightningCLIPModule(base):
             dict: the outputs.
         """
         super().test_step(batch, batch_idx)
-        output=self.translate(batch["zh"])
+        # output=self.translate(batch["zh"])
             
-        outs = {}
-        logits = output.logits
-        predictions = self.tokenizer.batch_decode(torch.argmax(logits, dim=-1),
-                                                skip_special_tokens=True)
-        predictions = [pred.strip() for pred in predictions]
+        # outs = {}
+        # logits = output.logits
+        # predictions = self.tokenizer.batch_decode(torch.argmax(logits, dim=-1),
+        #                                         skip_special_tokens=True)
+        # predictions = [pred.strip() for pred in predictions]
 
-        references = self.tokenizer.batch_decode(batch["en"],
-                                        skip_special_tokens=True)
-        references = [label.strip() for label in references]
-        refs = [[label] for label in references]
+        # references = self.tokenizer.batch_decode(batch["en"],
+        #                                 skip_special_tokens=True)
+        # references = [label.strip() for label in references]
+        # refs = [[label] for label in references]
 
-        metric = self.getMetric("bertscore")
-        f1 = metric.compute(predictions=predictions,
-                        references=references,
-                        model_type="microsoft/deberta-xlarge-mnli",
-                        lang="en",
-                        device="cuda",
-                        batch_size=batch["CN"].shape[0])["f1"]
+        # metric = self.getMetric("bertscore")
+        # f1 = metric.compute(predictions=predictions,
+        #                 references=references,
+        #                 model_type="microsoft/deberta-xlarge-mnli",
+        #                 lang="en",
+        #                 device="cuda",
+        #                 batch_size=batch["CN"].shape[0])["f1"]
         
-        self.bertscores.extend(f1)
+        # self.bertscores.extend(f1)
 
     def test_epoch_end(self, outputs: list) -> None:
         """ Post-training evaluation.
@@ -169,8 +169,8 @@ class LightningCLIPModule(base):
             outputs (list): the outputs from all batches.
         """
         super().test_epoch_end(outputs)
-        BertScore = reduce(add,self.bertscores) / len(self.bertscores)
-        self.log("BertScore", BertScore, prog_bar=True,enable_graph=False, rank_zero_only=True)
+        # BertScore = reduce(add,self.bertscores) / len(self.bertscores)
+        # self.log("BertScore", BertScore, prog_bar=True,enable_graph=False, rank_zero_only=True)
 
 
 import time
