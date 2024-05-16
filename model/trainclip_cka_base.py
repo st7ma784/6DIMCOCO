@@ -265,9 +265,9 @@ class LightningCLIPModule(LightningModule):
         #check that B is not 2 and self.epoch is >0
         print("imfeatures",imfeatures.shape)
         print("tfeatures",tfeatures.shape)#20,512
-        if self.tfeatures is None and self.current_epoch>0:
+        if self.tfeatures is None:
             self.tfeatures=np.expand_dims(tfeatures,0) #1 ,5,B,512
-        elif self.current_epoch>0 and self.tfeatures is not None:
+        elif self.tfeatures is not None:
             self.tfeatures=np.concatenate([self.tfeatures,np.expand_dims(tfeatures,0)],axis=0)
         
         #step 3, repeat for each previous epoch (as a cum sum?))
@@ -429,8 +429,6 @@ class LightningCLIPModule(LightningModule):
                     self.logger.log_image(key="mean_similarity_between_each_sample_across_validation_epochs", images=["mean_similarity_between_each_sample_across_validation_epochs.jpg"])
                 #remove the tfeatures
                 
-            self.tfeatures=None
-
     def on_test_epoch_end(self):
         imfeatures=torch.nan_to_num(torch.cat([val["imfeatures"] for val in self.results],dim=0)).cpu().numpy()
         labels=torch.cat([val["classes"] for val in self.results],dim=0).cpu().numpy()
