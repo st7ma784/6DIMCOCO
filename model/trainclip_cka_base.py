@@ -266,9 +266,9 @@ class LightningCLIPModule(LightningModule):
         #check that B is not 2 and self.epoch is >0
         print("imfeatures",imfeatures.shape)
         print("tfeatures",tfeatures.shape)#20,512
-        if self.tfeatures is None and self.current_epoch>0:
+        if self.tfeatures is None:
             self.tfeatures=np.expand_dims(tfeatures,0) #1 ,5,B,512
-        elif self.current_epoch>0 and self.tfeatures is not None:
+        else:
             self.tfeatures=np.concatenate([self.tfeatures,np.expand_dims(tfeatures,0)],axis=0)
         plot=plt.figure()
         for i in range(self.tfeatures.shape[0]):
