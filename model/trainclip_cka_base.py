@@ -274,7 +274,7 @@ class LightningCLIPModule(LightningModule):
             self.tfeatures=np.concatenate([self.tfeatures,tfeatures],axis=0)
         plot=plt.figure()
         for i in range(self.tfeatures.shape[0]):
-            sns.distplot(self.tfeatures[i][1],label="Epoch {}".format(i))
+            sns.distplot(self.tfeatures[i][0],label="Epoch {}".format(i))
         plt.legend()
         plt.title("Distribution of Validation Features for sample1")
         plt.savefig("distribution_of_validation_features.jpg")
@@ -289,7 +289,7 @@ class LightningCLIPModule(LightningModule):
         deltas=np.diff(self.tfeatures,axis=0)
         plot=plt.figure()
         for i in range(deltas.shape[0]):
-            sns.distplot(deltas[i][1],label="Epoch {}".format(i))
+            sns.distplot(deltas[i][0],label="Epoch {}".format(i))
         plt.legend()
         plt.title("Distribution of Validation Feature Deltas for sample1")
         plt.savefig("distribution_of_validation_feature_deltas.jpg")
