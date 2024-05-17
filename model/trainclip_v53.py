@@ -48,7 +48,7 @@ class LightningCLIPModule(CKA_base):
             heads=transformer_heads,
             attn_mask=self.build_attention_mask()
             )
-        self.encode_image= VisionTransformer(
+        self.im_enc= VisionTransformer(
                 input_resolution=224,
                 patch_size=16,
                 width=transformer_width,
@@ -141,7 +141,8 @@ class LightningCLIPModule(CKA_base):
         #this is one set of masks, theres another set however, of
 
 
-
+    def encode_image(self,*Args,**kwargs):
+        return self.im_enc(*Args,**kwargs)
     # @torch.jit.script
     def forward(self, im, *captions):
         image_features=self.encode_image(im)
