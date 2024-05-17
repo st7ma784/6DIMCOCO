@@ -271,6 +271,7 @@ class LightningCLIPModule(LightningModule):
             self.tfeatures=tfeatures
         else:
             self.tfeatures=np.concatenate([self.tfeatures,tfeatures)],axis=0)
+        tfeatures=tfeatures[0]
         plot=plt.figure()
         for i in range(self.tfeatures.shape[0]):
             sns.distplot(self.tfeatures[i][1],label="Epoch {}".format(i))
