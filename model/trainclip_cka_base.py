@@ -305,10 +305,10 @@ class LightningCLIPModule(LightningModule):
         similarity_matrix=np.zeros((first_five.shape[0],first_five.shape[1],first_five.shape[1])) 
         #norm of each vector
         norms=np.linalg.norm(first_five,axis=2) # epochs x 5
-        normed_first_five=np.divide(first_five,norms[:,:,None])
+        normed_first_five=np.divide(first_five,norms[:,:,None]) #E,5,512
         similarity_matrix=np.matmul(normed_first_five,normed_first_five.transpose(0,2,1))# shape epochs x 5 x 5
         # block out the diagonal
-        similarity_matrix[:,:,np.arange(similarity_matrix.shape[1]),np.arange(similarity_matrix.shape[1])]=0
+        similarity_matrix[:,np.arange(similarity_matrix.shape[1]),np.arange(similarity_matrix.shape[1])]=0
         #sum last 2 dimensions and divide by 20
         similarity_matrix=np.sum(similarity_matrix,axis=(1,2))/20
         plot=plt.figure()
@@ -323,7 +323,7 @@ class LightningCLIPModule(LightningModule):
         norms=np.linalg.norm(every_five,axis=2)
         normed_every_five=np.divide(every_five,norms[:,:,None])
         similarity_matrix=np.matmul(normed_every_five,normed_every_five.transpose(0,2,1))
-        similarity_matrix[:,:,np.arange(similarity_matrix.shape[1]),np.arange(similarity_matrix.shape[1])]=0
+        similarity_matrix[:,np.arange(similarity_matrix.shape[1]),np.arange(similarity_matrix.shape[1])]=0
         similarity_matrix=np.sum(similarity_matrix,axis=(1,2))/ ((every_five.shape[1]*every_five.shape[1]) - every_five.shape[1])
         plot=plt.figure()
         plt.plot(np.arange(similarity_matrix.shape[0]),similarity_matrix)
