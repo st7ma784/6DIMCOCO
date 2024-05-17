@@ -264,12 +264,13 @@ class LightningCLIPModule(LightningModule):
         imfeatures=torch.nan_to_num(torch.cat([val["imfeatures"] for val in self.results],dim=0)).cpu().numpy()
         tfeatures=torch.nan_to_num(torch.cat([val["tfeatures"] for val in self.results],dim=0)).cpu().numpy()
         #check that B is not 2 and self.epoch is >0
+        tfeatures=np.expand_dims(tfeatures,0) #1 ,5,B,512
         print("imfeatures",imfeatures.shape)
         print("tfeatures",tfeatures.shape)#20,512
         if self.tfeatures is None:
-            self.tfeatures=np.expand_dims(tfeatures,0) #1 ,5,B,512
+            self.tfeatures=tfeatures
         else:
-            self.tfeatures=np.concatenate([self.tfeatures,np.expand_dims(tfeatures,0)],axis=0)
+            self.tfeatures=np.concatenate([self.tfeatures,tfeatures)],axis=0)
         plot=plt.figure()
         for i in range(self.tfeatures.shape[0]):
             sns.distplot(self.tfeatures[i][1],label="Epoch {}".format(i))
