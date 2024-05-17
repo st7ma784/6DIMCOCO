@@ -256,22 +256,22 @@ class LightningCLIPModule(LightningModule):
         loss=loss/2
         loss = loss.mean()
         self.log('val_loss-stock', loss, prog_bar=True,enable_graph=False, rank_zero_only=True)
-        self.results.append({"imfeatures":image_features[0], "tfeatures":torch.cat(captions),"classes":batch[2],"loss": loss})
+        self.results.append({"imfeatures":image_features[0], "tfeatures":torch.cat(captions,dim=0),"classes":batch[2],"loss": loss})
 
         return {"loss": loss}
 
     def on_validation_epoch_end(self):
         imfeatures=torch.nan_to_num(torch.cat([val["imfeatures"] for val in self.results],dim=0)).cpu().numpy()
         tfeatures=torch.nan_to_num(torch.cat([val["tfeatures"] for val in self.results],dim=0)).cpu().numpy()
+        tfeatures=np.expand_dims(tfeatures,0)
         #check that B is not 2 and self.epoch is >0
         tfeatures=np.expand_dims(tfeatures,0) #1 ,5,B,512
         print("imfeatures",imfeatures.shape)
         print("tfeatures",tfeatures.shape)#20,512
         if self.tfeatures is None:
-            self.tfeatures=tfeatures
+            self.tfeatures=tfeatures #1 ,5,B,512
         else:
-            self.tfeatures=np.concatenate([self.tfeatures,tfeatures)],axis=0)
-        tfeatures=tfeatures[0]
+            self.tfeatures=np.concatenate([self.tfeatures,tfeatures],axis=0)
         plot=plt.figure()
         for i in range(self.tfeatures.shape[0]):
             sns.distplot(self.tfeatures[i][1],label="Epoch {}".format(i))
