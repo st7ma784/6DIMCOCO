@@ -265,14 +265,18 @@ class LightningCLIPModule(LightningModule):
         tfeatures=torch.nan_to_num(torch.cat([val["tfeatures"] for val in self.results],dim=0)).cpu().numpy()
         tfeatures=np.expand_dims(tfeatures,0)
         #check that B is not 2 and self.epoch is >0
-        tfeatures=np.expand_dims(tfeatures,0) #1 ,5,B,512
+        #1 ,5,B,512
         print("imfeatures",imfeatures.shape)
         print("tfeatures",tfeatures.shape)#20,512
         if self.tfeatures is None:
             self.tfeatures=tfeatures #1 ,5,B,512
         else:
-            self.tfeatures=np.concatenate([self.tfeatures,tfeatures],axis=0)
+            if self.tfeatures.shape[1]==tfeatures.shape[1]:
+                self.tfeatures=np.concatenate([self.tfeatures,tfeatures],axis=0)
+            else:
+                self.tfeatures=tfeatures
         plot=plt.figure()
+        tfeatures=tfeatures[0]
         for i in range(self.tfeatures.shape[0]):
             sns.distplot(self.tfeatures[i][0],label="Epoch {}".format(i))
         plt.legend()
@@ -433,7 +437,7 @@ class LightningCLIPModule(LightningModule):
         if not self.tfeatures is None:
             plot=plt.figure()
             for i in range(self.tfeatures.shape[0]):
-                sns.distplot(self.tfeatures[i][1],label="Epoch {}".format(i))
+                sns.distplot(self.tfeatures[i][0],label="Epoch {}".format(i))
             plt.legend()
             plt.title("Distribution of Validation Features for sample1")
             plt.savefig("distribution_of_validation_features.jpg")
@@ -448,7 +452,7 @@ class LightningCLIPModule(LightningModule):
             deltas=np.diff(self.tfeatures,axis=0)
             plot=plt.figure()
             for i in range(deltas.shape[0]):
-                sns.distplot(deltas[i][1],label="Epoch {}".format(i))
+                sns.distplot(deltas[i][0],label="Epoch {}".format(i))
             plt.legend()
             plt.title("Distribution of Validation Feature Deltas for sample1")
             plt.savefig("distribution_of_validation_feature_deltas.jpg")
@@ -466,10 +470,10 @@ class LightningCLIPModule(LightningModule):
             similarity_matrix=np.zeros((first_five.shape[0],first_five.shape[1],first_five.shape[1])) 
             #norm of each vector
             norms=np.linalg.norm(first_five,axis=2) # epochs x 5
-            normed_first_five=np.divide(first_five,norms[:,:,None])
+            normed_first_five=np.divide(first_five,norms[:,:,None]) #E,5,512
             similarity_matrix=np.matmul(normed_first_five,normed_first_five.transpose(0,2,1))# shape epochs x 5 x 5
             # block out the diagonal
-            similarity_matrix[:,:,np.arange(similarity_matrix.shape[1]),np.arange(similarity_matrix.shape[1])]=0
+            similarity_matrix[:,np.arange(similarity_matrix.shape[1]),np.arange(similarity_matrix.shape[1])]=0
             #sum last 2 dimensions and divide by 20
             similarity_matrix=np.sum(similarity_matrix,axis=(1,2))/20
             plot=plt.figure()
@@ -484,7 +488,7 @@ class LightningCLIPModule(LightningModule):
             norms=np.linalg.norm(every_five,axis=2)
             normed_every_five=np.divide(every_five,norms[:,:,None])
             similarity_matrix=np.matmul(normed_every_five,normed_every_five.transpose(0,2,1))
-            similarity_matrix[:,:,np.arange(similarity_matrix.shape[1]),np.arange(similarity_matrix.shape[1])]=0
+            similarity_matrix[:,np.arange(similarity_matrix.shape[1]),np.arange(similarity_matrix.shape[1])]=0
             similarity_matrix=np.sum(similarity_matrix,axis=(1,2))/ ((every_five.shape[1]*every_five.shape[1]) - every_five.shape[1])
             plot=plt.figure()
             plt.plot(np.arange(similarity_matrix.shape[0]),similarity_matrix)
@@ -517,8 +521,7 @@ class LightningCLIPModule(LightningModule):
                     self.logger.log_image(key="mean_similarity_of_first_5_features_across_validation_epochs", images=["mean_similarity_of_first_5_features_across_validation_epochs.jpg"])
                     self.logger.log_image(key="mean_similarity_between_each_sample_across_validation_epochs", images=["mean_similarity_between_each_sample_across_validation_epochs.jpg"])
                 #remove the tfeatures
-                
-            self.tfeatures=None
+                self.tfeatures=None
 
     def on_test_epoch_end(self):
         imfeatures=torch.nan_to_num(torch.cat([val["imfeatures"] for val in self.results],dim=0)).cpu().numpy()
