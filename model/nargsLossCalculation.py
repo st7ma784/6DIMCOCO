@@ -493,3 +493,35 @@ if __name__ == "__main__":
     print(CELoss)
     loss2=torch.nn.functional.cross_entropy(Logits,labels)
     print(loss2)
+
+    for N in range(3,7):
+        B=4
+        for j in range(0,20):
+            testFn=get_loss_fn(j,True)
+            testBatchA=torch.rand(B,512,device="cpu")
+            testBatchB=torch.normal(0,0.3,(B,512),device="cpu")
+            testBatchA=testBatchA/torch.norm(testBatchA,dim=-1,keepdim=True)
+            testBatchB=testBatchB/torch.norm(testBatchB,dim=-1,keepdim=True)
+            
+            logtis=testFn(*[testBatchB]*N)#convert this to probabilities in range [0,1]
+            logtis=torch.nan_to_num(logtis)
+
+            label=torch.nn.functional.softmax(logtis)
+            Views=torch.diag_embed(torch.ones(N,dtype=torch.long)*B-1)+1
+            
+            Lossmask=torch.sum(reduce(torch.add,list(map(lambda Arr: torch.nn.functional.one_hot(torch.arange(B).view(*Arr),num_classes=B),Views.tolist()))).pow(4),dim=-1)
+            masks=torch.unique(torch.flatten(Lossmask,0,-1),dim=0,sorted=False)
+
+            
+            st=torch.stack([Lossmask==masks[i] for i in range(len(masks))],dim=0)
+
+            from matplotlib import pyplot as plt
+            fig = plt.plot(figsize=(1000, 1000))
+
+            for i in range(st.shape[0]):
+                plt.hist(logtis[st[i]].numpy(), label=masks[i])
+            plt.legend(loc = "upper right")
+            plt.savefig("ExactLabelsnormalPlotMethod{}B{}N{}.jpg".format(j,B,N))
+            plt.clf()
+
+        

@@ -105,7 +105,8 @@ class LightningCLIPModule(CKA_base):
 
         if exactlabels==1:
             with torch.no_grad():
-                testBatch=torch.rand(self.hparams.batch_size,self.transformer_width,device=self.device)
+                #testBatch=torch.rand(self.hparams.batch_size,self.transformer_width,device=self.device)
+                testBatch=torch.normal(0,0.3,(self.hparams.batch_size,self.transformer_width),device=self.device)
                 if not normlogits:
                     testBatch=testBatch/torch.norm(testBatch,dim=-1,keepdim=True)
                 self.label=self.calculate_loss(testBatch,testBatch,testBatch,testBatch,testBatch,testBatch).to(self.device,non_blocking=True)
