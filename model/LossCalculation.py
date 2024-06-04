@@ -593,7 +593,14 @@ def get_loss_calc(reduction='sum',ver=0,mask=None):
         def loss(x,y,alpha):
             
             return torch.nn.functional.cross_entropy(x*Lossmasks.to(y.device),y*Lossmasks.to(y.device),reduction=reduction)
-            
+    elif ver==3:
+        def loss(x,y,alpha):
+            #return sigmoidloss
+            x=torch.sigmoid(x)
+            y=torch.sigmoid(y)
+
+            return -torch.sum(torch.sigmoid(x*y))#*mask.shape[0]/mask.sum()
+         #negative because when mask is used, the loss is actually the negative of the loss
     else:
         def loss(x,y,alpha):
             #l=torch.nn.functional.cross_entropy(x.where(mask,torch.tensor(-100)),y.where(mask,torch.tensor(-100)),ignore_index=-100,reduction="mean")

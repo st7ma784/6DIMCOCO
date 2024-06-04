@@ -160,3 +160,4 @@ models--*/*
 models--bert-base-chinese/*
 ._magicsword_**
 models--**
+magicsword___text/**

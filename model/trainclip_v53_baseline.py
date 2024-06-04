@@ -49,7 +49,7 @@ class BaselineLightningCLIPModule(LightningCLIPModule):
         #print("logits",logits.shape)
         #print("labels",labels.shape)
         loss=torch.nn.functional.cross_entropy(logits,labels)
-     
+        
     
       
         self.log('train_loss', loss, prog_bar=True,enable_graph=False, rank_zero_only=True)
