@@ -596,9 +596,12 @@ def get_loss_calc(reduction='sum',ver=0,mask=None):
     elif ver==3:
         def loss(x,y,alpha):
             #return sigmoidloss
-            x=torch.sigmoid(x)
-            y=torch.sigmoid(y)
-
+            x=x-x.min()
+            y=y-y.min()
+            x=x/x.max()
+            y=y/y.max()
+            x = 2*x - 1
+            y= 2*y - 1
             return -torch.sum(torch.sigmoid(x*y))#*mask.shape[0]/mask.sum()
          #negative because when mask is used, the loss is actually the negative of the loss
     else:
