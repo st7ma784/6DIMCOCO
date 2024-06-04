@@ -4,7 +4,6 @@ import os,sys
 from pytorch_lightning import loggers as pl_loggers
 from transformers import BertTokenizerFast
 
-
 def wandbtrain(config=None,dir=None,devices=None,accelerator=None,Dataset=None,project="6DIMCLIPTOKSweepvfinal",entity="st7ma784"):
     import pytorch_lightning
     import wandb
@@ -127,7 +126,9 @@ def train(config={
                 drop_last=True)
             Dataset=COCODataModule(Cache_dir=dir,annotations=config.get("annotations",dir),batch_size=config["batch_size"])
         from pytorch_lightning.strategies import DDPStrategy as DDP
-        
+    import torch
+    torch.set_float32_matmul_precision('medium')
+
     if devices is None:
         devices=config.get("devices","auto")
     if accelerator is None:
