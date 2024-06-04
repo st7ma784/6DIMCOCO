@@ -127,7 +127,7 @@ class COCODataModule(pl.LightningDataModule):
             B=self.batch_size
 
 
-        return torch.utils.data.DataLoader(self.test, batch_size=B, shuffle=True, num_workers=1, prefetch_factor=1, pin_memory=True,drop_last=True)
+        return torch.utils.data.DataLoader(self.test, batch_size=B, shuffle=False, num_workers=1, prefetch_factor=1, pin_memory=True,drop_last=True)
     def prepare_data(self):
         self.download_data()
         #pass

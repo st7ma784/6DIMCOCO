@@ -13,15 +13,15 @@ class parser(HyperOptArgumentParser):
         self.opt_list("--JSE", default=0, type=int, options=[0], tunable=True)
         self.opt_list("--prune",default=False,type=bool,options=[True,False], tunable=True)
         self.opt_list("--projection",type=str,options=["None","inv","iinv"], tunable=True)
-        self.opt_list("--normlogits",default=True,type=bool,options=[True,False], tunable=True)
-        self.opt_list("--exactlabels",default=0,type=int,options=[1,0], tunable=True)
+        self.opt_list("--normlogits",default=True,type=bool,options=[True], tunable=True)
+        self.opt_list("--exactlabels",default=0,type=int,options=[0], tunable=True)
         self.opt_list("--meanloss",default=False,type=bool,options=[True,False], tunable=True)
-        self.opt_list("--maskLosses",default=0,type=int,options=[0,1,2], tunable=True) #1 and 2 often result in nan in labels?
+        self.opt_list("--maskLosses",default=0,type=int,options=[0,1,2,3], tunable=True) #1 and 2 often result in nan in labels?
         self.opt_list("--debug",default=False,type=bool,options=[False], tunable=True)
-        self.opt_list("--logitsversion",default=4,type=int,options=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16], tunable=True) #1 and 2 often result in nan in labels?
+        self.opt_list("--logitsversion",default=4,type=int,options=[6,8], tunable=True) #1 and 2 often result in nan in labels?
         self.opt_list("--precision", default=32, options=[16,32,8], type=int, tunable=False)
         self.opt_list("--codeversion", default=6, type=int, options=[6], tunable=False)
-        self.opt_list("--transformer_layers", default=8, type=int, options=[3,4,5,6], tunable=True)
+        self.opt_list("--transformer_layers", default=8, type=int, options=[6], tunable=True)
         self.opt_list("--transformer_heads", default=16, type=int, options=[16], tunable=True)
         self.opt_list("--embed_dim", default=512, type=int, options=[512], tunable=True)
         self.opt_list("--transformer_width", default=512, type=int, options=[512], tunable=True)
@@ -29,10 +29,10 @@ class parser(HyperOptArgumentParser):
         self.opt_list("--accelerator", default='gpu', type=str, options=['gpu'], tunable=False)
         self.opt_list("--num_trials", default=0, type=int, tunable=False)
         #self.opt_range('--neurons', default=50, type=int, tunable=True, low=100, high=800, nb_samples=8, log_base=None)
-        self.opt_list("--dims",default=3, type=float, options=[3.0,4.0,3.5,6.0,0], tunable=True)
-        self.opt_list("--cn",default=False,type=bool,options=[True,False], tunable=True)
-        self.opt_list("--gumbel",default=False,type=bool,options=[True,False], tunable=True)
-        self.opt_list("--epochs",default=10,type=int,options=[20], tunable=False)
+        self.opt_list("--dims",default=3, type=float, options=[6.0], tunable=True)#3.0,4.0,3.5
+        self.opt_list("--cn",default=False,type=bool,options=[False], tunable=True)
+        self.opt_list("--gumbel",default=False,type=bool,options=[False], tunable=True)
+        self.opt_list("--epochs",default=10,type=int,options=[50], tunable=False)
 # Testing to check param outputs
 if __name__== "__main__":
     myparser=parser()
