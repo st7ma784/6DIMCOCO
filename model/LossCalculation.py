@@ -602,7 +602,7 @@ def get_loss_calc(reduction='sum',ver=0,mask=None):
             y=y/y.max()
             x = 2*x - 1
             y= 2*y - 1
-            return -torch.sum(torch.sigmoid(x*y))#*mask.shape[0]/mask.sum()
+            return -torch.sum(torch.nn.functional.logsigmoid(x*y))#*mask.shape[0]/mask.sum()
          #negative because when mask is used, the loss is actually the negative of the loss
     else:
         def loss(x,y,alpha):
