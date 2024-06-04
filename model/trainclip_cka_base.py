@@ -277,92 +277,95 @@ class LightningCLIPModule(LightningModule):
                 self.tfeatures=tfeatures
         plot=plt.figure()
         tfeatures=tfeatures[0]
-        for i in range(self.tfeatures.shape[0]):
-            sns.distplot(self.tfeatures[i][0],label="Epoch {}".format(i))
-        plt.legend()
-        plt.title("Distribution of Validation Features for sample1")
-        plt.savefig("distribution_of_validation_features.jpg")
-        plt.close()
-        plot=plt.figure()
-        for i in range(self.tfeatures.shape[0]):
-            sns.distplot(self.tfeatures[i],label="Epoch {}".format(i))
-        plt.legend()
-        plt.title("mean Distribution of Validation Features")
-        plt.savefig("mean_distribution_of_validation_features.jpg")
-        plt.close()
-        deltas=np.diff(self.tfeatures,axis=0)
-        plot=plt.figure()
-        for i in range(deltas.shape[0]):
-            sns.distplot(deltas[i][0],label="Epoch {}".format(i))
-        plt.legend()
-        plt.title("Distribution of Validation Feature Deltas for sample1")
-        plt.savefig("distribution_of_validation_feature_deltas.jpg")
-        plt.close()
-        plot=plt.figure()
-        for i in range(deltas.shape[0]):
-            sns.distplot(deltas[i],label="Epoch {}".format(i))
-        plt.legend()
-        plt.title("mean Distribution of Validation Feature Deltas")
-        plt.savefig("mean_distribution_of_validation_feature_deltas.jpg")
+        try:
 
-        #we're going to repeat the same process, taking the first 5 features, and every 5th feature.
-        #step 1, plot the 5 vectors as 
-        first_five=self.tfeatures[:,0:5] # is shape epochs x 5 x 512
-        similarity_matrix=np.zeros((first_five.shape[0],first_five.shape[1],first_five.shape[1])) 
-        #norm of each vector
-        norms=np.linalg.norm(first_five,axis=2) # epochs x 5
-        normed_first_five=np.divide(first_five,norms[:,:,None]) #E,5,512
-        similarity_matrix=np.matmul(normed_first_five,normed_first_five.transpose(0,2,1))# shape epochs x 5 x 5
-        # block out the diagonal
-        similarity_matrix[:,np.arange(similarity_matrix.shape[1]),np.arange(similarity_matrix.shape[1])]=0
-        #sum last 2 dimensions and divide by 20
-        similarity_matrix=np.sum(similarity_matrix,axis=(1,2))/20
-        plot=plt.figure()
-        #do plot of similarity matrix with epoch on x axis and similarity on y axis
-        plt.plot(np.arange(similarity_matrix.shape[0]),similarity_matrix)
-        plt.title("Mean Similarity of first 5 features across validation epochs")
-        plt.savefig("mean_similarity_of_first_5_features_across_validation_epochs.jpg")
-        plt.close()
-        #now do the same for every 5th feature
-        every_five=self.tfeatures[:,np.arange(0,self.tfeatures.shape[1],5)]
-        similarity_matrix=np.zeros((every_five.shape[0],every_five.shape[1],every_five.shape[1]))
-        norms=np.linalg.norm(every_five,axis=2)
-        normed_every_five=np.divide(every_five,norms[:,:,None])
-        similarity_matrix=np.matmul(normed_every_five,normed_every_five.transpose(0,2,1))
-        similarity_matrix[:,np.arange(similarity_matrix.shape[1]),np.arange(similarity_matrix.shape[1])]=0
-        similarity_matrix=np.sum(similarity_matrix,axis=(1,2))/ ((every_five.shape[1]*every_five.shape[1]) - every_five.shape[1])
-        plot=plt.figure()
-        plt.plot(np.arange(similarity_matrix.shape[0]),similarity_matrix)
-        plt.title("Mean Similarity between each sample across validation epochs")
-        plt.savefig("mean_similarity_between_each_sample_across_validation_epochs.jpg")
-        plt.close()
+            for i in range(self.tfeatures.shape[0]):
+                sns.distplot(self.tfeatures[i][0],label="Epoch {}".format(i))
+            plt.legend()
+            plt.title("Distribution of Validation Features for sample1")
+            plt.savefig("distribution_of_validation_features.jpg")
+            plt.close()
+            plot=plt.figure()
+            for i in range(self.tfeatures.shape[0]):
+                sns.distplot(self.tfeatures[i],label="Epoch {}".format(i))
+            plt.legend()
+            plt.title("mean Distribution of Validation Features")
+            plt.savefig("mean_distribution_of_validation_features.jpg")
+            plt.close()
+            deltas=np.diff(self.tfeatures,axis=0)
+            plot=plt.figure()
+            for i in range(deltas.shape[0]):
+                sns.distplot(deltas[i][0],label="Epoch {}".format(i))
+            plt.legend()
+            plt.title("Distribution of Validation Feature Deltas for sample1")
+            plt.savefig("distribution_of_validation_feature_deltas.jpg")
+            plt.close()
+            plot=plt.figure()
+            for i in range(deltas.shape[0]):
+                sns.distplot(deltas[i],label="Epoch {}".format(i))
+            plt.legend()
+            plt.title("mean Distribution of Validation Feature Deltas")
+            plt.savefig("mean_distribution_of_validation_feature_deltas.jpg")
 
-        #log all these plots
-        if self.logger:
-            if hasattr(self.logger,"log_image"):
-                # self.logger.log_image(key=[
-                #     "distribution_of_validation_features.jpg",
-                #     "mean_distribution_of_validation_features.jpg",
-                #     "distribution_of_validation_feature_deltas.jpg",
-                #     "mean_distribution_of_validation_feature_deltas.jpg",
-                #     "mean_similarity_of_first_5_features_across_validation_epochs.jpg",
-                #     "mean_similarity_between_each_sample_across_validation_epochs.jpg",
-                #     ], images=[
-                #     "distribution_of_validation_features.jpg",
-                #     "mean_distribution_of_validation_features.jpg",
-                #     "distribution_of_validation_feature_deltas.jpg",
-                #     "mean_distribution_of_validation_feature_deltas.jpg",
-                #     "mean_similarity_of_first_5_features_across_validation_epochs.jpg",
-                #     "mean_similarity_between_each_sample_across_validation_epochs.jpg",
-                #     ])
-                self.logger.log_image(key="distribution_of_validation_features", images=["distribution_of_validation_features.jpg"])
-                self.logger.log_image(key="mean_distribution_of_validation_features", images=["mean_distribution_of_validation_features.jpg"])
-                self.logger.log_image(key="distribution_of_validation_feature_deltas", images=["distribution_of_validation_feature_deltas.jpg"])
-                self.logger.log_image(key="mean_distribution_of_validation_feature_deltas", images=["mean_distribution_of_validation_feature_deltas.jpg"])
-                self.logger.log_image(key="mean_similarity_of_first_5_features_across_validation_epochs", images=["mean_similarity_of_first_5_features_across_validation_epochs.jpg"])
-                self.logger.log_image(key="mean_similarity_between_each_sample_across_validation_epochs", images=["mean_similarity_between_each_sample_across_validation_epochs.jpg"])
-            #remove the tfeatures
-                
+            #we're going to repeat the same process, taking the first 5 features, and every 5th feature.
+            #step 1, plot the 5 vectors as 
+            first_five=self.tfeatures[:,0:5] # is shape epochs x 5 x 512
+            similarity_matrix=np.zeros((first_five.shape[0],first_five.shape[1],first_five.shape[1])) 
+            #norm of each vector
+            norms=np.linalg.norm(first_five,axis=2) # epochs x 5
+            normed_first_five=np.divide(first_five,norms[:,:,None]) #E,5,512
+            similarity_matrix=np.matmul(normed_first_five,normed_first_five.transpose(0,2,1))# shape epochs x 5 x 5
+            # block out the diagonal
+            similarity_matrix[:,np.arange(similarity_matrix.shape[1]),np.arange(similarity_matrix.shape[1])]=0
+            #sum last 2 dimensions and divide by 20
+            similarity_matrix=np.sum(similarity_matrix,axis=(1,2))/20
+            plot=plt.figure()
+            #do plot of similarity matrix with epoch on x axis and similarity on y axis
+            plt.plot(np.arange(similarity_matrix.shape[0]),similarity_matrix)
+            plt.title("Mean Similarity of first 5 features across validation epochs")
+            plt.savefig("mean_similarity_of_first_5_features_across_validation_epochs.jpg")
+            plt.close()
+            #now do the same for every 5th feature
+            every_five=self.tfeatures[:,np.arange(0,self.tfeatures.shape[1],5)]
+            similarity_matrix=np.zeros((every_five.shape[0],every_five.shape[1],every_five.shape[1]))
+            norms=np.linalg.norm(every_five,axis=2)
+            normed_every_five=np.divide(every_five,norms[:,:,None])
+            similarity_matrix=np.matmul(normed_every_five,normed_every_five.transpose(0,2,1))
+            similarity_matrix[:,np.arange(similarity_matrix.shape[1]),np.arange(similarity_matrix.shape[1])]=0
+            similarity_matrix=np.sum(similarity_matrix,axis=(1,2))/ ((every_five.shape[1]*every_five.shape[1]) - every_five.shape[1])
+            plot=plt.figure()
+            plt.plot(np.arange(similarity_matrix.shape[0]),similarity_matrix)
+            plt.title("Mean Similarity between each sample across validation epochs")
+            plt.savefig("mean_similarity_between_each_sample_across_validation_epochs.jpg")
+            plt.close()
+
+            #log all these plots
+            if self.logger:
+                if hasattr(self.logger,"log_image"):
+                    # self.logger.log_image(key=[
+                    #     "distribution_of_validation_features.jpg",
+                    #     "mean_distribution_of_validation_features.jpg",
+                    #     "distribution_of_validation_feature_deltas.jpg",
+                    #     "mean_distribution_of_validation_feature_deltas.jpg",
+                    #     "mean_similarity_of_first_5_features_across_validation_epochs.jpg",
+                    #     "mean_similarity_between_each_sample_across_validation_epochs.jpg",
+                    #     ], images=[
+                    #     "distribution_of_validation_features.jpg",
+                    #     "mean_distribution_of_validation_features.jpg",
+                    #     "distribution_of_validation_feature_deltas.jpg",
+                    #     "mean_distribution_of_validation_feature_deltas.jpg",
+                    #     "mean_similarity_of_first_5_features_across_validation_epochs.jpg",
+                    #     "mean_similarity_between_each_sample_across_validation_epochs.jpg",
+                    #     ])
+                    self.logger.log_image(key="distribution_of_validation_features", images=["distribution_of_validation_features.jpg"])
+                    self.logger.log_image(key="mean_distribution_of_validation_features", images=["mean_distribution_of_validation_features.jpg"])
+                    self.logger.log_image(key="distribution_of_validation_feature_deltas", images=["distribution_of_validation_feature_deltas.jpg"])
+                    self.logger.log_image(key="mean_distribution_of_validation_feature_deltas", images=["mean_distribution_of_validation_feature_deltas.jpg"])
+                    self.logger.log_image(key="mean_similarity_of_first_5_features_across_validation_epochs", images=["mean_similarity_of_first_5_features_across_validation_epochs.jpg"])
+                    self.logger.log_image(key="mean_similarity_between_each_sample_across_validation_epochs", images=["mean_similarity_between_each_sample_across_validation_epochs.jpg"])
+                #remove the tfeatures
+        except:
+            pass
         #step 3, repeat for each previous epoch (as a cum sum?))
         #step 4, take the first 5 tfeatures. compare their cartesian distance and mean cosine similarity. 
         #step 5, take every 5th tfeature. compare their cartesian distance and mean cosine similarity.
