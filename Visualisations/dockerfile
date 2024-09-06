@@ -6,4 +6,4 @@ COPY . /app
 
 EXPOSE 5000/tcp
 
-ENTRYPOINT ["bash", "gunicorn.sh"]
+CMD ["bash", "gunicorn.sh"]
