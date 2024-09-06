@@ -82,7 +82,6 @@ async def getPlot4():
 
 if __name__ == "__main__":
 
-    app.run(host="0.0.0.0", port=8000 )
 
 
     def square(logits,img_buf = BytesIO()):
@@ -197,6 +196,7 @@ if __name__ == "__main__":
             return hypcubes(logits,buffer)
 
         
+    app.run(host="0.0.0.0", port=8000 )
 
 
 
