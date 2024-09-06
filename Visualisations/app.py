@@ -38,10 +38,11 @@ def index():
 @app.route('/demo/data', methods=['GET','POST'])
 async def getS():
     data=request.get_json()
-    wh=torch.tensor([[data['width'],data['height']]])/2
+    wh=torch.tensor([[data['width'],data['height']]])
     x=[float(x[:-2]) for x in filter(lambda a: a != '',data['x'])]
     y=[float(y[:-2]) for y in filter(lambda a: a != '',data['y'])]
-    xys=[(torch.tensor([[x,y]],requires_grad=False)-wh)/wh for x,y in zip(x,y)]
+    
+    xys=[(torch.tensor([[x,y]],requires_grad=False)-(wh/2))/wh for x,y in zip(x,y)]
     stats=data['stats']
     out={}
     
