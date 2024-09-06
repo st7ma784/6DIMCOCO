@@ -24,6 +24,60 @@ def l3mean(args):
     return torch.pow(mean([torch.pow(a,3) for a in args]),1/3)
 def dynmean(args):
     return torch.pow(mean([torch.pow(a,len(args)) for a in args]),1/len(args))
+app = Flask(__name__,template_folder='.')
+
+
+@app.route("/demo") 
+def index():
+    return render_template("./index.html")
+
+
+@torch.no_grad()
+@app.route('/demo/data', methods=['GET','POST'])
+async def getS():
+    data=request.get_json()
+    wh=torch.tensor([[data['width'],data['height']]])/2
+    x=[float(x[:-2]) for x in filter(lambda a: a != '',data['x'])]
+    y=[float(y[:-2]) for y in filter(lambda a: a != '',data['y'])]
+    xys=[(torch.tensor([[x,y]],requires_grad=False)-wh)/wh for x,y in zip(x,y)]
+    stats=data['stats']
+    out={}
+    
+    if stats:
+        out={name:(torch.nan_to_num(func(xys))*wh).tolist() for name,func in usefulpoints.items()}
+        #getting error that > not supported between instances of int and str??
+
+    functions={i:get_loss_fn(i,norm=data["norm"],JSE=1 if data["jse"] else 0) for i in range(1,17)}
+    out.update({str(name):(torch.nan_to_num(func(*xys))).tolist() for name,func in functions.items()})
+    
+    return jsonify(out)
+
+
+@app.route('/demo/Plotfour', methods=['GET','POST'])
+async def getPlot4():
+    data=request.get_json()
+    wh=torch.tensor([[data['width'],data['height']]])/2
+    x=[float(x[:-2]) for x in filter(lambda a: a != '',data['x'])]
+    y=[float(y[:-2]) for y in filter(lambda a: a != '',data['y'])]
+    xys=torch.stack([torch.tensor([[x,y]],requires_grad=False)for x,y in zip(x,y)])-wh
+    xys=xys/wh         
+    normed=data['norm']
+    jse=1 if data["jse"] else 0
+    zip_buffer = BytesIO()
+    funclist={i:get_loss_fn(i,norm=data["norm"],JSE=jse) for i in range(1,17)}
+
+
+    with zipfile.ZipFile(zip_buffer, "a", compression=zipfile.ZIP_DEFLATED,allowZip64=False) as zip_file:
+        for name, func in funclist.items():
+            zip_file.writestr("DGraphMethod{}.jpeg".format(name),draw(torch.nan_to_num(func(xys,xys,xys,xys))))
+          
+    zip_buffer.seek(0)
+    return make_response(send_file(zip_buffer,download_name="Graphs.zip",as_attachment=False,mimetype="application/zip"),200)
+    
+  
+
+app.run(host="0.0.0.0", port=5000, debug=True )
+
 
 
 
@@ -147,57 +201,3 @@ if __name__ == "__main__":
 
 
     usefulpoints={"mean":mean,"variance":variance, "std":std,"l2mean":l2mean,"l3mean":l3mean,"lsqrtmean":lsqrtmean,"dynmean":dynmean}
-    app = Flask(__name__,template_folder='.')
-    
-    
-    @app.route("/demo") 
-    def index():
-        return render_template("./index.html")
-    
-    
-    @torch.no_grad()
-    @app.route('/demo/data', methods=['GET','POST'])
-    async def getS():
-        data=request.get_json()
-        wh=torch.tensor([[data['width'],data['height']]])/2
-        x=[float(x[:-2]) for x in filter(lambda a: a != '',data['x'])]
-        y=[float(y[:-2]) for y in filter(lambda a: a != '',data['y'])]
-        xys=[(torch.tensor([[x,y]],requires_grad=False)-wh)/wh for x,y in zip(x,y)]
-        stats=data['stats']
-        out={}
-        
-        if stats:
-            out={name:(torch.nan_to_num(func(xys))*wh).tolist() for name,func in usefulpoints.items()}
-            #getting error that > not supported between instances of int and str??
-
-        functions={i:get_loss_fn(i,norm=data["norm"],JSE=1 if data["jse"] else 0) for i in range(1,17)}
-        out.update({str(name):(torch.nan_to_num(func(*xys))).tolist() for name,func in functions.items()})
-        
-        return jsonify(out)
-    
-
-    @app.route('/demo/Plotfour', methods=['GET','POST'])
-    async def getPlot4():
-        data=request.get_json()
-        wh=torch.tensor([[data['width'],data['height']]])/2
-        x=[float(x[:-2]) for x in filter(lambda a: a != '',data['x'])]
-        y=[float(y[:-2]) for y in filter(lambda a: a != '',data['y'])]
-        xys=torch.stack([torch.tensor([[x,y]],requires_grad=False)for x,y in zip(x,y)])-wh
-        xys=xys/wh         
-        normed=data['norm']
-        jse=1 if data["jse"] else 0
-        zip_buffer = BytesIO()
-        funclist={i:get_loss_fn(i,norm=data["norm"],JSE=jse) for i in range(1,17)}
-
-
-        with zipfile.ZipFile(zip_buffer, "a", compression=zipfile.ZIP_DEFLATED,allowZip64=False) as zip_file:
-            for name, func in funclist.items():
-                zip_file.writestr("DGraphMethod{}.jpeg".format(name),draw(torch.nan_to_num(func(xys,xys,xys,xys))))
-              
-        zip_buffer.seek(0)
-        return make_response(send_file(zip_buffer,download_name="Graphs.zip",as_attachment=False,mimetype="application/zip"),200)
-        
-      
-
-    app.run(host="0.0.0.0", port=5000, debug=True )
-  
