@@ -1,5 +1,6 @@
 
 
+from telnetlib import BM
 import torch
 from functools import reduce
 '''
@@ -10,6 +11,17 @@ If you wish to use it for TPUs, I strongly recommend you refactor your code to u
 
 This code is a copy of the LossCalculation.py file, but with the loss functions as functions that take any number of arguments.
 '''
+
+
+def calc_mean(*vecs):
+    return reduce(torch.add,vecs)
+def JSE_mean(*vecs):
+   
+   
+    sum_of_squares=reduce(torch.add,[torch.pow(vec,2) for vec in vecs])
+    JSEFactor=1-(4/sum_of_squares)
+    return torch.mul(calc_mean(*vecs),JSEFactor)
+
 
 
 def oneminus(args):
@@ -24,73 +36,85 @@ def logargs(args):
     return torch.log(args)
 
 
-def get_loss_fn(logitsversion=0,norm=False,log=False):
+def get_loss_fn(logitsversion=0,norm=False,log=False,JSE=0):
     baseLogits=calculate_loss
     ##logfunction=lambda x:x
-   
+    mean_fn=calc_mean
+    if JSE==1:
+        mean_fn=JSE_mean
         # if log:
     #     logfunction=logargs
     if logitsversion==0:
         def baseLogits(*args):
-            return calculate_loss(*args)
+            return calculate_loss(*args,mean_fn=mean_fn)
     elif logitsversion==1: 
         def baseLogits(*args):
-            return oneminus(calculate_loss2(*args))
+            return oneminus(calculate_loss2(*args,mean_fn=mean_fn))
     elif logitsversion==2: 
         def baseLogits(*args):
-            return oneminus(calculate_loss3(*args))      #one minus here
+            return oneminus(calculate_loss3(*args,mean_fn=mean_fn))      #one minus here
     elif logitsversion==3:
         #this does not work in any arrangement? 
         def baseLogits(*args):
-            return oneminus(calculate_loss4(*args))
+            return oneminus(calculate_loss4(*args,mean_fn=mean_fn))
     elif logitsversion==4:
         #this does not work in any arrangement either?
         def baseLogits(*args):
-            return oneminus(calculate_loss5(*args))
+            return oneminus(calculate_loss5(*args,mean_fn=mean_fn))
     elif logitsversion==5:
         def baseLogits(*args):
-            return oneminus(calculate_loss6(*args))
+            return oneminus(calculate_loss6(*args,mean_fn=mean_fn))
     elif logitsversion==6:
         def baseLogits(*args):
             return oneminus(calculate_loss1(*args))
     elif logitsversion==13:
         def baseLogits(*args):
-            return oneminus(calculate_loss7(*args))
+            return oneminus(calculate_loss7(*args,mean_fn=mean_fn))
     elif logitsversion==14:
         def baseLogits(*args):
-            return torch.sum(oneminus(calculate_loss8(*args)),dim=-1)
+            return torch.sum(oneminus(calculate_loss8(*args,mean_fn=mean_fn)),dim=-1)
     elif logitsversion==7:
+        norm=True
         def baseLogits(*args):
-            return oneminus(calculate_lossNorms(*args))
+            return calculate_lossNorms(*args,mean_fn=mean_fn)
             
     elif logitsversion==8:
+        norm=True
         def baseLogits(*args):
-            return oneminus(calculate_lossNormsv2(*args))
+            return calculate_lossNormsv2(*args,mean_fn=mean_fn)
         
                 
     elif logitsversion==9:
+        norm=True
         def baseLogits(*args):
-            return oneminus(calculate_lossNormsv3(*args))
+            return calculate_lossNormsv3(*args,mean_fn=mean_fn)
                 
     elif logitsversion==10:
+        norm=True
         def baseLogits(*args):
-            return oneminus(calculate_lossNormsv4(*args))
+            return calculate_lossNormsv4(*args,mean_fn=mean_fn)
         
              
     elif logitsversion==11:
+        norm=True
         def baseLogits(*args):
-            return calculate_lossNormsv5(*args)
+            return calculate_lossNormsv5(*args,mean_fn=mean_fn)
              
     elif logitsversion==12:
+        norm=False
         def baseLogits(*args):
-            return oneminus(calculate_lossNormsv8(*args))
+            return calculate_lossNormsv5(*args,mean_fn=mean_fn)
     elif logitsversion==15:
+        norm=True
         def baseLogits(*args):
-            return oneminus(calculate_lossNormsv6(*args))
+            return calculate_lossNormsv6(*args,mean_fn=mean_fn)
     elif logitsversion==16:
+        norm=True
         def baseLogits(*args):
-            return oneminus(calculate_lossNormsv7(*args))
-
+            return calculate_lossNormsv7(*args,mean_fn=mean_fn)
+    elif logitsversion==-1:
+        def baseLogits(*args):
+            return Fast_loss_Hdim(*args)
     normfunction=lambda x:x
     if norm:
         normfunction=normargs
@@ -103,7 +127,7 @@ def get_loss_fn(logitsversion=0,norm=False,log=False):
 
 
 
-def calculate_lossStock(args):
+def calculate_lossStock(args,mean_fn=calc_mean):
     I,C1=args[0],args[1]
     #normalize image and text features
     I = I / I.norm(dim=-1, keepdim=True)
@@ -114,7 +138,7 @@ def calculate_lossStock(args):
     #calculate loss
     return logits_per_image, logits_per_text
 
-def calculate_lossbase(args,norm=True,log=False):
+def calculate_lossbase(args,norm=True,log=False,mean_fn=calc_mean):
     I,C1=args[0],args[1]
     #normalize image and text features
     I = I / I.norm(dim=-1, keepdim=True)
@@ -124,7 +148,7 @@ def calculate_lossbase(args,norm=True,log=False):
     #calculate loss
     return logits_per_image
 
-def calculate_loss(  *Args):
+def calculate_loss(  *Args,mean_fn=calc_mean):
     #find number of arguments
     n=len(Args)
     #find first n letters of alphabet
@@ -165,85 +189,91 @@ def calculate_loss(  *Args):
 
     
     
-def calculate_loss1(  *Args):
+def calculate_loss1(  *Args,mean_fn=calc_mean):
     #find number of arguments
     n=len(Args)
     #assume all args are shape BxF
     #each argmuents is going to become BxFx1x... (n dimensions)
 
 
-    return torch.mean(torch.sqrt(torch.abs(reduce(torch.add,[torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]).sub_(
-                        torch.pow(reduce(torch.add,[arg.view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]),2),alpha=1/n))),dim=-1)
+    return torch.mean(torch.sqrt(torch.abs( mean_fn(*[torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]).sub_(
+                        torch.pow( mean_fn(*[arg.view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]),2),alpha=1/n))),dim=-1)
 
 
-def calculate_loss2(  *Args):
+def calculate_loss2(  *Args,mean_fn=calc_mean):
     n=len(Args)
     
     # for i,arg in enumerate(Args):
     #     print([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])
-    return torch.mean(torch.sqrt(reduce(torch.add,[torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]).sub_(
-                        torch.pow(reduce(torch.add,[arg.view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]),2),alpha=1/n)),dim=-1)
+    return torch.mean(torch.sqrt( mean_fn(*[torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]).sub_(
+                        torch.pow( mean_fn(*[arg.view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]),2),alpha=1/n)),dim=-1)
     #frequently ends with Nans, not sure why
     
-def calculate_loss3( *Args):
+def calculate_loss3( *Args,mean_fn=calc_mean):
     n=len(Args)
 
-    return torch.sqrt(torch.sum(torch.pow(reduce(torch.add,[torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]).sub_(
-                        torch.pow(reduce(torch.add,[arg.view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]),2),alpha=1/n),2),dim=-1))
+    return torch.sqrt(torch.sum(torch.pow( mean_fn(*[torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]).sub_(
+                        torch.pow( mean_fn(*[arg.view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]),2),alpha=1/n),2),dim=-1))
     #results in nan labels 
     
 
+def calcloss( *Args,mean_fn=calc_mean):
+    n=len(Args)
 
-def calculate_loss4(*Args):
+    return torch.sum( mean_fn(*[torch.sqrt(torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])).sub_(
+                            torch.pow( mean_fn(*[arg.view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]),2),alpha=1/n)) for i,arg in enumerate(Args)]),dim=-1)
+
+
+def calculate_loss4(*Args,mean_fn=calc_mean):
     #tested and not working
-    return torch.sum(torch.sqrt(reduce(torch.add,[torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)])),dim=-1)
-def calculate_loss5(*Args):
+    return torch.sum(torch.sqrt( mean_fn(*[torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)])),dim=-1)
+
+def calculate_loss5(*Args, mean_fn=calc_mean):
    
-    return torch.sum(reduce(torch.add,[ torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)]).sub_(
-                    torch.pow(reduce(torch.add,[    arg.view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)]),2),alpha=1/len(Args)),dim=-1)
+    return torch.sum( mean_fn(*[ torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)]).sub_(
+                    torch.pow( mean_fn(*[    arg.view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)]),2),alpha=1/len(Args)),dim=-1)
 
     
-def calculate_loss6(*Args):
+def calculate_loss6(*Args, mean_fn=calc_mean):
     
-    return torch.sqrt(torch.abs(torch.sum(reduce(torch.add,[torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)]).sub_(
-                            torch.pow(reduce(torch.add,[arg.view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)]),2),alpha=1/len(Args)),dim=-1)))
-def calculate_loss7(  *Args):
+    return torch.sqrt(torch.abs(torch.sum( mean_fn(*[torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)]).sub_(
+                            torch.pow( mean_fn(*[arg.view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)]),2),alpha=1/len(Args)),dim=-1)))
+def calculate_loss7(  *Args, mean_fn=calc_mean):
     #find number of arguments
     #n=len(Args)
-    return torch.sum(torch.abs(reduce(torch.add,[torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)]).sub_(
-                        torch.pow(reduce(torch.add,[arg.view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)]),2),alpha=1/len(Args))),dim=-1)
+    return torch.sum(torch.abs( mean_fn(*[torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)]).sub_(
+                        torch.pow( mean_fn(*[arg.view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)]),2),alpha=1/len(Args))),dim=-1)
 
-def calculate_loss8(  *Args):
+def calculate_loss8(  *Args, mean_fn=calc_mean):
     #find number of arguments
     #n=len(Args)
-    return reduce(torch.add,[torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)]).sub_(
-                        torch.pow(reduce(torch.add,[arg.view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)]),2),alpha=1/len(Args))
+    return  mean_fn(*[torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)]).sub_(
+                        torch.pow( mean_fn(*[arg.view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)]),2),alpha=1/len(Args))
 ################################################ NORMS ################################################
 
-  
-def calculate_lossNorms(  *Args):
+def calculate_lossNorms(  *Args,mean_fn=calc_mean):
     #find number of arguments
     #n=len(Args)
-    mean=reduce(torch.add,[arg.view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)])    
+    mean= mean_fn(*[arg.view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)])    
     #return dot product of scalednorm and mean x 6
     return torch.sum(torch.mul(mean/mean.norm(dim=-1,keepdim=True),mean),dim=-1) #this....doesnt work see v4
     #return out
 
-def calculate_lossNormsv2(*Args):
+def calculate_lossNormsv2(*Args, mean_fn=calc_mean):
     #find number of arguments
     #n=len(Args)
-    sum=reduce(torch.add,[arg.view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)])
+    sum= mean_fn(*[arg.view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)])
     return torch.squeeze(torch.sum(sum.pow(2)/sum.norm(dim=-1,keepdim=True),dim=-1))
     #return dot product of scalednorm and mean x 6
     #return torch.sum(torch.mul(scalednorm,mean),dim=-1)
 
   
-def calculate_lossNormsv3(*Args):
+def calculate_lossNormsv3(*Args, mean_fn=calc_mean):
     #find number of arguments
 
-    return reduce(torch.add,[torch.div(arg,len(Args)).view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)]).norm(dim=-1,keepdim=True).squeeze(-1)
+    return  mean_fn(*[torch.div(arg,len(Args)).view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)]).norm(dim=-1,keepdim=True).squeeze(-1)
 
-def calculate_lossNormsv4(*Args):
+def calculate_lossNormsv4(*Args, mean_fn=calc_mean):
     #assert I.shape[0]==C1.shape[0]==C2.shape[0]==C3.shape[0]==C4.shape[0]==C5.shape[0]
     #check norms are 1
     # assert torch.allclose(I.norm(dim=-1, keepdim=True),torch.ones_like(I.norm(dim=-1, keepdim=True)))
@@ -257,20 +287,20 @@ def calculate_lossNormsv4(*Args):
     # print("norms are 1")
     #find number of arguments
     
-    mean=reduce(torch.add,[arg.view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)])
+    mean= mean_fn(*[arg.view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)])
     mean=torch.div(mean,mean.norm(dim=-1,keepdim=True))
 
-    return reduce(torch.add,[torch.sum(torch.mul(mean,arg.view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) ),dim=-1)for i,arg in enumerate(Args)])
+    return  mean_fn(*[torch.sum(torch.mul(mean,arg.view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) ),dim=-1)for i,arg in enumerate(Args)])
     #return dot product of scalednorm and mean x 6
 
     
-def calculate_lossNormsv5(*Args):
+def calculate_lossNormsv5(*Args, mean_fn=calc_mean):
  
     #find number of arguments   
     #n=len(Args)
-    mean=reduce(torch.add,[arg.view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)])
+    mean= mean_fn(*[arg.view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)])
     #perform dot similarity between input and normalised mean of other inputs
-    return reduce(torch.add,[torch.sum(
+    return  mean_fn(*[torch.sum(
                                         torch.mul(
                                             torch.div(
                                                     torch.sub(mean,
@@ -287,7 +317,7 @@ def calculate_lossNormsv5(*Args):
     #return dot product of scalednorm and mean x 6
 
        
-def calculate_lossNormsv6(*Args):
+def calculate_lossNormsv6(*Args, mean_fn=calc_mean):
     '''
     Trying to replicate the following numpy code in batch form
 
@@ -298,31 +328,20 @@ def calculate_lossNormsv6(*Args):
         so z = root(6*mean^2)+mean - norm(x,y)
     '''
     #find number of arguments
-    mean=reduce(torch.add,[ torch.div(torch.abs(arg),len(Args)).view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)])
+    mean= mean_fn(*[ torch.div(torch.abs(arg),len(Args)).view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)])
     mean=torch.sub(mean,torch.sub(torch.abs(torch.sqrt(len(Args)*torch.pow(mean,2))),
-            torch.sqrt(reduce(torch.add,[torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)]))))                    
+            torch.sqrt( mean_fn(*[torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(len(Args)-1-i)+[-1])) for i,arg in enumerate(Args)]))))                    
                          
     
     return torch.sum(mean,dim=-1)
 
-def calculate_lossNormsv7(*Args):
+def calculate_lossNormsv7(*Args, mean_fn=calc_mean):
     n=len(Args)
-    mean2 = reduce(torch.add,[torch.div(torch.abs(arg),n).view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]) + torch.sqrt(torch.mul(reduce(torch.add,[ torch.div(torch.abs(arg),n).view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]).pow(2),n))
+    mean2 =  mean_fn(*[torch.div(torch.abs(arg),n).view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]) + torch.sqrt(torch.mul( mean_fn(*[ torch.div(torch.abs(arg),n).view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]).pow(2),n))
     #norm =sum(abs(x)**ord)**(1./ord)
-    norm=torch.sqrt(reduce(torch.add,[ torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]))
+    norm=torch.sqrt( mean_fn(*[ torch.pow(arg,2).view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)]))
     return torch.sum(torch.sub(mean2,norm),dim=-1)
 
-def calculate_lossNormsv8(*Args):
-
-    #function to produce similarity of all args with std deviation
-
-
-    n=len(Args)
-
-    mean = reduce(torch.add,[torch.div(arg,n).view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])) for i,arg in enumerate(Args)])
-    deviation= reduce(torch.add, [torch.pow(mean- arg.view(*list([1]*i+[arg.shape[0]]+[1]*(n-1-i)+[-1])),2) for i,arg in enumerate(Args)])
-    #print(deviation.shape)
-    return torch.sum(torch.sqrt(deviation),dim=-1)
 
 ############
 #loss functions
@@ -357,6 +376,7 @@ def get_loss_calc(reduction='sum',ver=0,mask=None):
     if ver==0:
 
         def loss(x,y,alpha):
+
             return torch.nn.functional.cross_entropy(x,y,reduction=reduction)
 
     elif ver==1:
@@ -373,7 +393,7 @@ def get_loss_calc(reduction='sum',ver=0,mask=None):
             Lossmasks=torch.sum(torch.nn.functional.softmax(alpha/torch.norm(alpha,keepdim=True))*st.to(alpha.device),dim=-1)
             #print("losmasks:",Lossmasks.shape)
             #Lossmasks=Lossmasks.view(*mask.shape)
-            return torch.nn.functional.cross_entropy(x*Lossmasks,y*Lossmasks,reduction=reduction,)
+            return torch.nn.functional.cross_entropy(x*Lossmasks,y*Lossmasks,reduction=reduction)
     elif ver==2:
         Lossmasks=reduce(torch.logical_or,[mask==masks[i] for i in range(-2,2)])
 
@@ -394,6 +414,39 @@ def get_loss_calc(reduction='sum',ver=0,mask=None):
     
     return loss#
 
+#fpor improved JSE implementation have a look at notes in the the other losscalculation file. 
+
+
+def calc_mean(*vecs):
+    return reduce(torch.add,vecs)
+
+def JSE_mean(*vecs):
+   
+   
+    sum_of_squares=reduce(torch.add,[torch.pow(vec,2) for vec in vecs])
+    JSEFactor=1-(4/sum_of_squares)
+    return torch.mul(calc_mean(*vecs),JSEFactor)
+
+
+def Fast_loss_Hdim(*vecs):
+    #step 1, stack all vectors into a single tensor, N,B,F
+    #matrix multiply by transpose of itself to get shape N,N,B,B
+    #rearrange to B,B,N,N
+    #do CE loss along diagonal of B,B and sum
+    #return loss
+
+    #step 1
+    stacked=torch.stack(vecs,dim=0)
+    #step 2
+    #print(stacked.shape)
+    logits=torch.matmul(stacked.unsqueeze(0),stacked.transpose(-1,-2).unsqueeze(1))
+    #print(logits.shape) # N,N,B,B
+    #step 3
+    logits=logits.permute(2,3,0,1)
+    
+    return logits.flatten(2,3)
+
+
 
 #run each method on the same data and compare the results
 if __name__ == "__main__":
@@ -406,3 +459,69 @@ if __name__ == "__main__":
         if torch.any(torch.tensor(results)):
             print("method {} failed".format(i))
             print(results)
+    loss=torch.nn.CrossEntropyLoss(reduction="mean")
+
+    #next we're going to test Fast_loss_Hdim
+    #we need to create a bunch of vectors of shape BxF
+    vectors=torch.rand([10,512],dtype=torch.float32) *2 -1
+    vectors2=torch.rand([10,512],dtype=torch.float32)   *2 -1
+    vectors3=torch.rand([10,512],dtype=torch.float32)  *2 -1
+    vectors4=torch.rand([10,512],dtype=torch.float32) *2 -1
+    vectors5=torch.rand([10,512],dtype=torch.float32) *2 -1
+    vectors6=torch.rand([10,512],dtype=torch.float32) *2 -1
+    #try them all the same 
+    vectors2=vectors
+    vectors3=vectors
+    vectors4=vectors
+    vectors5=vectors
+    vectors6=vectors
+
+    #norm them
+    vectors=vectors/vectors.norm(dim=-1,keepdim=True)
+    vectors2=vectors2/vectors2.norm(dim=-1,keepdim=True)
+    vectors3=vectors3/vectors3.norm(dim=-1,keepdim=True)
+    vectors4=vectors4/vectors4.norm(dim=-1,keepdim=True)
+    vectors5=vectors5/vectors5.norm(dim=-1,keepdim=True)
+    vectors6=vectors6/vectors6.norm(dim=-1,keepdim=True)
+
+    Logits=Fast_loss_Hdim(vectors,vectors2,vectors3,vectors4,vectors5,vectors6)
+    print(Logits[0,0])
+    print(Logits[1,1])
+    labels=torch.arange(Logits.shape[0],dtype=torch.long).unsqueeze(1).repeat(1,Logits.shape[-1])
+    print(Logits[0,1])
+    CELoss=loss(Logits,labels)
+    print(CELoss)
+    loss2=torch.nn.functional.cross_entropy(Logits,labels)
+    print(loss2)
+
+    for N in range(3,7):
+        B=4
+        for j in range(0,20):
+            testFn=get_loss_fn(j,True)
+            testBatchA=torch.rand(B,512,device="cpu")
+            testBatchB=torch.normal(0,0.3,(B,512),device="cpu")
+            testBatchA=testBatchA/torch.norm(testBatchA,dim=-1,keepdim=True)
+            testBatchB=testBatchB/torch.norm(testBatchB,dim=-1,keepdim=True)
+            
+            logtis=testFn(*[testBatchB]*N)#convert this to probabilities in range [0,1]
+            logtis=torch.nan_to_num(logtis)
+
+            label=torch.nn.functional.softmax(logtis)
+            Views=torch.diag_embed(torch.ones(N,dtype=torch.long)*B-1)+1
+            
+            Lossmask=torch.sum(reduce(torch.add,list(map(lambda Arr: torch.nn.functional.one_hot(torch.arange(B).view(*Arr),num_classes=B),Views.tolist()))).pow(4),dim=-1)
+            masks=torch.unique(torch.flatten(Lossmask,0,-1),dim=0,sorted=False)
+
+            
+            st=torch.stack([Lossmask==masks[i] for i in range(len(masks))],dim=0)
+
+            from matplotlib import pyplot as plt
+            fig = plt.plot(figsize=(1000, 1000))
+
+            for i in range(st.shape[0]):
+                plt.hist(logtis[st[i]].numpy(), label=masks[i])
+            plt.legend(loc = "upper right")
+            plt.savefig("ExactLabelsnormalPlotMethod{}B{}N{}.jpg".format(j,B,N))
+            plt.clf()
+
+        
