@@ -10,6 +10,8 @@ import numpy as np
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
+usefulpoints={"mean":mean,"variance":variance, "std":std,"l2mean":l2mean,"l3mean":l3mean,"lsqrtmean":lsqrtmean,"dynmean":dynmean}
+
 def mean(args):
     return reduce(torch.add,[a/len(args) for a in args])
 def std(args):
@@ -200,4 +202,3 @@ if __name__ == "__main__":
 
 
 
-    usefulpoints={"mean":mean,"variance":variance, "std":std,"l2mean":l2mean,"l3mean":l3mean,"lsqrtmean":lsqrtmean,"dynmean":dynmean}
