@@ -10,7 +10,6 @@ import numpy as np
 import matplotlib
 matplotlib.use('agg')
 import matplotlib.pyplot as plt
-usefulpoints={"mean":mean,"variance":variance, "std":std,"l2mean":l2mean,"l3mean":l3mean,"lsqrtmean":lsqrtmean,"dynmean":dynmean}
 
 def mean(args):
     return reduce(torch.add,[a/len(args) for a in args])
@@ -27,6 +26,7 @@ def l3mean(args):
 def dynmean(args):
     return torch.pow(mean([torch.pow(a,len(args)) for a in args]),1/len(args))
 app = Flask(__name__,template_folder='.')
+usefulpoints={"mean":mean,"variance":variance, "std":std,"l2mean":l2mean,"l3mean":l3mean,"lsqrtmean":lsqrtmean,"dynmean":dynmean}
 
 
 @app.route("/demo") 
