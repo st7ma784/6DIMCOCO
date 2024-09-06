@@ -76,13 +76,13 @@ async def getPlot4():
     
   
 
-app.run(host="0.0.0.0", port=8000 )
 
 
 
 
 if __name__ == "__main__":
 
+    app.run(host="0.0.0.0", port=8000 )
 
 
     def square(logits,img_buf = BytesIO()):
