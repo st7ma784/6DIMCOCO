@@ -19,5 +19,5 @@ RUN python3 -V
 RUN python -V
 RUN mkdir /data
 RUN mkdir /data/artifacts
-# Run the launch command with the num_trials -1 flag
-CMD python launch.py --dir /data --annotations /data/annotations --log_path \data\logs --num_trials -1
+# Run the training command with the new structure
+CMD python scripts/run_training.py --dir /data --wandb

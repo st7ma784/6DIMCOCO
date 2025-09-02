@@ -1,0 +1,51 @@
+/* Custom CSS for 6DIMCOCO documentation */
+
+.wy-nav-content {
+    max-width: 1200px;
+}
+
+.rst-content .section > h1 {
+    border-bottom: 3px solid #2980b9;
+    padding-bottom: 10px;
+}
+
+.rst-content .section > h2 {
+    border-bottom: 1px solid #bdc3c7;
+    padding-bottom: 5px;
+}
+
+/* Code block styling */
+.highlight {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 10px;
+}
+
+/* API documentation styling */
+.py.class, .py.function, .py.method {
+    border-left: 3px solid #3498db;
+    padding-left: 10px;
+    margin-bottom: 20px;
+}
+
+/* Note and warning boxes */
+.admonition.note {
+    background-color: #e8f4fd;
+    border-left: 4px solid #2980b9;
+}
+
+.admonition.warning {
+    background-color: #fff3cd;
+    border-left: 4px solid #f39c12;
+}
+
+/* Table styling */
+.rst-content table.docutils {
+    border: 1px solid #e1e4e5;
+}
+
+.rst-content table.docutils th {
+    background-color: #f1f2f3;
+    border-bottom: 2px solid #e1e4e5;
+}

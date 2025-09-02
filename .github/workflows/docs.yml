@@ -1,0 +1,59 @@
+name: Build and Deploy Documentation
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  docs:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.9'
+    
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y pandoc
+    
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r docs/requirements.txt
+        pip install -r requirements.txt || true
+    
+    - name: Build documentation
+      run: |
+        cd docs
+        sphinx-build -b html . _build/html
+    
+    - name: Setup Pages
+      uses: actions/configure-pages@v3
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+    
+    - name: Upload artifact
+      uses: actions/upload-pages-artifact@v2
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
+      with:
+        path: './docs/_build/html'
+    
+    - name: Deploy to GitHub Pages
+      id: deployment
+      uses: actions/deploy-pages@v2
+      if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
