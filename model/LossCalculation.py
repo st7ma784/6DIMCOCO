@@ -116,8 +116,8 @@ def get_loss_fn(logitsversion=0,norm=False,log=False):
 def calculate_lossStock(I, C1):
 
     #normalize image and text features
-    I = I / I.norm(dim=-1, keepdim=True)
-    C1 = C1 / C1.norm(dim=-1, keepdim=True)
+    I = I / (I.norm(dim=-1, keepdim=True) + 1e-8)
+    C1 = C1 / (C1.norm(dim=-1, keepdim=True) + 1e-8)
     #calculate logits
     logits_per_image =  I @ C1.T
     logits_per_text =  C1 @ I.T
@@ -127,8 +127,8 @@ def calculate_lossStock(I, C1):
 def calculate_lossbase(I, C1, C2, C3, C4, C5,norm=True,log=False):
 
     #normalize image and text features
-    I = I / I.norm(dim=-1, keepdim=True)
-    C1 = C1 / C1.norm(dim=-1, keepdim=True)
+    I = I / (I.norm(dim=-1, keepdim=True) + 1e-8)
+    C1 = C1 / (C1.norm(dim=-1, keepdim=True) + 1e-8)
     #calculate logits
     logits_per_image =  I @ C1.T
     #calculate loss
@@ -257,7 +257,7 @@ def calculate_lossNorms(I, C1, C2, C3, C4, C5):
                                                         C3.view(1,1,1,C3.shape[0],1,1,-1),
                                                         C4.view(1,1,1,1,C4.shape[0],1,-1),
                                                         C5.view(1,1,1,1,1,C5.shape[0],-1)])
-    scalednorm=mean/mean.norm(dim=-1,keepdim=True)
+    scalednorm=mean/(mean.norm(dim=-1,keepdim=True) + 1e-8)
     
     #return dot product of scalednorm and mean x 6
     out=torch.sum(torch.mul(scalednorm,mean),dim=-1) #this....doesnt work see v4
@@ -270,7 +270,7 @@ def calculate_lossNormsv2(I, C1, C2, C3, C4, C5):
                         C3.view(1,1,1,C3.shape[0],1,1,-1),
                         C4.view(1,1,1,1,C4.shape[0],1,-1),
                         C5.view(1,1,1,1,1,C5.shape[0],-1)])
-    out=sum.pow(2)/sum.norm(dim=-1,keepdim=True)
+    out=sum.pow(2)/(sum.norm(dim=-1,keepdim=True) + 1e-8)
     out=torch.sum(out,dim=-1)
     return torch.squeeze(out)
     #return dot product of scalednorm and mean x 6
@@ -284,7 +284,7 @@ def calculate_lossNormsv3(I, C1, C2, C3, C4, C5):
                             C3.view(1,1,1,C3.shape[0],1,1,-1).div(6),
                             C4.view(1,1,1,1,C4.shape[0],1,-1).div(6),
                             C5.view(1,1,1,1,1,C5.shape[0],-1).div(6)])
-    return mean.norm(dim=-1,keepdim=True)
+    return mean.norm(dim=-1,keepdim=True) + 1e-8
 
 def calculate_lossNormsv4(I, C1, C2, C3, C4, C5):
     #assert I.shape[0]==C1.shape[0]==C2.shape[0]==C3.shape[0]==C4.shape[0]==C5.shape[0]
@@ -305,7 +305,7 @@ def calculate_lossNormsv4(I, C1, C2, C3, C4, C5):
                             C3.view(1,1,1,C3.shape[0],1,1,-1),#.div(6),
                             C4.view(1,1,1,1,C4.shape[0],1,-1),#.div(6),
                             C5.view(1,1,1,1,1,C5.shape[0],-1)])
-    mean=torch.div(mean,mean.norm(dim=-1,keepdim=True))
+    mean=torch.div(mean,mean.norm(dim=-1,keepdim=True) + 1e-8)
     # print("max value in mean is ",torch.max(mean.flatten()).item())
     # print("min value in mean is ",torch.min(mean.flatten()).item())
 
@@ -339,12 +339,12 @@ def calculate_lossNormsv5(I, C1, C2, C3, C4, C5):
                             C4.view(1,1,1,1,C4.shape[0],1,-1),#.div(6),
                             C5.view(1,1,1,1,1,C5.shape[0],-1)])
     #perform dot similarity between input and normalised mean of other inputs
-    return reduce(torch.add,[torch.sum(torch.mul(torch.div(mean.sub(I.view(I.shape[0],1,1,1,1,1,-1)),mean.sub(I.view(I.shape[0],1,1,1,1,1,-1)).norm(dim=-1,keepdim=True)),I.view(I.shape[0],1,1,1,1,1,-1)),dim=-1),#replicate down wards
-                             torch.sum(torch.mul(torch.div(mean.sub(C1.view(1,C1.shape[0],1,1,1,1,-1)),mean.sub(C1.view(1,C1.shape[0],1,1,1,1,-1)).norm(dim=-1,keepdim=True)),C1.view(1,C1.shape[0],1,1,1,1,-1)),dim=-1),
-                             torch.sum(torch.mul(torch.div(mean.sub(C2.view(1,1,C2.shape[0],1,1,1,-1)),mean.sub(C2.view(1,1,C2.shape[0],1,1,1,-1)).norm(dim=-1,keepdim=True)),C2.view(1,1,C2.shape[0],1,1,1,-1)),dim=-1),
-                             torch.sum(torch.mul(torch.div(mean.sub(C3.view(1,1,1,C3.shape[0],1,1,-1)),mean.sub(C3.view(1,1,1,C3.shape[0],1,1,-1)).norm(dim=-1,keepdim=True)),C3.view(1,1,1,C3.shape[0],1,1,-1)),dim=-1),
-                             torch.sum(torch.mul(torch.div(mean.sub(C4.view(1,1,1,1,C4.shape[0],1,-1)),mean.sub(C4.view(1,1,1,1,C4.shape[0],1,-1)).norm(dim=-1,keepdim=True)),C4.view(1,1,1,1,C4.shape[0],1,-1)),dim=-1),
-                             torch.sum(torch.mul(torch.div(mean.sub(C5.view(1,1,1,1,1,C5.shape[0],-1)),mean.sub(C5.view(1,1,1,1,1,C5.shape[0],-1)).norm(dim=-1,keepdim=True)),C5.view(1,1,1,1,1,C5.shape[0],-1)),dim=-1)])
+    return reduce(torch.add,[torch.sum(torch.mul(torch.div(mean.sub(I.view(I.shape[0],1,1,1,1,1,-1)),mean.sub(I.view(I.shape[0],1,1,1,1,1,-1)).norm(dim=-1,keepdim=True) + 1e-8),I.view(I.shape[0],1,1,1,1,1,-1)),dim=-1),#replicate down wards
+                             torch.sum(torch.mul(torch.div(mean.sub(C1.view(1,C1.shape[0],1,1,1,1,-1)),mean.sub(C1.view(1,C1.shape[0],1,1,1,1,-1)).norm(dim=-1,keepdim=True) + 1e-8),C1.view(1,C1.shape[0],1,1,1,1,-1)),dim=-1),
+                             torch.sum(torch.mul(torch.div(mean.sub(C2.view(1,1,C2.shape[0],1,1,1,-1)),mean.sub(C2.view(1,1,C2.shape[0],1,1,1,-1)).norm(dim=-1,keepdim=True) + 1e-8),C2.view(1,1,C2.shape[0],1,1,1,-1)),dim=-1),
+                             torch.sum(torch.mul(torch.div(mean.sub(C3.view(1,1,1,C3.shape[0],1,1,-1)),mean.sub(C3.view(1,1,1,C3.shape[0],1,1,-1)).norm(dim=-1,keepdim=True) + 1e-8),C3.view(1,1,1,C3.shape[0],1,1,-1)),dim=-1),
+                             torch.sum(torch.mul(torch.div(mean.sub(C4.view(1,1,1,1,C4.shape[0],1,-1)),mean.sub(C4.view(1,1,1,1,C4.shape[0],1,-1)).norm(dim=-1,keepdim=True) + 1e-8),C4.view(1,1,1,1,C4.shape[0],1,-1)),dim=-1),
+                             torch.sum(torch.mul(torch.div(mean.sub(C5.view(1,1,1,1,1,C5.shape[0],-1)),mean.sub(C5.view(1,1,1,1,1,C5.shape[0],-1)).norm(dim=-1,keepdim=True) + 1e-8),C5.view(1,1,1,1,1,C5.shape[0],-1)),dim=-1)])
     #return dot product of scalednorm and mean x 6
 
        
@@ -492,12 +492,12 @@ def calculate_lossNormsvc(I, C1, C2, C3, C4, C5):
         This should give us a (B,B) matrix of the cosine distance between the vectors, this can then be halved because every vector is counted twice
     '''
         #stack=torch.stack([I,C1,C2,C3,C4,C5],dim=0)
-    I=I/torch.norm(I,dim=-1,keepdim=True)
-    C1=C1/torch.norm(C1,dim=-1,keepdim=True)
-    C2=C2/torch.norm(C2,dim=-1,keepdim=True)
-    C3=C3/torch.norm(C3,dim=-1,keepdim=True)
-    C4=C4/torch.norm(C4,dim=-1,keepdim=True)
-    C5=C5/torch.norm(C5,dim=-1,keepdim=True)
+    I=I/(torch.norm(I,dim=-1,keepdim=True) + 1e-8)
+    C1=C1/(torch.norm(C1,dim=-1,keepdim=True) + 1e-8)
+    C2=C2/(torch.norm(C2,dim=-1,keepdim=True) + 1e-8)
+    C3=C3/(torch.norm(C3,dim=-1,keepdim=True) + 1e-8)
+    C4=C4/(torch.norm(C4,dim=-1,keepdim=True) + 1e-8)
+    C5=C5/(torch.norm(C5,dim=-1,keepdim=True) + 1e-8)
     total=reduce(torch.add, [
                             reduce(torch.add,[  C1@I.T,
                                                 #torch.sum(torch.mul(C1,C1),dim=-1),

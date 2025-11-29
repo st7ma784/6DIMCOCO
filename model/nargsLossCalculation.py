@@ -31,7 +31,7 @@ def null(*args):
     return args
 
 def normargs(*args):
-    return map(lambda arg: arg/arg.norm(dim=-1, keepdim=True), args)
+    return map(lambda arg: arg/(arg.norm(dim=-1, keepdim=True) + 1e-8), args)
 def logargs(args):
     return torch.log(args)
 
@@ -130,8 +130,8 @@ def get_loss_fn(logitsversion=0,norm=False,log=False,JSE=0):
 def calculate_lossStock(args,mean_fn=calc_mean):
     I,C1=args[0],args[1]
     #normalize image and text features
-    I = I / I.norm(dim=-1, keepdim=True)
-    C1 = C1 / C1.norm(dim=-1, keepdim=True)
+    I = I / (I.norm(dim=-1, keepdim=True) + 1e-8)
+    C1 = C1 / (C1.norm(dim=-1, keepdim=True) + 1e-8)
     #calculate logits
     logits_per_image =  I @ C1.T
     logits_per_text =  C1 @ I.T
@@ -141,8 +141,8 @@ def calculate_lossStock(args,mean_fn=calc_mean):
 def calculate_lossbase(args,norm=True,log=False,mean_fn=calc_mean):
     I,C1=args[0],args[1]
     #normalize image and text features
-    I = I / I.norm(dim=-1, keepdim=True)
-    C1 = C1 / C1.norm(dim=-1, keepdim=True)
+    I = I / (I.norm(dim=-1, keepdim=True) + 1e-8)
+    C1 = C1 / (C1.norm(dim=-1, keepdim=True) + 1e-8)
     #calculate logits
     logits_per_image =  I @ C1.T
     #calculate loss
